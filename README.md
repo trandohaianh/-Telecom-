@@ -5,6 +5,7 @@
 > - `/metrics` cho Grafana Cloud kèm 12 cảnh báo.
 > - Bộ eval có cổng chặn hồi quy: [evals/README.md](evals/README.md).
 > - Docker cho amd64 và arm64; deploy miễn phí chung VM với FieldOps: [deploy/cloud/README.md](deploy/cloud/README.md).
+> - Tầng scale-out chia tải theo số chủ gọi, chất lượng giống chạy 1 tiến trình; ngoại suy khoảng 8 lõi cho 50k TPS: [docs/SCALE_OUT.md](docs/SCALE_OUT.md).
 
 # Telecom Fraud Shield v2 — Real-time two-tier AI fraud detection
 

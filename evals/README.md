@@ -34,8 +34,14 @@ Ngoài ra không chỉ số nào được tụt quá 3 điểm phần trăm so v
 - Họ phát hiện kém nhất 80% (deepfake). Zero-day Wangiri 91,7%.
 - Phục vụ ở 50–100 EPS: 99,5% quyết định xong trong 30 ms, p99 12–19 ms, không fail-open.
 
-**Chưa đạt mục tiêu ban đầu:**
-- Một tiến trình chỉ phục vụ khoảng 300 EPS. Ở 300 EPS, p99 là 66 ms và có fail-open; ở 600 EPS trở
-  lên thì bắt đầu loại bỏ yêu cầu. Mục tiêu 50.000 TPS cần chia phân vùng ra nhiều máy và một feature
-  store dùng chung.
-- Mọi số liệu trên dựa trên dữ liệu mô phỏng; chưa có lưu lượng thật có nhãn.
+**Mở rộng tới 50.000 TPS:** xem [docs/SCALE_OUT.md](../docs/SCALE_OUT.md).
+- Chia tải theo số chủ gọi kèm trạng thái chéo khoá được nhân bản cho chỉ số **giống hệt** chạy 1
+  tiến trình với 2, 4 và 8 shard (`evals/shard_equivalence.py --replicated`).
+- Một shard chấm khoảng 10.000 sự kiện/giây khi nhận theo lô, p99 mỗi lô 11 ms
+  (`evals/bench_scaleout.py`).
+- Ngoại suy cần khoảng 8 lõi cho 50k TPS. Con số này chưa đo trên cụm thật.
+
+**Vẫn chưa đạt:**
+- API HTTPS từng sự kiện vẫn chỉ khoảng 300 EPS/tiến trình. Lưu lượng lớn phải đi qua luồng gom lô
+  (Kafka/gRPC). Consumer Kafka thật chưa được nối.
+- Mọi số liệu dựa trên dữ liệu mô phỏng; chưa có lưu lượng thật có nhãn.

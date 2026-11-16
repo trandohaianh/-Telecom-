@@ -1,0 +1,33 @@
+# Bí mật và trạng thái chạy — KHÔNG commit
+secrets/
+logs/
+deploy/cloud/.env
+*.sqlite3
+*.sqlite3-*
+
+# Bản sao lưu / staging cũ
+backups/
+backup_tfd-v2.0/
+.codex_backups/
+_stage*.tar.gz
+_claude_*.tgz
+
+# Kết quả sinh ra
+reports/evals/
+runtime/*
+!runtime/artifacts_v22/
+spark/_verify_*/
+docs/build/
+**/node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Android build
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+spark/_checkpoint_*/
+spark/.review-backup-*/

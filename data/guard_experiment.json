@@ -1,0 +1,102 @@
+{
+ "window": {
+  "seed": 101,
+  "events": 50000
+ },
+ "injection": {
+  "duplicate_rate": 0.05,
+  "late_rate": 0.02,
+  "late_delay_s": 300.0,
+  "duplicates_injected": 2412,
+  "late_injected": 967,
+  "stream_length": 52412
+ },
+ "guard_config": {
+  "keys": 2659,
+  "max_ts": 43762.315025915785,
+  "watermark": 43642.315025915785,
+  "dedup_ttl_s": 900.0,
+  "allowed_lateness_s": 120.0,
+  "admitted": 49042,
+  "duplicate": 2412,
+  "late": 958
+ },
+ "A_clean_baseline": {
+  "block_fpr_pct": 0.0,
+  "fraud_caught_pct": 83.3333
+ },
+ "B_dirty_guard_off": {
+  "decisions_changed": 130,
+  "legitimate_newly_blocked": 0,
+  "legitimate_newly_actioned": 130,
+  "fraud_newly_missed": 0,
+  "block_fpr_pct": 0.0,
+  "fraud_caught_pct": 83.3333,
+  "examples_legitimate_newly_blocked": []
+ },
+ "C_dirty_guard_on": {
+  "decisions_changed": 3,
+  "legitimate_newly_blocked": 0,
+  "legitimate_newly_actioned": 2,
+  "fraud_newly_missed": 1,
+  "block_fpr_pct": 0.0,
+  "fraud_caught_pct": 81.8182,
+  "examples_legitimate_newly_blocked": []
+ },
+ "ingest_counters": {
+  "admitted": 49042,
+  "duplicate": 2412,
+  "late": 958
+ },
+ "status_counts_guard_on": {
+  "ADMITTED": 49042,
+  "DUPLICATE": 2412,
+  "LATE": 958
+ },
+ "sweep_duplicate_rate": [
+  {
+   "duplicate_rate": 0.1,
+   "deliveries": 54943,
+   "guard_off": {
+    "decisions_changed": 301,
+    "legitimate_newly_blocked": 0,
+    "legitimate_newly_actioned": 301,
+    "fraud_newly_missed": 0,
+    "block_fpr_pct": 0.0,
+    "fraud_caught_pct": 83.3333,
+    "examples_legitimate_newly_blocked": []
+   },
+   "guard_on": {
+    "decisions_changed": 3,
+    "legitimate_newly_blocked": 0,
+    "legitimate_newly_actioned": 2,
+    "fraud_newly_missed": 1,
+    "block_fpr_pct": 0.0,
+    "fraud_caught_pct": 81.8182,
+    "examples_legitimate_newly_blocked": []
+   }
+  },
+  {
+   "duplicate_rate": 0.2,
+   "deliveries": 59893,
+   "guard_off": {
+    "decisions_changed": 668,
+    "legitimate_newly_blocked": 0,
+    "legitimate_newly_actioned": 667,
+    "fraud_newly_missed": 0,
+    "block_fpr_pct": 0.0,
+    "fraud_caught_pct": 84.8485,
+    "examples_legitimate_newly_blocked": []
+   },
+   "guard_on": {
+    "decisions_changed": 3,
+    "legitimate_newly_blocked": 0,
+    "legitimate_newly_actioned": 2,
+    "fraud_newly_missed": 1,
+    "block_fpr_pct": 0.0,
+    "fraud_caught_pct": 81.8182,
+    "examples_legitimate_newly_blocked": []
+   }
+  }
+ ]
+}

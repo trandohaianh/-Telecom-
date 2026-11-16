@@ -1,0 +1,27 @@
+{
+  "samples": 60,
+  "model_single_event_ms": {
+    "p50": 2.198,
+    "p95": 8.172,
+    "p99": 9.139,
+    "max": 9.204
+  },
+  "sqlite_reserve_ms": {
+    "p50": 22.5,
+    "p95": 23.268,
+    "p99": 36.619,
+    "max": 36.717
+  },
+  "sqlite_finish_ms": {
+    "p50": 22.498,
+    "p95": 26.724,
+    "p99": 46.019,
+    "max": 47.226
+  },
+  "sqlite_batch_evidence_ack_ms": 22.516,
+  "sqlite_synchronous": 2,
+  "filesystem": [
+    "/dev/sdd /tmp ext4 rw,relatime 0 0"
+  ],
+  "note": "isolated diagnostic, one owner, disk-backed ext4, same 2 CPU / 2 GiB container; no HTTP/evidence writer"
+}

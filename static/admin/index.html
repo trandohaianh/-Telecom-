@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telecom Fraud Shield · Live</title>
+<link rel="icon" href="/app/icon.svg" type="image/svg+xml">
+<!-- Áp theme đã lưu trước khi vẽ trang để không bị nháy tối → sáng. -->
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('tfs_theme') || 'dark'; } catch(e) {}</script>
+<!-- Tải trước kết nối font và stylesheet ngoài để giao diện có kiểu chữ nhất quán. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Khai báo màu sắc/font dùng chung để các thành phần có thể tham chiếu bằng var(...). */
+:root{--bg:#0b0b0c;--panel:#141416;--panel2:#1b1b1e;--line:#2a2a2e;--ink:#f4f4f5;--mut:#9a9aa2;--red:#e11d48;--red2:#ff4d6d;--amber:#f59e0b;--green:#22c55e;--blue:#60a5fa;
+--term:#000;--drawer:#0f0f11;--track:#2a2a2e;--scrim:rgba(0,0,0,.86);--on-ink:#000;
+--display:"Montserrat",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;color-scheme:dark}
+/* Giao diện sáng: bật bằng nút gạt trên header, lựa chọn được nhớ trong trình duyệt. */
+:root[data-theme="light"]{--bg:#f4f4f6;--panel:#ffffff;--panel2:#f7f7f9;--line:#dcdce2;--ink:#111114;--mut:#5f5f69;--red:#e11d48;--red2:#be123c;
+--amber:#b45309;--green:#15803d;--blue:#1d4ed8;--term:#f1f1f4;--drawer:#ffffff;--track:#e4e4e9;--scrim:rgba(20,20,24,.55);--on-ink:#fff;color-scheme:light}
+/* Nút gạt sáng / tối. */
+.theme{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.06em;cursor:pointer;user-select:none;border:1px solid var(--line);padding:4px 8px}
+.theme input{position:absolute;opacity:0;width:1px;height:1px}
+.theme .sw{width:38px;height:20px;border-radius:10px;background:var(--track);position:relative;transition:.2s;border:1px solid var(--line)}
+.theme .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--ink);transition:.2s}
+.theme input:checked + .sw{background:var(--red);border-color:var(--red)}.theme input:checked + .sw::after{left:20px;background:#fff}
+.theme input:focus-visible + .sw{outline:2px solid var(--blue);outline-offset:2px}
+/* Các quy tắc tổng thể, bố cục header và trạng thái LIVE. */
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--display)}
+.wrap{max-width:1440px;margin:0 auto;padding:18px 16px 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:38px;height:38px;background:var(--red);display:grid;place-items:center;font-weight:800;font-size:18px}
+h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.02em}h1 small{display:block;font-size:12px;color:var(--mut);font-weight:500;letter-spacing:0}
+.right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{border:1px solid var(--line);padding:5px 10px;font-size:12px;font-weight:700;letter-spacing:.06em;display:inline-flex;gap:7px;align-items:center}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:p 1.6s infinite}
+@keyframes p{70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+/* Kiểu nút, thẻ KPI, panel và lưới bố cục trên màn hình lớn. */
+button{font:700 12px var(--display);letter-spacing:.05em;background:var(--panel2);color:var(--ink);border:1px solid var(--line);padding:9px 12px;cursor:pointer}
+button:hover{border-color:var(--red)}button.red{background:var(--red);border-color:var(--red)}button.on{background:var(--ink);color:var(--on-ink)}
+.kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin:16px 0}
+.k{background:var(--panel);border:1px solid var(--line);padding:12px 12px 10px;min-width:0}
+.k .l{font-size:10.5px;color:var(--mut);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.k .v{font:600 24px var(--mono);margin-top:6px;white-space:nowrap}.k .s{font-size:11px;color:var(--mut);margin-top:2px}
+.k.red .v{color:var(--red2)}.k.amber .v{color:var(--amber)}.k.green .v{color:var(--green)}
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);padding:14px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
+.ph h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0;font-weight:800}.ph h2 b{color:var(--red)}
+.ph span{font-size:11px;color:var(--mut)}
+#feed{height:520px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.al{border:1px solid var(--line);border-left:4px solid var(--amber);background:var(--panel2);padding:10px 12px;cursor:pointer}
+.al.BLOCK{border-left-color:var(--red)}.al.FAIL{border-left-color:var(--blue)}
+.al .top{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.tag{font:700 10.5px var(--display);letter-spacing:.06em;padding:2px 6px;background:var(--term);border:1px solid var(--line)}
+.tag.BLOCK{background:var(--red);border-color:var(--red)}.tag.FLAG{background:var(--amber);color:#000;border-color:var(--amber)}.tag.FAIL{background:var(--blue);color:#000}
+.tag.z{background:#7c3aed;border-color:#7c3aed}.tag.inj{background:#fff;color:#000}
+.al .act{font-size:12px;color:var(--mut);margin:4px 0}.al ul{margin:4px 0 0 0;padding-left:16px;font-size:12.5px}
+.al code{font:600 11px var(--mono);color:var(--red2)}
+.mono{font-family:var(--mono)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.res{font:12px var(--mono);background:var(--term);border:1px solid var(--line);padding:10px;min-height:92px;white-space:pre-wrap;margin-top:10px;max-height:190px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--mut);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}td.n{text-align:right;font-family:var(--mono)}
+.bar{height:6px;background:var(--track);position:relative}.bar i{position:absolute;inset:0 auto 0 0;background:var(--red)}
+canvas{width:100%;height:110px;display:block}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.note{font-size:11.5px;color:var(--mut);margin-top:8px}
+.big{font:600 30px var(--mono)}
+.drawer{position:fixed;inset:0 0 0 auto;width:min(460px,100%);background:var(--drawer);border-left:2px solid var(--red);padding:18px;transform:translateX(100%);transition:.2s;overflow:auto;z-index:9}
+.drawer.open{transform:none}.drawer pre{font:12px var(--mono);white-space:pre-wrap}
+/* Màn đăng nhập bằng token vai trò và các thẻ trạng thái dự phòng / hồi tố. */
+.login{position:fixed;inset:0;background:var(--scrim);display:none;place-items:center;z-index:20;padding:16px}
+.login.show{display:grid}.login form{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--red);padding:22px;width:min(420px,100%);display:grid;gap:10px}
+.login input{font:13px var(--mono);background:var(--term);color:var(--ink);border:1px solid var(--line);padding:10px}
+.login .err{color:var(--red2);font-size:12px;min-height:16px}
+.tag.fb{background:#0ea5e9;border-color:#0ea5e9;color:#000}.tag.retro{background:#a3e635;border-color:#a3e635;color:#000}
+.hide{display:none!important}
+/* Watermark tên người xem + thời gian phủ toàn trang: ảnh chụp màn hình bị rò rỉ sẽ lộ ra ai đã chụp. */
+#wm{position:fixed;inset:0;pointer-events:none;z-index:30;opacity:.07}
+/* Đề xuất của AI agent. */
+.prop{border:1px solid var(--line);border-left:4px solid var(--amber);background:var(--panel2);padding:10px 12px;margin-bottom:8px}
+.prop.high{border-left-color:var(--red)}.prop.done{opacity:.6}
+.prop .t{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:13px}
+.prop ul{margin:6px 0;padding-left:16px;font-size:12.5px}.prop .subj{font:11.5px var(--mono);color:var(--mut)}
+.prop .acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.prop .st{font-size:12px;color:var(--mut);margin-top:6px}
+#agent{max-height:430px;overflow:auto}
+a.pill{color:var(--ink);text-decoration:none}
+/* Thu gọn lưới KPI và các panel để dashboard dùng được trên màn hình nhỏ. */
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.grid,.cols{grid-template-columns:1fr}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<!-- Header: tên demo, trạng thái live, model version, circuit breaker và đổi ngôn ngữ. -->
+<header>
+  <div class="brand"><div class="logo">TF</div><h1><span data-vi="Lá chắn lừa đảo viễn thông · Thời gian thực" data-en="Telecom Fraud Shield · Real-time">Lá chắn lừa đảo viễn thông · Thời gian thực</span>
+    <small data-vi="AI hai tầng: tín hiệu trước cuộc gọi (&lt;30 ms) + nội dung SMS/âm thanh (&lt;170 ms)" data-en="Two-tier AI: pre-call signalling (&lt;30 ms) + SMS/audio content (&lt;170 ms)">AI hai tầng</small></h1></div>
+  <div class="right">
+    <span class="pill live"><i></i>LIVE</span>
+    <span class="pill mono" id="ver">tfd-v2.0</span>
+    <span class="pill" id="cbpill">BREAKER: CLOSED</span>
+    <a class="pill" href="/app/" target="_blank" data-vi="APP THUÊ BAO ↗" data-en="SUBSCRIBER APP ↗">APP THUÊ BAO ↗</a>
+    <span class="pill mono" id="who">–</span>
+    <a href="/admin/manage" class="analystonly" style="text-decoration:none"><button type="button" data-vi="QUẢN TRỊ" data-en="MANAGE">QUẢN TRỊ</button></a>
+    <button id="logout" data-vi="ĐĂNG XUẤT" data-en="SIGN OUT">ĐĂNG XUẤT</button>
+    <!-- Nút gạt giao diện sáng / tối. -->
+    <label class="theme" title="Sáng / Tối"><span>☾</span><input type="checkbox" id="themeSw" role="switch" aria-label="Giao diện sáng"><span class="sw"></span><span>☀</span></label>
+    <button id="lang">EN</button>
+  </div>
+</header>
+
+<!-- Tám thẻ KPI được JavaScript cập nhật từ endpoint trạng thái. -->
+<section class="kpis">
+  <!-- KPI tổng sự kiện và phân bổ theo loại. -->
+  <div class="k"><div class="l" data-vi="Sự kiện đã xử lý" data-en="Events processed">Sự kiện đã xử lý</div><div class="v" id="k_proc">0</div><div class="s" id="k_mix">–</div></div>
+  <!-- KPI tốc độ stream hiện tại. -->
+  <div class="k"><div class="l" data-vi="Thông lượng demo" data-en="Demo throughput">Thông lượng demo</div><div class="v" id="k_eps">0</div><div class="s" data-vi="sự kiện/giây — tốc độ phát của bản demo, không phải năng lực cực đại" data-en="events/s — the demo replay rate, not peak capacity">sự kiện/giây</div></div>
+  <!-- KPI phân vị 99 của độ trễ quyết định. -->
+  <div class="k green"><div class="l" data-vi="Độ trễ quyết định p99" data-en="Decision latency p99">Độ trễ p99</div><div class="v" id="k_p99">0</div><div class="s" data-vi="ms / ngân sách 30 ms" data-en="ms / 30 ms budget">ms</div></div>
+  <!-- KPI số sự kiện bị block cứng. -->
+  <div class="k red"><div class="l" data-vi="Đã chặn" data-en="Blocked">Đã chặn</div><div class="v" id="k_blk">0</div><div class="s" data-vi="trước khi chuông reo" data-en="before the phone rings">trước khi chuông reo</div></div>
+  <!-- KPI số sự kiện bị gắn cờ cảnh báo. -->
+  <div class="k amber"><div class="l" data-vi="Gắn cờ" data-en="Flagged">Gắn cờ</div><div class="v" id="k_flg">0</div><div class="s" data-vi="cảnh báo / Tier 2" data-en="warn / Tier 2">cảnh báo</div></div>
+  <!-- KPI số lần hệ thống fail-open do timeout/lỗi mô hình. -->
+  <div class="k"><div class="l">Fail-open</div><div class="v" id="k_fo">0</div><div class="s" data-vi="cho qua khi quá hạn" data-en="released on timeout">cho qua khi quá hạn</div></div>
+  <!-- KPI số gian lận bị phát hiện trên tổng số gian lận có nhãn mô phỏng. -->
+  <div class="k"><div class="l" data-vi="Gian lận đã bắt" data-en="Fraud caught">Gian lận đã bắt</div><div class="v" id="k_tp">0/0</div><div class="s" data-vi="theo nhãn mô phỏng" data-en="vs. simulation labels">theo nhãn</div></div>
+  <!-- KPI số bản ghi đã được ghi vào log chứng cứ. -->
+  <div class="k"><div class="l" data-vi="Bằng chứng" data-en="Evidence">Bằng chứng</div><div class="v" id="k_ev">0</div><div class="s" data-vi="bản ghi chuỗi hash" data-en="hash-chained records">bản ghi chuỗi hash</div></div>
+</section>
+
+<!-- Lưới vận hành: feed cảnh báo, nút tiêm tấn công và kiểm tra chịu lỗi/bằng chứng. -->
+<div class="grid">
+  <div class="panel">
+    <!-- Feed sẽ được render động bởi hàm render() khi API trả cảnh báo mới. -->
+    <div class="ph"><h2><b>●</b> <span data-vi="Cảnh báo trực tiếp" data-en="Live decisions">Cảnh báo trực tiếp</span></h2><span data-vi="Bấm vào thẻ để xem đặc trưng làm bằng chứng" data-en="Click a card to see the evidence features">Bấm thẻ để xem bằng chứng</span></div>
+    <div id="feed"></div>
+  </div>
+  <!-- Nhóm công cụ thao tác thử nghiệm: giả lập tấn công, chaos và xác minh log. -->
+  <div style="display:grid;gap:12px;align-content:start">
+    <!-- AI agent: giám sát + đề xuất; chỉ admin bấm duyệt thì hành động mới chạy. -->
+    <div class="panel">
+      <div class="ph"><h2><b>◆</b> <span data-vi="AI agent · chờ con người quyết định" data-en="AI agent · awaiting human decision">AI agent</span></h2><span id="agent_note"></span></div>
+      <div id="agent"><div class="note">—</div></div>
+    </div>
+    <div class="panel adminonly">
+      <div class="ph"><h2 data-vi="Mô phỏng tấn công" data-en="Simulate an attack">Mô phỏng tấn công</h2><span data-vi="đưa vào luồng thật" data-en="injected into the live stream">đưa vào luồng thật</span></div>
+      <div class="btns">
+        <!-- Mỗi data-a ánh xạ tới loại tấn công mà API /api/inject chấp nhận. -->
+        <!-- Tên mỗi kiểu lừa đảo thống nhất ở mọi nơi (nút, bảng thống kê, app) theo bảng FRAUD_NAMES bên dưới. -->
+        <button class="red" data-a="SIM_BOX" data-vi="SIM BOX" data-en="SIM BOX">SIM BOX</button>
+        <button class="red" data-a="CLI_SPOOF" data-vi="GIẢ MẠO SỐ TỔNG ĐÀI" data-en="SPOOFED HOTLINE">GIẢ MẠO SỐ TỔNG ĐÀI</button>
+        <button class="red" data-a="SMS_PHISH" data-vi="SMS LỪA ĐẢO" data-en="PHISHING SMS">SMS LỪA ĐẢO</button>
+        <button class="red" data-a="DEEPFAKE_VOICE" data-vi="GIỌNG NÓI DEEPFAKE" data-en="DEEPFAKE VOICE">GIỌNG NÓI DEEPFAKE</button>
+        <button class="red" data-a="VOICE_HARVEST" style="grid-column:span 2" data-vi="CUỘC GỌI IM LẶNG THU GIỌNG (&quot;ALO&quot; RỒI CÚP)" data-en="SILENT VOICE-HARVESTING CALLS">CUỘC GỌI IM LẶNG THU GIỌNG</button>
+        <button data-a="WANGIRI" style="grid-column:span 2" data-vi="WANGIRI (GỌI NHÁY 1 TIẾNG) · ZERO-DAY, CHƯA TỪNG HUẤN LUYỆN" data-en="WANGIRI (ONE-RING CALLS) · ZERO-DAY, NEVER TRAINED ON">WANGIRI (GỌI NHÁY 1 TIẾNG)</button>
+      </div>
+      <div class="res" id="res">—</div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2 data-vi="Kiểm thử chịu lỗi" data-en="Resilience drill">Kiểm thử chịu lỗi</h2><span>circuit breaker · fail-open</span></div>
+      <div class="btns adminonly">
+        <!-- data-c chọn kịch bản làm chậm detector, gây lỗi hoặc tắt chaos. -->
+        <button data-c="latency" data-vi="MÔ HÌNH CHẬM (+60 ms)" data-en="SLOW MODEL (+60 ms)">MÔ HÌNH CHẬM</button>
+        <button data-c="error" data-vi="MÔ HÌNH LỖI" data-en="MODEL CRASH">MÔ HÌNH LỖI</button>
+        <button data-c="off" style="grid-column:span 2" data-vi="KHÔI PHỤC" data-en="RECOVER">KHÔI PHỤC</button>
+      </div>
+      <div class="res" id="resil" style="min-height:0">—</div>
+      <div class="note" data-vi="Khi bộ phát hiện quá ngân sách 30 ms hoặc lỗi: luật dự phòng vẫn chặn nhóm số/thiết bị đã bị chặn, số tổng đài giả mạo, brandname sai kênh; phần còn lại được cho qua (fail-open). Sự kiện mô hình chưa chấm được xếp hàng và chấm lại khi hồi phục → cảnh báo hồi tố. Lỗi lặp lại 5 lần → breaker MỞ, thử lại sau 1 giây." data-en="If the detector exceeds the 30 ms budget or fails, fallback rules still block groups already blocked, spoofed hotlines and off-gateway brand senders; everything else fails open. Events the model missed are queued and re-scored after recovery (retro alerts). 5 consecutive failures open the breaker; it retries after 1 s.">Luật dự phòng + chấm lại sau sự cố.</div>
+    </div>
+    <div class="panel analystonly">
+      <div class="ph"><h2 data-vi="Nhật ký bằng chứng" data-en="Evidence log">Nhật ký bằng chứng</h2><span>SHA-256 hash chain</span></div>
+      <!-- Nút yêu cầu API xác minh tính toàn vẹn của hash chain. -->
+      <button id="verify" data-vi="KIỂM TRA TOÀN VẸN CHUỖI" data-en="VERIFY CHAIN INTEGRITY">KIỂM TRA TOÀN VẸN CHUỖI</button>
+      <div class="res" id="vres" style="min-height:50px">—</div>
+    </div>
+    <div class="panel adminonly-any">
+      <div class="ph"><h2 data-vi="Nhật ký thao tác" data-en="Audit trail">Nhật ký thao tác</h2><span data-vi="ai đã làm gì · có chữ ký" data-en="who did what · signed">ai đã làm gì · có chữ ký</span></div>
+      <button id="audit" data-vi="XEM &amp; KIỂM TRA NHẬT KÝ" data-en="VIEW &amp; VERIFY TRAIL">XEM &amp; KIỂM TRA NHẬT KÝ</button>
+      <div class="res" id="ares" style="min-height:50px">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Báo cáo benchmark đã lưu và biểu đồ kết quả tải được tải qua API metrics. -->
+<div class="cols">
+  <div class="panel">
+    <div class="ph"><h2 data-vi="Đo nghiệm độc lập 50.000 sự kiện" data-en="Independent 50,000-event test">Đo nghiệm độc lập 50.000 sự kiện</h2></div>
+    <div id="bench"></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><h2 data-vi="Phát hiện theo loại tấn công" data-en="Detection by attack family">Phát hiện theo loại tấn công</h2><span data-vi="10 cửa sổ × 50k" data-en="10 windows × 50k">10 × 50k</span></div>
+    <!-- Bảng tỷ lệ phát hiện từng nhóm tấn công được tạo trong renderMetrics(). -->
+    <div id="fam"></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><h2 id="lt_title" data-vi="Tải streaming" data-en="Streaming load">Tải streaming</h2><span data-vi="p99 Tier 1 theo tải" data-en="Tier-1 p99 vs load">p99 theo tải</span></div>
+    <!-- Canvas vẽ đường latency theo throughput từ dữ liệu load test đã lưu. -->
+    <canvas id="lt" width="600" height="220"></canvas>
+    <div class="note" id="ltnote"></div>
+  </div>
+</div>
+</div>
+
+<!-- Drawer mở khi chọn một cảnh báo, để xem JSON bằng chứng đầy đủ của nó. -->
+<!-- Đăng nhập nhân viên: tên đăng nhập + mật khẩu, Google (email đã gắn với tài khoản), hoặc token cá nhân (tự động hoá). -->
+<div class="login" id="login"><form id="lform">
+  <h2 style="margin:0;font-size:15px;letter-spacing:.08em" data-vi="ĐĂNG NHẬP VẬN HÀNH" data-en="OPERATOR SIGN-IN">ĐĂNG NHẬP VẬN HÀNH</h2>
+  <div id="ogbtn"></div>
+  <input id="user" autocomplete="username" placeholder="tên đăng nhập / username">
+  <input id="pass" type="password" autocomplete="current-password" placeholder="mật khẩu / password">
+  <input id="tok" autocomplete="off" placeholder="token cá nhân (tuỳ chọn)" style="display:none">
+  <a href="#" id="toktoggle" class="note" style="margin:0" data-vi="Dùng token cá nhân thay mật khẩu" data-en="Use a personal token instead">Dùng token cá nhân thay mật khẩu</a>
+  <div class="err" id="lerr"></div>
+  <button class="red" type="submit" data-vi="ĐĂNG NHẬP" data-en="SIGN IN">ĐĂNG NHẬP</button>
+  <a href="/app/" class="note" style="margin:0" data-vi="Bạn là thuê bao? Mở app Lá chắn lừa đảo →" data-en="Subscriber? Open the protection app →">Bạn là thuê bao? Mở app →</a>
+</form></div>
+
+<aside class="drawer" id="drawer"><button id="dclose" style="float:right">✕</button><h2 style="font-size:14px;letter-spacing:.1em" data-vi="BẰNG CHỨNG" data-en="EVIDENCE">BẰNG CHỨNG</h2>
+  <!-- Số luôn bị che; chuyên viên mở số đầy đủ phải ghi lý do, mỗi lần mở đều vào nhật ký. -->
+  <div class="analystonly"><button id="reveal" data-vi="XEM SỐ ĐẦY ĐỦ (GHI NHẬT KÝ)" data-en="REVEAL NUMBER (LOGGED)">XEM SỐ ĐẦY ĐỦ (GHI NHẬT KÝ)</button><div class="res" id="rvres" style="min-height:0;margin-top:8px">—</div></div>
+  <pre id="dbody"></pre></aside>
+<div id="wm"></div>
+
+<script>
+// Lưu ngôn ngữ đang chọn, trạng thái mới nhất và các metric benchmark trong bộ nhớ trang.
+let L = 'vi', last = null, metrics = null;
+// Viết tắt truy vấn một phần tử DOM theo CSS selector.
+const $ = s => document.querySelector(s);
+// Định dạng số theo locale đang được chọn; dùng 0 nếu giá trị chưa có.
+const fmt = n => (n ?? 0).toLocaleString(L === 'vi' ? 'vi-VN' : 'en-US');
+// Cập nhật văn bản song ngữ của các phần tử và vẽ lại dữ liệu theo ngôn ngữ mới.
+function applyLang(){ document.querySelectorAll('[data-vi]').forEach(e => { e.innerHTML = e.dataset[L]; }); $('#lang').textContent = L === 'vi' ? 'EN' : 'VI'; document.documentElement.lang = L; if (last) render(last); if (metrics) renderMetrics(); }
+// Khi bấm nút ngôn ngữ, đảo VI/EN rồi cập nhật nội dung giao diện.
+$('#lang').onclick = () => { L = L === 'vi' ? 'en' : 'vi'; applyLang(); };
+// Một tên duy nhất cho mỗi kiểu lừa đảo, dùng chung cho nút mô phỏng, bảng thống kê và app thuê bao.
+const FRAUD_NAMES = {
+  SIM_BOX: ['SIM box', 'SIM box'],
+  CLI_SPOOF: ['Giả mạo số tổng đài', 'Spoofed hotline'],
+  SMS_PHISH: ['SMS lừa đảo', 'Phishing SMS'],
+  DEEPFAKE_VOICE: ['Giọng nói deepfake', 'Deepfake voice'],
+  ZERO_DAY_WANGIRI: ['Wangiri (gọi nháy 1 tiếng)', 'Wangiri (one-ring calls)'],
+  VOICE_HARVEST: ['Cuộc gọi im lặng thu giọng', 'Silent voice-harvesting calls'],
+};
+// Tên hiển thị song ngữ cho từng loại sự kiện.
+const T = { CALL: ['Cuộc gọi', 'Call'], SMS: ['SMS', 'SMS'], AUDIO: ['Âm thanh trong cuộc gọi', 'In-call audio'] };
+// Nút gạt sáng / tối: đổi data-theme trên <html>, nhớ lựa chọn, vẽ lại biểu đồ theo màu mới.
+function setTheme(t){
+  document.documentElement.dataset.theme = t; $('#themeSw').checked = t === 'light';
+  try { localStorage.setItem('tfs_theme', t); } catch(e){}
+  if (metrics) renderMetrics();
+  watermark();
+}
+$('#themeSw').onchange = e => setTheme(e.target.checked ? 'light' : 'dark');
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// Phiên đăng nhập (không phải token cá nhân) lưu trong sessionStorage: đóng tab là mất, hết hạn sau 8 giờ / 30 phút rảnh.
+const store = { get(){ try { return sessionStorage.getItem('tfs_session') || ''; } catch(e){ return ''; } },
+                set(v){ try { v ? sessionStorage.setItem('tfs_session', v) : sessionStorage.removeItem('tfs_session'); } catch(e){} } };
+try { localStorage.removeItem('tfs_token'); } catch(e){}      // bản cũ từng lưu token cá nhân lâu dài: xóa đi
+let TOKEN = store.get(), ME = null;
+// Áp theme đã lưu (sau khi ME đã khai báo, vì setTheme vẽ lại watermark).
+(() => { let t = 'dark'; try { t = localStorage.getItem('tfs_theme') || 'dark'; } catch(e){} setTheme(t); })();
+// api gọi endpoint kèm token; 401 mở màn đăng nhập, 403 báo không đủ quyền.
+async function api(url, opts = {}){
+  const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: 'Bearer ' + TOKEN } });
+  if (r.status === 401){ if (ME) { ME = null; TOKEN = ''; store.set(''); } showLogin(L==='vi' ? 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.' : 'Session expired, please sign in again.'); throw new Error('401'); }
+  if (r.status === 403){ const j = await r.json(); throw new Error(j.detail || '403'); }
+  return r.json();
+}
+function showLogin(msg){ $('#lerr').textContent = msg || ''; $('#login').classList.add('show'); setTimeout(() => $('#user').focus(), 50); }
+let useToken = false;
+$('#toktoggle').onclick = e => { e.preventDefault(); useToken = !useToken;
+  $('#tok').style.display = useToken ? '' : 'none'; $('#user').style.display = $('#pass').style.display = useToken ? 'none' : ''; };
+async function finishLogin(r){
+  if (!r.ok){
+    const msg = r.status === 403 ? (L==='vi' ? 'Tài khoản đang bị khoá hoặc chưa được cấp quyền.' : 'Account suspended or not authorised.')
+              : r.status === 429 ? (L==='vi' ? 'Thử quá nhiều lần, chờ ít phút.' : 'Too many attempts, wait a few minutes.')
+              : (L==='vi' ? 'Thông tin đăng nhập không đúng.' : 'Invalid credential.');
+    $('#lerr').textContent = msg; return;
+  }
+  TOKEN = (await r.json()).session; store.set(TOKEN); $('#login').classList.remove('show'); await boot();
+}
+// Đăng nhập: gửi thông tin một lần để đổi lấy phiên; mật khẩu/token không được lưu lại trong trình duyệt.
+$('#lform').onsubmit = async e => {
+  e.preventDefault();
+  const r = useToken
+    ? await fetch('/api/login', { method: 'POST', headers: { Authorization: 'Bearer ' + $('#tok').value.trim() } })
+    : await fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' },
+                                  body: JSON.stringify({ username: $('#user').value.trim(), password: $('#pass').value }) });
+  $('#tok').value = ''; $('#pass').value = '';
+  await finishLogin(r);
+};
+// Google cho nhân viên: chỉ vào được nếu email Google đã được admin gắn với một tài khoản vận hành.
+(async () => {
+  let c = {}; try { c = await (await fetch('/api/auth/config')).json(); } catch(e){}
+  if (!c.google_client_id) return;
+  const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+  sc.onload = () => {
+    google.accounts.id.initialize({ client_id: c.google_client_id, ux_mode: 'popup', callback: async resp =>
+      finishLogin(await fetch('/api/login/google', { method: 'POST', headers: { 'content-type': 'application/json' },
+                                                     body: JSON.stringify({ credential: resp.credential }) })) });
+    google.accounts.id.renderButton($('#ogbtn'), { theme: 'filled_black', size: 'large', text: 'signin_with', locale: 'vi', width: 376 });
+  };
+  document.head.appendChild(sc);
+})();
+$('#logout').onclick = async () => { try { await fetch('/api/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN } }); } catch(e){} TOKEN = ''; store.set(''); ME = null; showLogin(); };
+// Ẩn/hiện bảng theo vai trò: tiêm tấn công + gây lỗi chỉ admin ở chế độ demo; bằng chứng từ analyst trở lên.
+function applyRole(){
+  const lvl = { viewer: 1, analyst: 2, admin: 3 }[ME.role];
+  document.querySelectorAll('.adminonly').forEach(e => e.classList.toggle('hide', !(lvl >= 3 && ME.demo_mode)));
+  document.querySelectorAll('.adminonly-any').forEach(e => e.classList.toggle('hide', lvl < 3));
+  document.querySelectorAll('.analystonly').forEach(e => e.classList.toggle('hide', lvl < 2));
+  $('#who').textContent = `${ME.name} · ${(ME.role_label || ME.role).toUpperCase()}`;
+  watermark();
+}
+// Watermark: tên tài khoản + thời điểm, lặp chéo toàn màn hình (cập nhật mỗi phút).
+function watermark(){
+  if (!ME) return;
+  const txt = `${ME.name} · ${new Date().toLocaleString('vi-VN')}`.replace(/[<&>]/g, '');
+  const col = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#888';
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='420' height='220'><text x='10' y='120' transform='rotate(-22 210 110)' font-family='monospace' font-size='15' fill='${col}'>${txt}</text></svg>`;
+  $('#wm').style.backgroundImage = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+}
+setInterval(watermark, 60000);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// AI agent: hiển thị đề xuất; admin duyệt / từ chối (kèm ghi chú), người khác chỉ xem.
+const ST = { pending: ['Chờ quyết định', 'Awaiting decision'], approved: ['Đã duyệt', 'Approved'], rejected: ['Đã từ chối', 'Rejected'],
+             expired: ['Hết hạn', 'Expired'], obsolete: ['Không còn cần', 'No longer needed'] };
+async function pollAgent(){
+  if (ME) { try {
+    const a = await api('/api/agent'), vi = L === 'vi';
+    $('#agent_note').textContent = a.can_decide ? (vi ? 'bạn có quyền quyết định' : 'you can decide') : (vi ? 'chỉ admin quyết định' : 'admin decides');
+    $('#agent').innerHTML = a.proposals.length ? a.proposals.map(p => `<div class="prop ${p.severity} ${p.status !== 'pending' ? 'done' : ''}">
+      <div class="t"><span>${esc(p.title)}</span><span class="mono" style="color:var(--mut)">${esc(p.id)}</span></div>
+      <ul>${p.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+      ${p.subjects.length ? `<div class="subj">${p.subjects.map(esc).join(' · ')}</div>` : ''}
+      ${p.status === 'pending' && a.can_decide ? `<div class="acts"><button class="red" data-ok="${esc(p.id)}">${vi ? 'DUYỆT' : 'APPROVE'}: ${esc(p.action.label)}</button><button data-no="${esc(p.id)}">${vi ? 'TỪ CHỐI' : 'REJECT'}</button></div>` : ''}
+      <div class="st">${ST[p.status] ? ST[p.status][vi ? 0 : 1] : esc(p.status)}${p.decided_by ? ' · ' + esc(p.decided_by) : ''}${p.note ? ' · “' + esc(p.note) + '”' : ''}${p.result ? ' · ' + esc(p.result) : ''}</div>
+    </div>`).join('') : `<div class="note">${vi ? 'Chưa có đề xuất. Agent đang giám sát: sự cố mô hình, nhóm SIM box, nguy cơ chặn nhầm, báo cáo người dùng, sự kiện lọt lúc sự cố, rò rỉ dữ liệu nội bộ.' : 'No proposals yet.'}</div>`;
+    document.querySelectorAll('[data-ok],[data-no]').forEach(b => b.onclick = async () => {
+      const ok = !!b.dataset.ok, id = b.dataset.ok || b.dataset.no;
+      const note = prompt(L === 'vi' ? (ok ? 'Ghi chú khi duyệt (lý do):' : 'Lý do từ chối:') : 'Note:', '');
+      if (note === null) return;
+      try { await api(`/api/agent/${encodeURIComponent(id)}/decide?decision=${ok ? 'approve' : 'reject'}&note=${encodeURIComponent(note)}`, { method: 'POST' }); } catch(e){ alert(e.message); }
+      pollAgent();
+    });
+  } catch(e){} }
+}
+setInterval(pollAgent, 3000);
+// Tạo HTML cho một thẻ cảnh báo, gồm quyết định, lý do, số liên quan và điểm rủi ro.
+function card(a){
+  // Chuyển trạng thái fail-open thành nhãn riêng; nếu không thì dùng quyết định detector.
+  // Fail-open thật (cho qua) khác với quyết định của luật dự phòng (vẫn chặn / gắn cờ khi mô hình không trả lời).
+  const fo = a.fail_open && a.decision === 'ALLOW', cls = fo ? 'FAIL' : a.decision;
+  const fb = a.fail_open && a.decision !== 'ALLOW';
+  // Tạo nhãn trực quan cho fail-open, dự phòng, hồi tố, zero-day và sự kiện được tiêm thủ công.
+  const tags = `<span class="tag ${cls}">${fo ? 'FAIL-OPEN' : a.decision}</span> ${fb ? `<span class="tag fb">${L==='vi'?'DỰ PHÒNG':'FALLBACK'}</span>` : ''} ${a.retro ? `<span class="tag retro">${L==='vi'?'HỒI TỐ':'RETRO'}</span>` : ''} ${a.zero_day ? '<span class="tag z">ZERO-DAY</span>' : ''} ${a.injected ? `<span class="tag inj">${L==='vi'?'MÔ PHỎNG':'INJECTED'}</span>` : ''}`;
+  // Hiển thị tối đa bốn mã/lý do phát hiện theo ngôn ngữ đang chọn.
+  const rs = (a.reasons || []).slice(0, 4).map(r => `<li><code>${r.code}</code> ${L === 'vi' ? r.vi : r.en}</li>`).join('');
+  // Trả markup của thẻ, gồm loại event, hai số liên quan, risk/anomaly và thời gian.
+  return `<div class="al ${cls}" data-id="${a.event_id}"><div class="top"><div>${tags} <b>${T[a.event_type][L==='vi'?0:1]}</b> <span class="mono" style="color:var(--mut)">${a.party ?? ''} → ${a.counterparty ?? ''}</span></div><span class="mono">${a.zero_day ? 'anomaly +' + a.anomaly_score.toFixed(3) : (a.risk != null ? 'risk ' + a.risk.toFixed(3) : '')} · ${a.time}</span></div><div class="act">${L === 'vi' ? a.action_vi : a.action_en}</div><ul>${rs}</ul></div>`;
+}
+// Cập nhật các KPI, trạng thái breaker và danh sách cảnh báo từ phản hồi /api/state.
+function render(s){
+  // Lưu trạng thái cuối để có thể vẽ lại khi đổi ngôn ngữ.
+  last = s;
+  // Cập nhật version, tổng sự kiện, cơ cấu loại sự kiện và throughput.
+  $('#ver').textContent = s.model_version;
+  $('#k_proc').textContent = fmt(s.processed);
+  $('#k_mix').textContent = `${fmt(s.by_type.CALL)} ${L==='vi'?'gọi':'calls'} · ${fmt(s.by_type.SMS)} SMS · ${fmt(s.by_type.AUDIO)} audio`;
+  $('#k_eps').textContent = fmt(Math.round(s.eps));
+  // Cập nhật phân vị latency và tô màu theo SLA Tier 1 30 ms.
+  $('#k_p99').textContent = s.latency_ms.p99.toFixed(2);
+  $('#k_p99').parentElement.className = 'k ' + (s.latency_ms.p99 < 30 ? 'green' : 'red');
+  // Hiển thị số block, flag, fail-open, tỷ lệ bắt gian lận và số chứng cứ.
+  $('#k_blk').textContent = fmt(s.decisions.BLOCK); $('#k_flg').textContent = fmt(s.decisions.FLAG); $('#k_fo').textContent = fmt(s.decisions.FAIL_OPEN);
+  $('#k_tp').textContent = `${fmt(s.truth.fraud_caught)}/${fmt(s.truth.fraud_seen)}`;
+  $('#k_ev').textContent = fmt(s.evidence_written);
+  // Cập nhật nhãn circuit breaker và kiểu viền/màu khi trạng thái không còn CLOSED.
+  const st = s.breaker.state; $('#cbpill').textContent = 'BREAKER: ' + st; $('#cbpill').style.borderColor = st === 'CLOSED' ? 'var(--line)' : 'var(--red)'; $('#cbpill').style.color = st === 'CLOSED' ? '' : 'var(--red2)';
+  // Trạng thái lớp chịu lỗi: luật dự phòng đã chặn bao nhiêu, hàng đợi chấm lại, cảnh báo hồi tố.
+  const R = s.resilience || {}, vi = L === 'vi';
+  $('#resil').textContent = vi
+    ? `Dự phòng: chặn ${fmt(R.fallback_block)} · cờ ${fmt(R.fallback_flag)} · danh sách chặn ${fmt(R.denylist_size)}\nChờ chấm lại ${fmt(R.rescore_pending)}/${fmt(R.rescore_capacity)} · đã chấm lại ${fmt(R.rescored)} · bỏ do đầy ${fmt(R.rescore_dropped)}\nCảnh báo hồi tố ${fmt(R.retro_alerts)} · kết luận đến muộn ${fmt(R.late_verdicts)}`
+    : `Fallback: blocked ${fmt(R.fallback_block)} · flagged ${fmt(R.fallback_flag)} · deny-list ${fmt(R.denylist_size)}\nRe-score pending ${fmt(R.rescore_pending)}/${fmt(R.rescore_capacity)} · re-scored ${fmt(R.rescored)} · dropped (full) ${fmt(R.rescore_dropped)}\nRetro alerts ${fmt(R.retro_alerts)} · late verdicts ${fmt(R.late_verdicts)}`;
+  // Tạo lại feed và gắn sự kiện click để mở JSON chứng cứ của thẻ tương ứng.
+  $('#feed').innerHTML = s.alerts.map(card).join('');
+  document.querySelectorAll('.al').forEach(el => el.onclick = () => { const a = s.alerts.find(x => x.event_id === el.dataset.id); OPEN_ID = a.event_id; $('#rvres').textContent = '—'; $('#dbody').textContent = JSON.stringify(a, null, 2); $('#drawer').classList.add('open'); });
+}
+$('#dclose').onclick = () => $('#drawer').classList.remove('open');
+// Mở số đầy đủ của cảnh báo đang xem: bắt buộc nhập lý do; server ghi nhật ký và AI agent đếm số lần mở.
+let OPEN_ID = null;
+$('#reveal').onclick = async () => {
+  const reason = prompt(L === 'vi' ? 'Lý do cần xem số đầy đủ (bắt buộc, sẽ ghi vào nhật ký):' : 'Reason (required, logged):', '');
+  if (!reason) return;
+  try { const r = await api(`/api/reveal?event_id=${encodeURIComponent(OPEN_ID)}&reason=${encodeURIComponent(reason)}`, { method: 'POST' });
+        $('#rvres').textContent = `${r.party} → ${r.counterparty}${r.imei ? '\nIMEI ' + r.imei : ''}\n${r.note}`; }
+  catch(e){ $('#rvres').textContent = '✘ ' + e.message; }
+};
+// Thăm dò API trạng thái mỗi 700 ms; nếu một request lỗi, lịch thăm dò tiếp tục chạy.
+async function poll(){ if (ME) { try { render(await api('/api/state')); } catch(e){} } setTimeout(poll, 700); }
+// Gửi yêu cầu tiêm kiểu tấn công đang chọn, rồi tổng hợp quyết định để hiển thị kết quả.
+document.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+  // Báo hiệu đang xử lý, gửi POST tới API và đọc kết quả JSON của loại tấn công đã chọn.
+  $('#res').textContent = '…';
+  let r; try { r = await api('/api/inject?type=' + b.dataset.a, { method: 'POST' }); } catch(e){ $('#res').textContent = '✘ ' + e.message; return; }
+  // Gộp số lượng theo cặp loại sự kiện/quyết định để tránh liệt kê từng event.
+  const c = {}; r.results.forEach(x => c[x.event_type + ':' + x.decision] = (c[x.event_type + ':' + x.decision] || 0) + 1);
+  // Chọn kết quả không ALLOW đầu tiên để đưa lý do phát hiện lên màn hình.
+  const first = r.results.find(x => x.decision !== 'ALLOW');
+  $('#res').textContent = `${r.attack}: ${r.results.length} ${L==='vi'?'sự kiện':'events'}\n` + Object.entries(c).map(([k,v]) => `  ${k.padEnd(16)} ${v}`).join('\n') + (first ? `\n${L==='vi'?'Lý do':'Reasons'}: ` + first.reasons.map(x => x.code).join(', ') : '');
+});
+// Bật chế độ latency/error hoặc tắt chaos bằng endpoint chịu lỗi.
+document.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => { try { await api('/api/chaos?mode=' + b.dataset.c, { method: 'POST' }); } catch(e){ return; } document.querySelectorAll('[data-c]').forEach(x => x.classList.toggle('on', x === b && b.dataset.c !== 'off')); });
+// Nhật ký thao tác: kiểm tra chuỗi + chữ ký, rồi liệt kê ai đã làm gì.
+$('#audit').onclick = async () => {
+  $('#ares').textContent = '…';
+  let a; try { a = await api('/api/audit?n=12'); } catch(e){ $('#ares').textContent = '✘ ' + e.message; return; }
+  const v = a.verify, vi = L === 'vi';
+  const head = v.valid ? `✔ ${vi?'Hợp lệ':'Valid'} · ${fmt(v.records)} ${vi?'thao tác, chữ ký khớp từng người':'actions, every signature matches its user'}`
+                       : `✘ ${vi?'Dòng':'Line'} ${v.first_bad_line}: ${v.problem}`;
+  $('#ares').textContent = head + '\n' + a.entries.slice().reverse().map(r => `${new Date(r.entry.ts * 1000).toLocaleTimeString()}  ${r.entry.actor.padEnd(14)} ${r.entry.action} ${JSON.stringify(r.entry.params)}`).join('\n');
+};
+// Yêu cầu server xác minh hash chain và hiển thị kết quả kiểm tra toàn vẹn.
+$('#verify').onclick = async () => { $('#vres').textContent = '…'; let v; try { v = await api('/api/evidence/verify'); } catch(e){ $('#vres').textContent = '✘ ' + e.message; return; } $('#vres').textContent = `${v.chain_valid ? '✔ ' + (L==='vi'?'Chuỗi hợp lệ':'Chain valid') : '✘ ' + (L==='vi'?'Bị sửa ở dòng ':'Tampered at line ') + v.first_bad_line}\n${fmt(v.records)} ${L==='vi'?'bản ghi':'records'} · last ${v.last_hash.slice(0, 24)}…`; };
+
+// Tạo một hàng HTML cho bảng benchmark; sub chứa ghi chú phụ như TP/FP.
+function row(label, val, sub){ return `<tr><td>${label}</td><td class="n">${val}</td><td class="n" style="color:var(--mut)">${sub ?? ''}</td></tr>`; }
+// Dựng bảng độ chính xác, phát hiện theo họ tấn công và biểu đồ load test từ metrics đã nạp.
+function renderMetrics(){
+  // Lấy các phần dữ liệu benchmark và kết quả load test cần để dựng báo cáo.
+  const b = metrics.benchmark, a = b.accuracy_test_50k, r = b.replicates_10x50k, lt = metrics.loadtest;
+  // Chọn nhãn ngôn ngữ hiện tại cho tiêu đề và ghi chú trong bảng.
+  const vi = L === 'vi';
+  $('#bench').innerHTML = `<table>
+    ${row(vi?'Sự kiện / gian lận':'Events / fraud', `${fmt(b.dataset.events)} / ${b.dataset.fraud_events}`, b.dataset.fraud_rate_pct + '%')}
+    ${row(vi?'Chặn cứng: recall':'Hard block: recall', a.block.recall_pct + '%', `TP ${a.block.TP}`)}
+    ${row(vi?'Chặn cứng: báo động giả':'Hard block: FPR', a.block.fpr_pct + '%', `FP ${a.block.FP}`)}
+    ${row(vi?'Chặn + cờ: recall':'Block + flag: recall', a.block_or_flag.recall_pct + '%', `TP ${a.block_or_flag.TP}`)}
+    ${row(vi?'Chặn + cờ: báo động giả':'Block + flag: FPR', a.block_or_flag.fpr_pct + '%', `FP ${a.block_or_flag.FP}`)}
+    ${row(vi?'500k sự kiện: FPR chặn':'500k events: block FPR', r.block_fpr_pct + '%', `95% CI ≤ ${r.block_fpr_95ci_pct[1]}%`)}
+    ${row(vi?'500k sự kiện: recall TB':'500k events: mean recall', r.recall_any_mean_pct + '%', `min ${r.recall_any_min_pct}%`)}
+  </table><div class="note">${vi?'Mục tiêu: FPR chặn < 0,01%. Dữ liệu mô phỏng, không phải thuê bao thật.':'Target: block FPR < 0.01%. Simulated data, not real subscribers.'}</div>`;
+  // Nhóm recall theo họ tấn công từ mười cửa sổ test để hiển thị mức trung bình.
+  const fams = {}; r.per_window.forEach(w => Object.entries(w.by_family).forEach(([k, v]) => (fams[k] = fams[k] || []).push(v)));
+  const name = Object.fromEntries(Object.entries(FRAUD_NAMES).map(([k, v]) => [k, v[vi ? 0 : 1]]));
+  $('#fam').innerHTML = '<table>' + Object.entries(fams).map(([k, v]) => { const m = v.reduce((x, y) => x + y, 0) / v.length; return `<tr><td>${name[k] || k}</td><td style="width:45%"><div class="bar"><i style="width:${m}%"></i></div></td><td class="n">${m.toFixed(1)}%</td></tr>`; }).join('') + `</table><div class="note">${vi?'Tỷ lệ sự kiện gian lận bị chặn hoặc gắn cờ. Wangiri không có trong dữ liệu huấn luyện: chỉ mô hình không giám sát bắt được.':'Share of fraud events blocked or flagged. Wangiri never appears in training: only the unsupervised model catches it.'}</div>`;
+  // Vẽ biểu đồ tải sau khi đã chuẩn bị các chuỗi dữ liệu cho từng cấu hình.
+  // Chuẩn bị context canvas và xóa hình cũ trước khi vẽ lại biểu đồ.
+  const c = $('#lt'), g = c.getContext('2d'), W = c.width, H = c.height; g.clearRect(0, 0, W, H);
+  // Trích throughput và p99 của hai cấu hình load test làm các điểm biểu đồ.
+  const s1 = (lt.single_process?.runs || []).map(x => [x.offered_rate_eps, x.latency_ms.CALL.p99]);
+  const s2 = (lt.partitioned_2?.runs || []).map(x => [x.offered_rate_eps, x.call_p99_ms]);
+  const s4 = (lt.partitioned_4?.runs || []).map(x => [x.offered_rate_eps, x.call_p99_ms]);
+  // Số nhân lấy từ chính file kết quả, không viết cứng trong giao diện.
+  const cores = lt.single_process?.hardware?.cpu_count;
+  if (cores) $('#lt_title').textContent = (vi ? 'Tải streaming · máy ' : 'Streaming load · ') + cores + (vi ? ' nhân' : '-core machine');
+  // Xác định giới hạn trục từ các tốc độ kiểm thử; trục latency luôn hiển thị đến 120 ms.
+  const xs = [...s1, ...s2, ...s4].map(p => p[0]), xmax = Math.max(...xs) * 1.05, ymax = 120;
+  // Chuyển tọa độ dữ liệu thành pixel trong vùng canvas và giới hạn trục dọc ở 120 ms.
+  const X = v => 40 + v / xmax * (W - 55), Y = v => H - 28 - Math.min(v, ymax) / ymax * (H - 45);
+  // Thiết lập màu chữ/lưới rồi vẽ các đường lưới và nhãn mốc độ trễ.
+  // Màu biểu đồ lấy từ theme hiện tại (sáng / tối).
+  const cLine = cssVar('--line'), cMut = cssVar('--mut'), cInk = cssVar('--ink');
+  g.strokeStyle = cLine; g.fillStyle = cMut; g.font = '18px JetBrains Mono';
+  [0, 30, 60, 90, 120].forEach(v => { g.beginPath(); g.moveTo(40, Y(v)); g.lineTo(W - 10, Y(v)); g.stroke(); g.fillText(v, 2, Y(v) + 6); });
+  // Vẽ đường đứt tại giới hạn SLA 30 ms để đối chiếu nhanh.
+  g.strokeStyle = '#e11d48'; g.setLineDash([6, 6]); g.beginPath(); g.moveTo(40, Y(30)); g.lineTo(W - 10, Y(30)); g.stroke(); g.setLineDash([]);
+  // Vẽ từng chuỗi điểm; mỗi cấu hình có màu riêng và điểm tròn để nhận biết số đo.
+  [[s1, cMut], [s2, cInk], [s4, '#e11d48']].forEach(([s, col]) => { g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); s.forEach(([x, y], i) => i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y))); g.stroke(); s.forEach(([x, y]) => { g.fillStyle = col; g.beginPath(); g.arc(X(x), Y(y), 5, 0, 7); g.fill(); }); });
+  // Thêm chú giải trục hoành với đơn vị sự kiện/giây theo ngôn ngữ hiện tại.
+  g.fillStyle = cMut; g.fillText((vi?'sự kiện/giây →':'events/s →') + ' ' + Math.round(xmax / 1000) + 'k', W - 230, H - 4);
+  // Giải thích màu hai cấu hình và đường ngưỡng trong phần ghi chú dưới biểu đồ.
+  // Mốc tốt nhất còn nằm trong ngân sách, lấy thẳng từ dữ liệu thay vì viết tay.
+  const best = (lt.partitioned_4?.runs || []).filter(x => x.call_p99_ms <= 30).pop();
+  const bestTxt = best ? (vi ? `Tốt nhất trong ngân sách: ${fmt(best.offered_rate_eps)} sự kiện/giây ở 4 phân vùng (p99 ${best.call_p99_ms} ms).`
+                             : `Best within budget: ${fmt(best.offered_rate_eps)} events/s on 4 partitions (p99 ${best.call_p99_ms} ms).`) : '';
+  $('#ltnote').innerHTML = (vi ? 'Xám: 1 tiến trình · Trắng: 2 phân vùng · Đỏ: 4 phân vùng. Đường đỏ đứt nét: ngân sách 30 ms. '
+                               : 'Grey: 1 process · White: 2 partitions · Red: 4 partitions. Red dashed: the 30 ms budget. ') + bestTxt +
+                           (vi ? ' Mục tiêu 50k TPS chưa đạt: cần chia phân vùng trên nhiều máy và một kho đặc trưng dùng chung.'
+                               : ' The 50k TPS target is not met: it needs partitions across several machines and a shared feature store.');
+}
+// Nạp metrics lưu sẵn, render báo cáo, thiết lập ngôn ngữ và bắt đầu polling live.
+// boot: xác định người dùng từ token, áp quyền, rồi nạp metrics; chưa có token thì mở màn đăng nhập.
+async function boot(){
+  if (!TOKEN){ showLogin(); return; }
+  try { ME = await api('/api/whoami'); } catch(e){ return; }
+  applyRole(); pollAgent();
+  try { metrics = await api('/api/metrics'); renderMetrics(); } catch(e){}
+}
+applyLang(); boot(); poll();
+</script>
+</body>
+</html>

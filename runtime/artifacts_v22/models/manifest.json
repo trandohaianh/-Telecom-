@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "created_utc": "2026-10-20T15:06:48.874350+00:00",
+  "model_version": "tfd-v2.2",
+  "feature_schema": {
+    "contract": "causal-v2-exact-24h-completion-order",
+    "call": [
+      "calls_1m",
+      "calls_10m",
+      "calls_1h",
+      "callee_dispersion_1h",
+      "in_out_ratio_24h",
+      "incoming_24h",
+      "short_call_ratio",
+      "mean_log_duration",
+      "completed_calls_seen",
+      "imei_per_msisdn_24h",
+      "msisdn_per_imei_24h",
+      "imei_gateway_tac",
+      "cell_registered",
+      "cell_unknown_radio",
+      "cell_trunk_or_intl",
+      "velocity_kmh",
+      "new_sims_on_cell_1h",
+      "caller_age_days",
+      "caller_foreign",
+      "origin_local",
+      "origin_intl_gw",
+      "origin_bank_trunk",
+      "cli_protected",
+      "protected_cli_mismatch",
+      "network_2g",
+      "hour_of_day",
+      "active_hours_on_network"
+    ],
+    "sms_meta": [
+      "route_brand_gw",
+      "route_p2p",
+      "route_unverified_bts",
+      "sender_is_brand",
+      "brand_not_via_gateway",
+      "url_count",
+      "url_unofficial",
+      "cell_registered",
+      "sender_sms_1h"
+    ],
+    "audio": [
+      "vocoder_artifact",
+      "pitch_jitter",
+      "spectral_flatness",
+      "speaker_drift",
+      "codec_2g",
+      "scam_lexicon_hits",
+      "caller_age_days",
+      "caller_known",
+      "caller_speech_ratio",
+      "callee_speech_s"
+    ]
+  },
+  "dataset_provenance": {
+    "status": "verified",
+    "feature_contract": "causal-v2-exact-24h-completion-order",
+    "manifest_sha256": "ea9e062ebb185efd9e0350f22971c30d4131e08973be25c4e937c33b02fe36de",
+    "input_sha256": {
+      "train_call_features.parquet": "51aa3d174b2ef9d19393db2bf3e425e2f9cf4b0d94038a44fa4c175b742ff481",
+      "train_sms_features.parquet": "924cf462a3fddecbede3875cba25df0ff5eda2926669cb83868ff25cab47ac5f",
+      "train_audio_features.parquet": "9dbb71e53872bb27589c115ccf8748394d46cd5ee67b65862e3d405d04c8ff08",
+      "val_call_features.parquet": "d5940e5f4bdd61e6160e9ced3d3c4ba565742bcb4753b6068d48f5481851b413",
+      "val_sms_features.parquet": "eb247fdb7f2632b6cbbaebc50410e9765248961a459c8bac7b9026fbd0e138e8",
+      "val_audio_features.parquet": "aa2c73df3b1521a9e73e8a41536d3f8d2e2f048a1ee4dbf82dd797cd42bc7686",
+      "cal_call_features.parquet": "dfaf0affa1963b739e8aa7ff21a95c5b5cb447f37e062e1078a1fcfe26da65b3",
+      "cal_sms_features.parquet": "03d3f76fdb70be62a0688f402dc0b1acb1234ee2382219171e23e69007f2d98c",
+      "cal_audio_features.parquet": "9642078b37a8080a99f4d2a55ca9e4aeffa67e4d0251f9b43036b5e7b282222e"
+    },
+    "dataset_kind": "synthetic_simulator"
+  },
+  "probabilities_calibrated": false,
+  "drift_baseline_requires_rebuild": true,
+  "artifacts": {
+    "tier1_call_lgbm.txt": {
+      "sha256": "922fef78513ab241e866875a0a47dc791b6c5ec3db2668467bee58a817b3e30e",
+      "bytes": 571499
+    },
+    "tier2_audio_lgbm.txt": {
+      "sha256": "027c4bb49774bd8912f2a3fef3520849ccc381aa5713bc9367c7ffe655dfc326",
+      "bytes": 100893
+    },
+    "tier1_zero_day_iforest.joblib": {
+      "sha256": "6a1d34dfba39384d30880604c0f5ccdd51642ab4e236c179c21c0adce2bef1eb",
+      "bytes": 7936293
+    },
+    "sms_text_lr.joblib": {
+      "sha256": "7f3c402513b2163e92b94a8463487de84fe524451af386d5d7fa400f71b86157",
+      "bytes": 597985
+    },
+    "thresholds.json": {
+      "sha256": "f05a0fd446795d90297be1b9b48171477f4bfc4c044a70931ab1265056c46c0f",
+      "bytes": 403
+    },
+    "training_report.json": {
+      "sha256": "9f7bfe7e28eeec0be332ce34b448cd40a2be0d771b518574ca30e837431b0c79",
+      "bytes": 6793
+    }
+  }
+}

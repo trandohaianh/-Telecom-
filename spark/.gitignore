@@ -1,0 +1,6 @@
+# Dữ liệu và kết quả sinh ra khi chạy — sinh lại bằng make_sample.py, không cần commit.
+sample_events.csv
+reference_call_features.parquet
+spark_call_features.parquet/
+_checkpoint/
+spark-warehouse/

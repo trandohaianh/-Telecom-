@@ -1,0 +1,14 @@
+{
+  "name": "Lá chắn lừa đảo viễn thông",
+  "short_name": "Lá chắn",
+  "description": "Cảnh báo cuộc gọi và tin nhắn lừa đảo, phát hiện ở tầng nhà mạng.",
+  "lang": "vi",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#f6f6f7",
+  "theme_color": "#e11d48",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

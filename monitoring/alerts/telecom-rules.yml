@@ -1,0 +1,63 @@
+# Luật cảnh báo Telecom Fraud Shield (Prometheus / Grafana Cloud — nạp bằng mimirtool hoặc tạo trong UI).
+groups:
+  - name: telecom-detection
+    rules:
+      - alert: TfsDown
+        expr: up{job=~".*telecom.*|.*tfs.*"} == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Telecom Fraud Shield không scrape được 5 phút"}
+      - alert: TfsFailOpen
+        expr: sum(increase(tfs_decisions{decision="FAIL_OPEN"}[10m])) > 20
+        labels: {severity: critical}
+        annotations:
+          summary: "Hơn 20 quyết định fail-open trong 10 phút"
+          description: "Mô hình không kịp chấm: cuộc gọi đi qua không được bảo vệ. Kiểm tra CPU, hàng đợi, breaker."
+      - alert: TfsSlowDecisions
+        expr: max(tfs_decision_latency_ms{quantile="p99"}) > 30
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "p99 độ trễ quyết định vượt SLA 30 ms"}
+      - alert: TfsInferenceOverload
+        expr: sum(increase(tfs_inference{kind=~"overloaded|admission_rejected"}[10m])) > 0
+        labels: {severity: warning}
+        annotations: {summary: "Runtime suy luận từ chối/quá tải yêu cầu"}
+      - alert: TfsBreakerOpen
+        expr: max(tfs_breaker_open) == 1
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "Circuit breaker mô hình đang MỞ (chỉ còn luật dự phòng)"}
+      - alert: TfsEnforceEnabled
+        expr: max(tfs_network_enforce) == 1
+        labels: {severity: warning}
+        annotations: {summary: "Hệ thống đang ở chế độ ENFORCE (khuyến nghị chặn gửi nhà mạng có hiệu lực)"}
+      - alert: TfsDecisionDrift
+        expr: max(tfs_drift_decision_psi) >= 0.25
+        for: 2h
+        labels: {severity: warning}
+        annotations: {summary: "Phân bố quyết định lệch mạnh so với baseline huấn luyện (PSI ≥ 0.25)"}
+  - name: telecom-ops
+    rules:
+      - alert: TfsBackupStale
+        expr: time() - max(tfs_pipeline_last_success_timestamp_seconds{task="backup"}) > 26 * 3600
+        for: 30m
+        labels: {severity: critical}
+        annotations: {summary: "Không có backup Telecom mới hơn 26 giờ"}
+      - alert: TfsKpiStale
+        expr: time() - max(tfs_pipeline_last_success_timestamp_seconds{task="kpi_snapshot"}) > 3 * 3600
+        for: 30m
+        labels: {severity: warning}
+        annotations: {summary: "Pipeline KPI không chạy hơn 3 giờ"}
+      - alert: TfsReportsBacklog
+        expr: max(tfs_number_reports{status="pending"}) > 100
+        for: 1h
+        labels: {severity: warning}
+        annotations: {summary: "Hơn 100 số bị báo cáo đang chờ chuyên viên duyệt"}
+      - alert: TfsLoginBruteForce
+        expr: sum(increase(tfs_auth_events_total{result="failed"}[15m])) > 50
+        labels: {severity: warning}
+        annotations: {summary: "Nhiều lần đăng nhập sai (có thể đang bị dò mật khẩu)"}
+      - alert: TfsSmsCostSpike
+        expr: sum(increase(tfs_usage_cost_usd_total[1h])) > 2
+        labels: {severity: warning}
+        annotations: {summary: "Chi phí SMS OTP 1 giờ qua vượt $2"}

@@ -1,0 +1,4094 @@
+{
+  "kind": "signed_asgi_tcp_body_gap_diagnostic",
+  "transport_only": true,
+  "verified_at_utc": "2026-10-21T16:23:21Z",
+  "model_scoring": false,
+  "sqlite": false,
+  "environment": {
+    "image": "telecom-backend-verify:20261021-a17f",
+    "cpus": 2,
+    "memory_bytes": 2147483648,
+    "network": "none; loopback only",
+    "source": "read-only bind; frozen copy",
+    "tmp_mount": [
+      "/dev/sdd /tmp ext4 rw,relatime 0 0"
+    ],
+    "cpu_max": "200000 100000",
+    "python": "3.11.16",
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+    "httpx": "0.28.1",
+    "uvicorn": "0.47.0",
+    "source_sha256": {
+      "security.py": "7ee62933dcfb3e47938a4f241115cd553b9c61081b8860b73fd7ae80f8061b12",
+      "http_loadtest.py": "d2b69ee1542103de998abc16ca324cf7f6e16e0de5cd3bcc438af544858f03b9",
+      "config.py": "73f7bf3bf3900cdea2f1df4187e404661c795a4b67f0db2a72135e1a09c8557f",
+      "precise_event_loop.py": "22e9db2defe17219d9a9535b31924137eb550f772895d317ca626f25bd3f577b"
+    }
+  },
+  "method": {
+    "rates_eps": [
+      10,
+      100
+    ],
+    "seconds": 3,
+    "concurrency": 32,
+    "variant_order": [
+      "httpx_default",
+      "httpx_explicit_nodelay"
+    ],
+    "key": "preloaded fresh explicit key; no per-request storage/cache dependency",
+    "httpx": "same run_http; diagnostic client subclass records sockets+httpcore trace",
+    "server": "instrumented subclass of actual uvicorn AutoHTTPProtocol; socket options read, never changed",
+    "explicit_nodelay": "AsyncHTTPTransport(socket_options=[(IPPROTO_TCP,TCP_NODELAY,1)])",
+    "stdlib": "bounded connection pool, asyncio.to_thread; diagnostic HTTPConnection subclass sends small headers+bytes body in one send",
+    "stdlib_original_send_call_segments_bytes": [
+      38,
+      1
+    ],
+    "stdlib_original_note": "probe records actual standard-library header/body send calls; diagnostic explicitly coalesces regardless of original behavior",
+    "limitations": "short fixed-order transport-only test; stdlib variant changes async backend/thread model AND coalescing, so not a single-variable causality proof",
+    "scored_metrics": "zero by design, no inference SLA claim"
+  },
+  "runs": [
+    {
+      "variant": "httpx_default",
+      "transport_only": true,
+      "benchmark": {
+        "kind": "http_end_to_end",
+        "offered_rate_eps": 10.0,
+        "offered_events": 30,
+        "completed_requests": 30,
+        "client_shed": 0,
+        "wall_s": 2.913,
+        "completed_eps": 10.3,
+        "http_status": {
+          "200": 30
+        },
+        "decisions": {
+          "ALLOW": 30
+        },
+        "ingest": {
+          "TRANSPORT_ONLY": 30
+        },
+        "fail_open": 0,
+        "unexpected_enforce": 0,
+        "latency_ms": {
+          "p50": 9.799,
+          "p95": 11.478,
+          "p99": 23.694
+        },
+        "scheduler_delay_ms": {
+          "p50": 1.061,
+          "p95": 1.528,
+          "p99": 1.956
+        },
+        "request_roundtrip_ms": {
+          "p50": 8.543,
+          "p95": 11.023,
+          "p99": 23.17
+        },
+        "server_reported_latency_ms": {
+          "p50": 0.157,
+          "p95": 0.286,
+          "p99": 0.296
+        },
+        "responses_within_30ms_pct": 100.0,
+        "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
+        "deadline_ms": 30.0,
+        "denominator": "offered_events",
+        "concurrency": 32,
+        "offered_window_s": 3.0,
+        "timeout_s": 2.0,
+        "response_outcomes": {
+          "scored_before_deadline": 0,
+          "pending": 0,
+          "fail_open": 0,
+          "scored_after_deadline": 0,
+          "scored_deadline_unverified": 0,
+          "not_scored": 30,
+          "scoring_unreported": 0,
+          "scoring_inconsistent": 0,
+          "http_error": 0,
+          "invalid_response": 0,
+          "client_error": 0,
+          "client_shed": 0
+        },
+        "scored_responses": 0,
+        "pending_responses": 0,
+        "pending_responses_pct": 0.0,
+        "fail_open_pct": 0.0,
+        "scoring_unreported": 0,
+        "scored_before_deadline": 0,
+        "scored_before_deadline_pct": 0.0,
+        "scored_within_http_30ms": 0,
+        "scored_within_http_30ms_pct": 0.0,
+        "http_responses_within_30ms": 30,
+        "http_responses_within_30ms_pct": 100.0,
+        "server_responses_within_30ms": 30,
+        "server_responses_within_30ms_pct": 100.0,
+        "server_commit_ms": {},
+        "server_queue_ms": {},
+        "metric_definitions": {
+          "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; not pending/fail_open; finite server latency <=30ms",
+          "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
+          "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
+          "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap"
+        }
+      },
+      "server_phase_ms": {
+        "await_body_ms": {
+          "count": 30,
+          "p50": 0.084509,
+          "p95": 0.165856,
+          "p99": 0.175992,
+          "max": 0.179618
+        },
+        "body_total_ms": {
+          "count": 30,
+          "p50": 0.087808,
+          "p95": 0.170001,
+          "p99": 0.180992,
+          "max": 0.184618
+        },
+        "auth_ms": {
+          "count": 30,
+          "p50": 0.046154,
+          "p95": 0.072268,
+          "p99": 0.09101,
+          "max": 0.097709
+        },
+        "json_ms": {
+          "count": 30,
+          "p50": 0.021702,
+          "p95": 0.035003,
+          "p99": 0.0475,
+          "max": 0.052605
+        },
+        "handler_total_ms": {
+          "count": 30,
+          "p50": 0.157365,
+          "p95": 0.285653,
+          "p99": 0.296057,
+          "max": 0.298928
+        }
+      },
+      "client_phase": {
+        "await_response_headers_ms": {
+          "count": 30,
+          "p50": 0.870234,
+          "p95": 1.542263,
+          "p99": 2.805792,
+          "max": 3.232305
+        },
+        "body_send_ms": {
+          "count": 30,
+          "p50": 0.132763,
+          "p95": 0.258945,
+          "p99": 0.294481,
+          "max": 0.298628
+        },
+        "header_to_body_gap_ms": {
+          "count": 30,
+          "p50": 0.005201,
+          "p95": 0.009151,
+          "p99": 0.010311,
+          "max": 0.010601
+        },
+        "headers_send_ms": {
+          "count": 30,
+          "p50": 0.273276,
+          "p95": 0.432276,
+          "p99": 0.47662,
+          "max": 0.491847
+        }
+      },
+      "client_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "server_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "cpu_stat_delta": {
+        "usage_usec": 198379,
+        "user_usec": 171277,
+        "system_usec": 27103,
+        "nice_usec": 0,
+        "nr_periods": 30,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "measured_call_wall_s": 2.9732095819999813,
+      "mean_cpu_cores": 0.06672217162254566,
+      "client_process_before": {
+        "VmRSS": 63552,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 977,
+        "nonvoluntary_ctxt_switches": 10
+      },
+      "client_process_after": {
+        "VmRSS": 66492,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 1549,
+        "nonvoluntary_ctxt_switches": 10
+      },
+      "server_process_before": {
+        "VmRSS": 48024,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 742,
+        "nonvoluntary_ctxt_switches": 0
+      },
+      "server_process_after": {
+        "VmRSS": 48048,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 806,
+        "nonvoluntary_ctxt_switches": 0
+      },
+      "asgi_health": {
+        "ok": true,
+        "transport_only": true,
+        "protocol": "uvicorn.protocols.http.h11_impl.H11Protocol",
+        "loop": "_UnixSelectorEventLoop"
+      }
+    },
+    {
+      "variant": "httpx_default",
+      "transport_only": true,
+      "benchmark": {
+        "kind": "http_end_to_end",
+        "offered_rate_eps": 100.0,
+        "offered_events": 300,
+        "completed_requests": 242,
+        "client_shed": 58,
+        "wall_s": 3.742,
+        "completed_eps": 64.67,
+        "http_status": {
+          "200": 242
+        },
+        "decisions": {
+          "ALLOW": 242
+        },
+        "ingest": {
+          "TRANSPORT_ONLY": 242
+        },
+        "fail_open": 0,
+        "unexpected_enforce": 0,
+        "latency_ms": {
+          "p50": 10.695,
+          "p95": 1060.121,
+          "p99": 1492.844
+        },
+        "scheduler_delay_ms": {
+          "p50": 1.251,
+          "p95": 144.36,
+          "p99": 188.776
+        },
+        "request_roundtrip_ms": {
+          "p50": 9.334,
+          "p95": 955.66,
+          "p99": 1413.059
+        },
+        "server_reported_latency_ms": {
+          "p50": 0.241,
+          "p95": 33.577,
+          "p99": 46.738
+        },
+        "responses_within_30ms_pct": 54.0,
+        "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
+        "deadline_ms": 30.0,
+        "denominator": "offered_events",
+        "concurrency": 32,
+        "offered_window_s": 3.0,
+        "timeout_s": 2.0,
+        "response_outcomes": {
+          "scored_before_deadline": 0,
+          "pending": 0,
+          "fail_open": 0,
+          "scored_after_deadline": 0,
+          "scored_deadline_unverified": 0,
+          "not_scored": 242,
+          "scoring_unreported": 0,
+          "scoring_inconsistent": 0,
+          "http_error": 0,
+          "invalid_response": 0,
+          "client_error": 0,
+          "client_shed": 58
+        },
+        "scored_responses": 0,
+        "pending_responses": 0,
+        "pending_responses_pct": 0.0,
+        "fail_open_pct": 0.0,
+        "scoring_unreported": 0,
+        "scored_before_deadline": 0,
+        "scored_before_deadline_pct": 0.0,
+        "scored_within_http_30ms": 0,
+        "scored_within_http_30ms_pct": 0.0,
+        "http_responses_within_30ms": 162,
+        "http_responses_within_30ms_pct": 54.0,
+        "server_responses_within_30ms": 225,
+        "server_responses_within_30ms_pct": 75.0,
+        "server_commit_ms": {},
+        "server_queue_ms": {},
+        "metric_definitions": {
+          "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; not pending/fail_open; finite server latency <=30ms",
+          "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
+          "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
+          "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap"
+        }
+      },
+      "server_phase_ms": {
+        "await_body_ms": {
+          "count": 242,
+          "p50": 0.135113,
+          "p95": 33.442164,
+          "p99": 46.592437,
+          "max": 93.173428
+        },
+        "body_total_ms": {
+          "count": 242,
+          "p50": 0.139263,
+          "p95": 33.446985,
+          "p99": 46.597465,
+          "max": 93.178629
+        },
+        "auth_ms": {
+          "count": 242,
+          "p50": 0.053705,
+          "p95": 0.111116,
+          "p99": 0.150629,
+          "max": 0.203119
+        },
+        "json_ms": {
+          "count": 242,
+          "p50": 0.025202,
+          "p95": 0.053595,
+          "p99": 0.088095,
+          "max": 0.126312
+        },
+        "handler_total_ms": {
+          "count": 242,
+          "p50": 0.240724,
+          "p95": 33.576658,
+          "p99": 46.738418,
+          "max": 93.307742
+        }
+      },
+      "client_phase": {
+        "await_response_headers_ms": {
+          "count": 242,
+          "p50": 1.24817,
+          "p95": 86.273167,
+          "p99": 145.791901,
+          "max": 214.847588
+        },
+        "body_send_ms": {
+          "count": 242,
+          "p50": 0.198969,
+          "p95": 34.545066,
+          "p99": 47.102186,
+          "max": 93.60797
+        },
+        "header_to_body_gap_ms": {
+          "count": 242,
+          "p50": 0.006,
+          "p95": 0.015896,
+          "p99": 0.023756,
+          "max": 0.046204
+        },
+        "headers_send_ms": {
+          "count": 242,
+          "p50": 0.380637,
+          "p95": 50.172973,
+          "p99": 61.472398,
+          "max": 135.76821
+        }
+      },
+      "client_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 265180
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 265180
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 265180
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 265180
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 265180
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 265180
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "server_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "cpu_stat_delta": {
+        "usage_usec": 2046490,
+        "user_usec": 1707371,
+        "system_usec": 339118,
+        "nice_usec": 0,
+        "nr_periods": 38,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "measured_call_wall_s": 3.7716292219993193,
+      "mean_cpu_cores": 0.5426010563453973,
+      "client_process_before": {
+        "VmRSS": 66492,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 1551,
+        "nonvoluntary_ctxt_switches": 10
+      },
+      "client_process_after": {
+        "VmRSS": 67640,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 7381,
+        "nonvoluntary_ctxt_switches": 16
+      },
+      "server_process_before": {
+        "VmRSS": 48060,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 808,
+        "nonvoluntary_ctxt_switches": 0
+      },
+      "server_process_after": {
+        "VmRSS": 48380,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 1107,
+        "nonvoluntary_ctxt_switches": 0
+      },
+      "asgi_health": {
+        "ok": true,
+        "transport_only": true,
+        "protocol": "uvicorn.protocols.http.h11_impl.H11Protocol",
+        "loop": "_UnixSelectorEventLoop"
+      }
+    },
+    {
+      "variant": "httpx_explicit_nodelay",
+      "transport_only": true,
+      "benchmark": {
+        "kind": "http_end_to_end",
+        "offered_rate_eps": 10.0,
+        "offered_events": 30,
+        "completed_requests": 30,
+        "client_shed": 0,
+        "wall_s": 2.913,
+        "completed_eps": 10.3,
+        "http_status": {
+          "200": 30
+        },
+        "decisions": {
+          "ALLOW": 30
+        },
+        "ingest": {
+          "TRANSPORT_ONLY": 30
+        },
+        "fail_open": 0,
+        "unexpected_enforce": 0,
+        "latency_ms": {
+          "p50": 10.993,
+          "p95": 12.724,
+          "p99": 12.923
+        },
+        "scheduler_delay_ms": {
+          "p50": 1.122,
+          "p95": 1.587,
+          "p99": 1.605
+        },
+        "request_roundtrip_ms": {
+          "p50": 9.967,
+          "p95": 11.659,
+          "p99": 11.995
+        },
+        "server_reported_latency_ms": {
+          "p50": 0.169,
+          "p95": 0.353,
+          "p99": 0.393
+        },
+        "responses_within_30ms_pct": 100.0,
+        "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
+        "deadline_ms": 30.0,
+        "denominator": "offered_events",
+        "concurrency": 32,
+        "offered_window_s": 3.0,
+        "timeout_s": 2.0,
+        "response_outcomes": {
+          "scored_before_deadline": 0,
+          "pending": 0,
+          "fail_open": 0,
+          "scored_after_deadline": 0,
+          "scored_deadline_unverified": 0,
+          "not_scored": 30,
+          "scoring_unreported": 0,
+          "scoring_inconsistent": 0,
+          "http_error": 0,
+          "invalid_response": 0,
+          "client_error": 0,
+          "client_shed": 0
+        },
+        "scored_responses": 0,
+        "pending_responses": 0,
+        "pending_responses_pct": 0.0,
+        "fail_open_pct": 0.0,
+        "scoring_unreported": 0,
+        "scored_before_deadline": 0,
+        "scored_before_deadline_pct": 0.0,
+        "scored_within_http_30ms": 0,
+        "scored_within_http_30ms_pct": 0.0,
+        "http_responses_within_30ms": 30,
+        "http_responses_within_30ms_pct": 100.0,
+        "server_responses_within_30ms": 30,
+        "server_responses_within_30ms_pct": 100.0,
+        "server_commit_ms": {},
+        "server_queue_ms": {},
+        "metric_definitions": {
+          "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; not pending/fail_open; finite server latency <=30ms",
+          "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
+          "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
+          "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap"
+        }
+      },
+      "server_phase_ms": {
+        "await_body_ms": {
+          "count": 30,
+          "p50": 0.088059,
+          "p95": 0.212401,
+          "p99": 0.233223,
+          "max": 0.237023
+        },
+        "body_total_ms": {
+          "count": 30,
+          "p50": 0.091209,
+          "p95": 0.216646,
+          "p99": 0.23624,
+          "max": 0.239923
+        },
+        "auth_ms": {
+          "count": 30,
+          "p50": 0.051355,
+          "p95": 0.114046,
+          "p99": 0.146958,
+          "max": 0.157515
+        },
+        "json_ms": {
+          "count": 30,
+          "p50": 0.023052,
+          "p95": 0.042814,
+          "p99": 0.108519,
+          "max": 0.133113
+        },
+        "handler_total_ms": {
+          "count": 30,
+          "p50": 0.168666,
+          "p95": 0.353319,
+          "p99": 0.393237,
+          "max": 0.40684
+        }
+      },
+      "client_phase": {
+        "await_response_headers_ms": {
+          "count": 30,
+          "p50": 1.030349,
+          "p95": 1.497599,
+          "p99": 2.620813,
+          "max": 3.075895
+        },
+        "body_send_ms": {
+          "count": 30,
+          "p50": 0.147064,
+          "p95": 0.284078,
+          "p99": 0.336536,
+          "max": 0.353734
+        },
+        "header_to_body_gap_ms": {
+          "count": 30,
+          "p50": 0.0057,
+          "p95": 0.016877,
+          "p99": 0.032702,
+          "max": 0.037603
+        },
+        "headers_send_ms": {
+          "count": 30,
+          "p50": 0.369936,
+          "p95": 0.767469,
+          "p99": 1.991198,
+          "max": 2.467337
+        }
+      },
+      "client_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "server_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "cpu_stat_delta": {
+        "usage_usec": 190907,
+        "user_usec": 151482,
+        "system_usec": 39425,
+        "nice_usec": 0,
+        "nr_periods": 29,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "measured_call_wall_s": 2.937310143999639,
+      "mean_cpu_cores": 0.06499381769064679,
+      "client_process_before": {
+        "VmRSS": 68652,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 7422,
+        "nonvoluntary_ctxt_switches": 17
+      },
+      "client_process_after": {
+        "VmRSS": 69348,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 7994,
+        "nonvoluntary_ctxt_switches": 17
+      },
+      "server_process_before": {
+        "VmRSS": 48364,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 745,
+        "nonvoluntary_ctxt_switches": 2
+      },
+      "server_process_after": {
+        "VmRSS": 48388,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 810,
+        "nonvoluntary_ctxt_switches": 2
+      },
+      "asgi_health": {
+        "ok": true,
+        "transport_only": true,
+        "protocol": "uvicorn.protocols.http.h11_impl.H11Protocol",
+        "loop": "_UnixSelectorEventLoop"
+      }
+    },
+    {
+      "variant": "httpx_explicit_nodelay",
+      "transport_only": true,
+      "benchmark": {
+        "kind": "http_end_to_end",
+        "offered_rate_eps": 100.0,
+        "offered_events": 300,
+        "completed_requests": 300,
+        "client_shed": 0,
+        "wall_s": 3.0,
+        "completed_eps": 100.0,
+        "http_status": {
+          "200": 300
+        },
+        "decisions": {
+          "ALLOW": 300
+        },
+        "ingest": {
+          "TRANSPORT_ONLY": 300
+        },
+        "fail_open": 0,
+        "unexpected_enforce": 0,
+        "latency_ms": {
+          "p50": 9.336,
+          "p95": 15.245,
+          "p99": 21.049
+        },
+        "scheduler_delay_ms": {
+          "p50": 1.032,
+          "p95": 3.939,
+          "p99": 5.412
+        },
+        "request_roundtrip_ms": {
+          "p50": 8.377,
+          "p95": 11.936,
+          "p99": 16.521
+        },
+        "server_reported_latency_ms": {
+          "p50": 0.177,
+          "p95": 0.386,
+          "p99": 2.036
+        },
+        "responses_within_30ms_pct": 100.0,
+        "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
+        "deadline_ms": 30.0,
+        "denominator": "offered_events",
+        "concurrency": 32,
+        "offered_window_s": 3.0,
+        "timeout_s": 2.0,
+        "response_outcomes": {
+          "scored_before_deadline": 0,
+          "pending": 0,
+          "fail_open": 0,
+          "scored_after_deadline": 0,
+          "scored_deadline_unverified": 0,
+          "not_scored": 300,
+          "scoring_unreported": 0,
+          "scoring_inconsistent": 0,
+          "http_error": 0,
+          "invalid_response": 0,
+          "client_error": 0,
+          "client_shed": 0
+        },
+        "scored_responses": 0,
+        "pending_responses": 0,
+        "pending_responses_pct": 0.0,
+        "fail_open_pct": 0.0,
+        "scoring_unreported": 0,
+        "scored_before_deadline": 0,
+        "scored_before_deadline_pct": 0.0,
+        "scored_within_http_30ms": 0,
+        "scored_within_http_30ms_pct": 0.0,
+        "http_responses_within_30ms": 300,
+        "http_responses_within_30ms_pct": 100.0,
+        "server_responses_within_30ms": 300,
+        "server_responses_within_30ms_pct": 100.0,
+        "server_commit_ms": {},
+        "server_queue_ms": {},
+        "metric_definitions": {
+          "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; not pending/fail_open; finite server latency <=30ms",
+          "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
+          "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
+          "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap"
+        }
+      },
+      "server_phase_ms": {
+        "await_body_ms": {
+          "count": 300,
+          "p50": 0.095459,
+          "p95": 0.242148,
+          "p99": 1.947653,
+          "max": 4.27111
+        },
+        "body_total_ms": {
+          "count": 300,
+          "p50": 0.09861,
+          "p95": 0.246269,
+          "p99": 1.951673,
+          "max": 4.276411
+        },
+        "auth_ms": {
+          "count": 300,
+          "p50": 0.051455,
+          "p95": 0.106715,
+          "p99": 0.150443,
+          "max": 0.21212
+        },
+        "json_ms": {
+          "count": 300,
+          "p50": 0.022602,
+          "p95": 0.043164,
+          "p99": 0.073403,
+          "max": 0.144414
+        },
+        "handler_total_ms": {
+          "count": 300,
+          "p50": 0.177217,
+          "p95": 0.386282,
+          "p99": 2.036138,
+          "max": 4.415124
+        }
+      },
+      "client_phase": {
+        "await_response_headers_ms": {
+          "count": 300,
+          "p50": 0.955091,
+          "p95": 1.72417,
+          "p99": 4.446985,
+          "max": 5.584736
+        },
+        "body_send_ms": {
+          "count": 300,
+          "p50": 0.144764,
+          "p95": 0.402074,
+          "p99": 2.302089,
+          "max": 4.616743
+        },
+        "header_to_body_gap_ms": {
+          "count": 300,
+          "p50": 0.0057,
+          "p95": 0.012926,
+          "p99": 0.028438,
+          "max": 0.10011
+        },
+        "headers_send_ms": {
+          "count": 300,
+          "p50": 0.284727,
+          "p95": 0.689251,
+          "p99": 2.483622,
+          "max": 3.797564
+        }
+      },
+      "client_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "server_socket_observations": [
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        },
+        {
+          "tcp_nodelay": 1,
+          "send_buffer_bytes": 2626560,
+          "receive_buffer_bytes": 131072
+        }
+      ],
+      "cpu_stat_delta": {
+        "usage_usec": 1531790,
+        "user_usec": 1302955,
+        "system_usec": 228835,
+        "nice_usec": 0,
+        "nr_periods": 30,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "measured_call_wall_s": 3.028053654001269,
+      "mean_cpu_cores": 0.5058662015370478,
+      "client_process_before": {
+        "VmRSS": 69356,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 7996,
+        "nonvoluntary_ctxt_switches": 17
+      },
+      "client_process_after": {
+        "VmRSS": 69356,
+        "Threads": 1,
+        "voluntary_ctxt_switches": 13311,
+        "nonvoluntary_ctxt_switches": 24
+      },
+      "server_process_before": {
+        "VmRSS": 48400,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 812,
+        "nonvoluntary_ctxt_switches": 2
+      },
+      "server_process_after": {
+        "VmRSS": 48548,
+        "Threads": 2,
+        "voluntary_ctxt_switches": 1148,
+        "nonvoluntary_ctxt_switches": 4
+      },
+      "asgi_health": {
+        "ok": true,
+        "transport_only": true,
+        "protocol": "uvicorn.protocols.http.h11_impl.H11Protocol",
+        "loop": "_UnixSelectorEventLoop"
+      }
+    }
+  ]
+}

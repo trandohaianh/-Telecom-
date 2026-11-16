@@ -1,0 +1,155 @@
+{
+  "verified_at_utc": "2026-10-21T02:40:23Z",
+  "isolation": "fresh local temporary credentials/state; user logs and secrets unchanged",
+  "artifacts_dir": "C:\\Users\\TRANDO~1\\AppData\\Local\\Temp\\telecom_live_http_8dnxh8ep",
+  "smoke": {
+    "signed_setup": true,
+    "duplicate_no_second_update": true,
+    "conflicting_identity_409": true,
+    "unsigned_401": true,
+    "cdr_retry_idempotent": true,
+    "real_wav_observation": true,
+    "unvalidated_enforce_refused": true,
+    "restart_setup_and_voice_idempotent": true
+  },
+  "runs": [
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 10.0,
+      "offered_events": 30,
+      "completed_requests": 30,
+      "client_shed": 0,
+      "wall_s": 2.926,
+      "completed_eps": 10.25,
+      "http_status": {
+        "200": 30
+      },
+      "decisions": {
+        "ALLOW": 25,
+        "FLAG": 5
+      },
+      "ingest": {
+        "PENDING": 25,
+        "ADMITTED": 5
+      },
+      "fail_open": 25,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 35.345,
+        "p95": 611.229,
+        "p99": 726.661
+      },
+      "scheduler_delay_ms": {
+        "p50": 10.331,
+        "p95": 578.739,
+        "p99": 690.882
+      },
+      "request_roundtrip_ms": {
+        "p50": 25.538,
+        "p95": 35.064,
+        "p99": 42.471
+      },
+      "server_reported_latency_ms": {
+        "p50": 16.0,
+        "p95": 16.0,
+        "p99": 38.01
+      },
+      "responses_within_30ms_pct": 33.333,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    },
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 50.0,
+      "offered_events": 150,
+      "completed_requests": 150,
+      "client_shed": 0,
+      "wall_s": 3.019,
+      "completed_eps": 49.68,
+      "http_status": {
+        "200": 150
+      },
+      "decisions": {
+        "ALLOW": 150
+      },
+      "ingest": {
+        "PENDING": 150
+      },
+      "fail_open": 150,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 38.532,
+        "p95": 464.129,
+        "p99": 579.683
+      },
+      "scheduler_delay_ms": {
+        "p50": 5.897,
+        "p95": 393.377,
+        "p99": 511.334
+      },
+      "request_roundtrip_ms": {
+        "p50": 32.734,
+        "p95": 67.822,
+        "p99": 70.461
+      },
+      "server_reported_latency_ms": {
+        "p50": 16.0,
+        "p95": 31.0,
+        "p99": 32.0
+      },
+      "responses_within_30ms_pct": 18.0,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    },
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 100.0,
+      "offered_events": 300,
+      "completed_requests": 254,
+      "client_shed": 46,
+      "wall_s": 3.047,
+      "completed_eps": 83.36,
+      "http_status": {
+        "200": 254
+      },
+      "decisions": {
+        "ALLOW": 254
+      },
+      "ingest": {
+        "PENDING": 254
+      },
+      "fail_open": 254,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 35.815,
+        "p95": 683.917,
+        "p99": 765.872
+      },
+      "scheduler_delay_ms": {
+        "p50": 3.867,
+        "p95": 509.693,
+        "p99": 608.209
+      },
+      "request_roundtrip_ms": {
+        "p50": 30.361,
+        "p95": 169.5,
+        "p99": 194.123
+      },
+      "server_reported_latency_ms": {
+        "p50": 16.0,
+        "p95": 47.0,
+        "p99": 63.0
+      },
+      "responses_within_30ms_pct": 29.333,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    }
+  ],
+  "evidence_chain_valid": true,
+  "evidence_records_before_restart": 732,
+  "journal_counts": {
+    "CDR": 1,
+    "OBSERVATION": 1,
+    "RETRO": 354,
+    "VERDICT": 435
+  },
+  "model_scope": "synthetic model bundle; runtime/transport verification, not real-world accuracy evidence",
+  "model_version": "tfd-v2.2"
+}

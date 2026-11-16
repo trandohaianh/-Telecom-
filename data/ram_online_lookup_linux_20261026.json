@@ -1,0 +1,17 @@
+{
+  "namespace": "demo-376cc9da2b194fd9953319e73161c7e7",
+  "samples": 1000,
+  "correct_within_budget": 1000,
+  "degraded": 0,
+  "incorrect": 0,
+  "lookup_budget_ms": 5.0,
+  "all_attempt_latency_ms": {
+    "p50": 0.40908750088419765,
+    "p99": 1.0244940058328211,
+    "max": 1.6807549982331693
+  },
+  "scope": "sequential in-process function + real Redis; no HTTP/SIP load or capacity certification",
+  "bloom_bytes": 2397,
+  "bloom_hashes": 13,
+  "deployment": "Python client and two Redis servers on dedicated internal Linux bridge; RAM-only policy/analytics, no SQL"
+}

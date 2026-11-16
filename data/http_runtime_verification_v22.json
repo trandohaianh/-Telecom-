@@ -1,0 +1,90 @@
+{
+  "verified_at_utc": "2026-10-20T15:05:24Z",
+  "isolation": "fresh local temporary credentials/state; user logs and secrets unchanged",
+  "artifacts_dir": "C:\\Users\\TRANDO~1\\AppData\\Local\\Temp\\telecom_live_http_4dtjikic",
+  "smoke": {
+    "signed_setup": true,
+    "duplicate_no_second_update": true,
+    "conflicting_identity_409": true,
+    "unsigned_401": true,
+    "cdr_retry_idempotent": true,
+    "real_wav_observation": true,
+    "unvalidated_enforce_refused": true,
+    "restart_setup_and_voice_idempotent": true
+  },
+  "runs": [
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 100.0,
+      "offered_events": 200,
+      "completed_requests": 168,
+      "client_shed": 32,
+      "wall_s": 2.015,
+      "completed_eps": 83.38,
+      "http_status": {
+        "200": 168
+      },
+      "decisions": {
+        "ALLOW": 168
+      },
+      "ingest": {
+        "PENDING": 168
+      },
+      "fail_open": 168,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 21.144,
+        "p95": 570.921,
+        "p99": 625.933
+      },
+      "scheduler_delay_ms": {
+        "p50": -3.347,
+        "p95": 465.658,
+        "p99": 530.676
+      },
+      "responses_within_30ms_pct": 53.0,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    },
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 500.0,
+      "offered_events": 1000,
+      "completed_requests": 212,
+      "client_shed": 788,
+      "wall_s": 2.298,
+      "completed_eps": 92.24,
+      "http_status": {
+        "200": 212
+      },
+      "decisions": {
+        "ALLOW": 212
+      },
+      "ingest": {
+        "PENDING": 212
+      },
+      "fail_open": 212,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 237.882,
+        "p95": 745.822,
+        "p99": 755.463
+      },
+      "scheduler_delay_ms": {
+        "p50": 14.059,
+        "p95": 644.891,
+        "p99": 659.131
+      },
+      "responses_within_30ms_pct": 0.0,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    }
+  ],
+  "evidence_chain_valid": true,
+  "evidence_records_before_restart": 431,
+  "journal_counts": {
+    "CDR": 1,
+    "OBSERVATION": 1,
+    "RETRO": 212,
+    "VERDICT": 381
+  },
+  "model_scope": "legacy synthetic models; runtime/transport verification, not real-world accuracy evidence"
+}

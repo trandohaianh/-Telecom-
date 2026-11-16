@@ -1,0 +1,1 @@
+{"owner_batches_observed": 4379, "salt_changes": 4, "max_wal_bytes": 34381432, "last_salt": "c8e9d4d3700aa5ac", "page_size": 4096, "autocheckpoint_pages": 8192, "sqlite_synchronous": 2}

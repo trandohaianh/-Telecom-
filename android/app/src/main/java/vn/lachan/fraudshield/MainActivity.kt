@@ -1,0 +1,113 @@
+package vn.lachan.fraudshield
+
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.os.Bundle
+import android.view.View
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+
+/**
+ * Vỏ Android của app thuê bao: hiển thị giao diện /app/ của server trong WebView.
+ *
+ * Trình giả lập dùng 10.0.2.2 để gọi máy tính đang chạy run_demo.py; điện thoại thật dùng IP Wi-Fi
+ * của máy đó (đổi trong hộp thoại "Máy chủ"). Bản demo chưa nhận cuộc gọi thật của máy: việc đó cần
+ * tích hợp với nhà mạng và quyền CallScreeningService của Android.
+ */
+class MainActivity : AppCompatActivity() {
+    private lateinit var web: WebView
+    private lateinit var swipe: SwipeRefreshLayout
+    private lateinit var errorView: LinearLayout
+    private lateinit var errorText: TextView
+    private val prefs by lazy { getSharedPreferences("lachan", MODE_PRIVATE) }
+
+    private fun serverUrl(): String = prefs.getString("server", BuildConfig.DEFAULT_SERVER) ?: BuildConfig.DEFAULT_SERVER
+
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        web = findViewById(R.id.web)
+        swipe = findViewById(R.id.swipe)
+        errorView = findViewById(R.id.error)
+        errorText = findViewById(R.id.error_text)
+
+        web.settings.javaScriptEnabled = true
+        web.settings.domStorageEnabled = true          // phiên đăng nhập của app lưu trong localStorage
+        web.settings.userAgentString = web.settings.userAgentString + " LaChanAndroid/0.1"
+        web.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                errorView.visibility = View.GONE
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                swipe.isRefreshing = false
+            }
+
+            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                if (request.isForMainFrame) showError(error.description.toString())
+            }
+        }
+
+        // Kéo xuống để tải lại, chỉ khi trang đang ở đầu (không cướp thao tác cuộn của app).
+        swipe.setColorSchemeResources(R.color.brand)
+        swipe.setOnChildScrollUpCallback { _, _ -> web.scrollY > 0 }
+        swipe.setOnRefreshListener { web.reload() }
+
+        findViewById<Button>(R.id.retry).setOnClickListener { web.loadUrl(serverUrl()) }
+        findViewById<Button>(R.id.change_server).setOnClickListener { askServer() }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack() else finish()
+            }
+        })
+
+        if (savedInstanceState == null) web.loadUrl(serverUrl()) else web.restoreState(savedInstanceState)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        web.saveState(outState)
+    }
+
+    private fun showError(why: String) {
+        swipe.isRefreshing = false
+        errorText.text = getString(R.string.error_body, serverUrl(), why)
+        errorView.visibility = View.VISIBLE
+    }
+
+    private fun askServer() {
+        val input = EditText(this).apply { setText(serverUrl()); setSingleLine() }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.server_title)
+            .setMessage(R.string.server_hint)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                var url = input.text.toString().trim()
+                if (!url.startsWith("http")) url = (if (BuildConfig.DEBUG) "http://" else "https://") + url
+                // Bản phát hành không cho HTTP (network_security_config của release cũng chặn cleartext).
+                if (!BuildConfig.DEBUG && url.startsWith("http://")) url = "https://" + url.removePrefix("http://")
+                if (!url.endsWith("/")) url += "/"
+                if (!url.endsWith("/app/")) url += "app/"
+                prefs.edit().putString("server", url).apply()
+                web.loadUrl(url)
+            }
+            .setNeutralButton(R.string.reset) { _, _ ->
+                prefs.edit().remove("server").apply()
+                web.loadUrl(serverUrl())
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+}

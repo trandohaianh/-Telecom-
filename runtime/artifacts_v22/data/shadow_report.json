@@ -1,0 +1,582 @@
+{
+ "mode": "SHADOW",
+ "enforced_actions": 0,
+ "events": 50000,
+ "scored_events": 50000,
+ "unscored_events": 0,
+ "unscored_by_status": {},
+ "ingest": {
+  "policy": "strict_event_time_frontier",
+  "keys": 2647,
+  "max_ts": 43762.315025915785,
+  "watermark": 43642.315025915785,
+  "dedup_ttl_s": 900.0,
+  "allowed_lateness_s": 120.0,
+  "admitted": 50000,
+  "duplicate": 0,
+  "late": 0
+ },
+ "would_have": {
+  "ALLOW": 49889,
+  "BLOCK": 34,
+  "FLAG": 77
+ },
+ "would_have_pct": {
+  "ALLOW": 99.778,
+  "BLOCK": 0.068,
+  "FLAG": 0.154
+ },
+ "would_have_denominator": "scored events only",
+ "agreement_with_labels": {
+  "true_negative": 49877,
+  "true_positive": 54,
+  "false_positive": 57,
+  "false_negative": 12
+ },
+ "if_enforced": {
+  "legitimate_events": 49934,
+  "legitimate_actioned_pct": 0.114151,
+  "fraud_events": 66,
+  "fraud_caught_pct": 81.8182
+ },
+ "by_family": {
+  "CLEAN": {
+   "ALLOW": 49877,
+   "FLAG": 57
+  },
+  "CLI_SPOOF": {
+   "BLOCK": 4
+  },
+  "DEEPFAKE_VOICE": {
+   "ALLOW": 5,
+   "FLAG": 3,
+   "BLOCK": 2
+  },
+  "SIM_BOX": {
+   "ALLOW": 6,
+   "FLAG": 6,
+   "BLOCK": 22
+  },
+  "SMS_PHISH": {
+   "BLOCK": 6
+  },
+  "ZERO_DAY_WANGIRI": {
+   "ALLOW": 1,
+   "FLAG": 11
+  }
+ },
+ "drift": {
+  "features": {
+   "active_hours_on_network": 3.7774,
+   "callee_dispersion_1h": 0.059,
+   "caller_age_days": 0.0382,
+   "calls_10m": 0.0251,
+   "calls_1h": 0.0285,
+   "calls_1m": 0.0151,
+   "completed_calls_seen": 0.0301,
+   "imei_per_msisdn_24h": 0.0001,
+   "in_out_ratio_24h": 0.0409,
+   "incoming_24h": 0.1032,
+   "mean_log_duration": 0.0202,
+   "msisdn_per_imei_24h": 0.0001,
+   "new_sims_on_cell_1h": 0.0001,
+   "short_call_ratio": 0.0433,
+   "velocity_kmh": 0.0014
+  },
+  "watch": [
+   "incoming_24h"
+  ],
+  "alert": [
+   "active_hours_on_network"
+  ],
+  "quality": {
+   "active_hours_on_network": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "callee_dispersion_1h": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "caller_age_days": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "calls_10m": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "calls_1h": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "calls_1m": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "completed_calls_seen": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "imei_per_msisdn_24h": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "in_out_ratio_24h": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "incoming_24h": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "mean_log_duration": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "msisdn_per_imei_24h": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "new_sims_on_cell_1h": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "short_call_ratio": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   },
+   "velocity_kmh": {
+    "observations": 35136,
+    "finite": 35136,
+    "nonfinite_rate": 0.0
+   }
+  },
+  "missing_features": [],
+  "insufficient_features": [],
+  "quality_alert": [],
+  "min_monitor_events": 100,
+  "max_feature_psi": 3.7774,
+  "null_psi_max": 0.0088,
+  "score_quality": {
+   "observations": 35136,
+   "finite": 35136,
+   "nonfinite_rate": 0.0
+  },
+  "band_shares": {
+   "BLOCK": 0.000996,
+   "FLAG": 0.000854,
+   "ALLOW": 0.99815
+  },
+  "band_share_ratio": {
+   "BLOCK": 0.071,
+   "FLAG": 1.269,
+   "ALLOW": 1.013
+  },
+  "block_band_moved": true,
+  "freshness": {
+   "event_lag_s": 0.0,
+   "max_age_s": 300.0,
+   "stale": false,
+   "as_of_source": "explicit"
+  },
+  "segments": {
+   "domestic": {
+    "features": {
+     "active_hours_on_network": 3.9525,
+     "callee_dispersion_1h": 0.0617,
+     "caller_age_days": 0.0466,
+     "calls_10m": 0.0254,
+     "calls_1h": 0.0286,
+     "calls_1m": 0.0157,
+     "completed_calls_seen": 0.0312,
+     "imei_per_msisdn_24h": 0.056,
+     "in_out_ratio_24h": 0.0354,
+     "incoming_24h": 0.1253,
+     "mean_log_duration": 0.0213,
+     "msisdn_per_imei_24h": 0.0977,
+     "new_sims_on_cell_1h": 0.0001,
+     "short_call_ratio": 0.0467,
+     "velocity_kmh": 0.0057
+    },
+    "watch": [
+     "incoming_24h"
+    ],
+    "alert": [
+     "active_hours_on_network"
+    ],
+    "quality": {
+     "active_hours_on_network": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "callee_dispersion_1h": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "caller_age_days": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "calls_10m": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "calls_1h": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "calls_1m": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "completed_calls_seen": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "imei_per_msisdn_24h": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "in_out_ratio_24h": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "incoming_24h": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "mean_log_duration": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "msisdn_per_imei_24h": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "new_sims_on_cell_1h": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "short_call_ratio": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     },
+     "velocity_kmh": {
+      "observations": 33873,
+      "finite": 33873,
+      "nonfinite_rate": 0.0
+     }
+    },
+    "missing_features": [],
+    "insufficient_features": [],
+    "quality_alert": [],
+    "min_monitor_events": 100,
+    "max_feature_psi": 3.9525,
+    "null_psi_max": 0.0077,
+    "score_quality": {
+     "observations": 33873,
+     "finite": 33873,
+     "nonfinite_rate": 0.0
+    },
+    "band_shares": {
+     "BLOCK": 0.000915,
+     "FLAG": 0.000886,
+     "ALLOW": 0.998199
+    },
+    "band_share_ratio": {
+     "BLOCK": 0.066,
+     "FLAG": 1.271,
+     "ALLOW": 1.013
+    },
+    "block_band_moved": true,
+    "recommendation": "INVESTIGATE"
+   },
+   "foreign": {
+    "features": {
+     "active_hours_on_network": 1.5309,
+     "callee_dispersion_1h": 0.0011,
+     "caller_age_days": 0.0,
+     "calls_10m": 0.0418,
+     "calls_1h": 0.0578,
+     "calls_1m": 0.011,
+     "completed_calls_seen": 0.0165,
+     "imei_per_msisdn_24h": 0.0,
+     "in_out_ratio_24h": 0.3497,
+     "incoming_24h": 0.0,
+     "mean_log_duration": 0.0922,
+     "msisdn_per_imei_24h": 0.0,
+     "new_sims_on_cell_1h": 0.0,
+     "short_call_ratio": 0.0291,
+     "velocity_kmh": 0.0
+    },
+    "watch": [],
+    "alert": [
+     "active_hours_on_network",
+     "in_out_ratio_24h"
+    ],
+    "quality": {
+     "active_hours_on_network": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "callee_dispersion_1h": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "caller_age_days": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "calls_10m": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "calls_1h": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "calls_1m": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "completed_calls_seen": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "imei_per_msisdn_24h": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "in_out_ratio_24h": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "incoming_24h": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "mean_log_duration": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "msisdn_per_imei_24h": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "new_sims_on_cell_1h": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "short_call_ratio": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     },
+     "velocity_kmh": {
+      "observations": 1118,
+      "finite": 1118,
+      "nonfinite_rate": 0.0
+     }
+    },
+    "missing_features": [],
+    "insufficient_features": [],
+    "quality_alert": [],
+    "min_monitor_events": 100,
+    "max_feature_psi": 1.5309,
+    "null_psi_max": 0.0181,
+    "score_quality": {
+     "observations": 1118,
+     "finite": 1118,
+     "nonfinite_rate": 0.0
+    },
+    "band_shares": {
+     "BLOCK": 0.0,
+     "FLAG": 0.0,
+     "ALLOW": 1.0
+    },
+    "band_share_ratio": {
+     "BLOCK": null,
+     "FLAG": null,
+     "ALLOW": 1.0
+    },
+    "block_band_moved": false,
+    "recommendation": "INVESTIGATE"
+   },
+   "trunk": {
+    "features": {
+     "active_hours_on_network": 6.3652,
+     "callee_dispersion_1h": 0.0618,
+     "caller_age_days": 0.0,
+     "calls_10m": 0.0001,
+     "calls_1h": 0.1567,
+     "calls_1m": 0.0484,
+     "completed_calls_seen": 0.0,
+     "imei_per_msisdn_24h": 1.2189,
+     "in_out_ratio_24h": 3.9641,
+     "incoming_24h": 0.0,
+     "mean_log_duration": 0.2253,
+     "msisdn_per_imei_24h": 0.2217,
+     "new_sims_on_cell_1h": 0.0917,
+     "short_call_ratio": 0.0,
+     "velocity_kmh": 0.1364
+    },
+    "watch": [
+     "calls_1h",
+     "mean_log_duration",
+     "msisdn_per_imei_24h",
+     "velocity_kmh"
+    ],
+    "alert": [
+     "active_hours_on_network",
+     "imei_per_msisdn_24h",
+     "in_out_ratio_24h"
+    ],
+    "quality": {
+     "active_hours_on_network": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "callee_dispersion_1h": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "caller_age_days": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "calls_10m": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "calls_1h": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "calls_1m": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "completed_calls_seen": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "imei_per_msisdn_24h": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "in_out_ratio_24h": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "incoming_24h": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "mean_log_duration": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "msisdn_per_imei_24h": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "new_sims_on_cell_1h": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "short_call_ratio": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     },
+     "velocity_kmh": {
+      "observations": 145,
+      "finite": 145,
+      "nonfinite_rate": 0.0
+     }
+    },
+    "missing_features": [],
+    "insufficient_features": [],
+    "quality_alert": [],
+    "min_monitor_events": 100,
+    "max_feature_psi": 6.3652,
+    "null_psi_max": 0.2073,
+    "score_quality": {
+     "observations": 145,
+     "finite": 145,
+     "nonfinite_rate": 0.0
+    },
+    "band_shares": {
+     "BLOCK": 0.027586,
+     "FLAG": 0.0,
+     "ALLOW": 0.972414
+    },
+    "band_share_ratio": {
+     "BLOCK": 0.185,
+     "FLAG": null,
+     "ALLOW": 1.143
+    },
+    "block_band_moved": true,
+    "recommendation": "RETRAIN_RECOMMENDED"
+   }
+  },
+  "unknown_segments": [],
+  "recommendation": "RETRAIN_RECOMMENDED",
+  "scope": "all scored CALL events in the window"
+ }
+}

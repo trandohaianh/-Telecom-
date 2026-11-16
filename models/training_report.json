@@ -1,0 +1,45 @@
+{
+  "tier1_call": {
+    "val_pr_auc": 0.9982822159132475,
+    "val_roc_auc": 0.9999660125275843,
+    "best_iteration": 179,
+    "thresholds": {
+      "block": 0.9189562726142347,
+      "flag": 0.2563290655282122,
+      "anomaly_flag": {
+        "domestic": 0.6602395933447861,
+        "foreign": 0.6432012918753437,
+        "trunk": 0.6285742770770295
+      }
+    },
+    "feature_importance_gain": {
+      "active_hours_on_network": 1340825.8,
+      "incoming_24h": 260461.4,
+      "imei_per_msisdn_24h": 66415.1,
+      "calls_1h": 65316.3,
+      "msisdn_per_imei_24h": 42510.1,
+      "new_sims_on_cell_1h": 10553.9,
+      "caller_age_days": 8546.0,
+      "hour_of_day": 8005.4,
+      "protected_cli_mismatch": 6344.2,
+      "in_out_ratio_24h": 6159.5
+    }
+  },
+  "sms": {
+    "val_pr_auc": 1.0,
+    "val_roc_auc": 1.0,
+    "thresholds": {
+      "block": 0.9,
+      "flag": 0.5
+    }
+  },
+  "tier2_audio": {
+    "val_pr_auc": 0.8871509807169826,
+    "val_roc_auc": 0.9911515483713057,
+    "best_iteration": 57,
+    "thresholds": {
+      "block": 0.908414173062539,
+      "flag": 0.5186308426956013
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+ "created_at": "2026-11-16T02:16:41+00:00",
+ "bundle": "runtime/artifacts_v22",
+ "metrics": {
+  "block_recall_pct": 54.55,
+  "block_precision_pct": 100.0,
+  "block_fpr_pct": 0.0,
+  "block_fpr_ci_hi_pct": 0.0077,
+  "any_recall_pct": 86.36,
+  "any_fpr_pct": 0.1142,
+  "family_min_detected_pct": 80.0,
+  "zero_day_caught_pct": 91.7,
+  "session_pre_ring_block_recall_pct": 49.06,
+  "scored_events": 50000,
+  "throughput_eps_offline": 7939,
+  "serving_scored_within_30ms_pct": 99.5,
+  "serving_p99_ms": 18.594,
+  "serving_fail_open": 0,
+  "serving_unexpected_enforce": 0,
+  "evidence_chain_valid": true,
+  "smoke_passed": true
+ }
+}

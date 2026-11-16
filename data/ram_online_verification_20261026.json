@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-26",
+  "packages": {
+    "redis": "8.1.0",
+    "confluent-kafka": "2.16.0"
+  },
+  "servers": {
+    "policy": {
+      "redis_version": "7.4.11",
+      "config": {
+        "save": "",
+        "appendonly": "no",
+        "maxmemory-policy": "noeviction"
+      },
+      "remaining_demo_keys": 0
+    },
+    "analytics": {
+      "redis_version": "7.4.11",
+      "config": {
+        "save": "",
+        "appendonly": "no",
+        "maxmemory-policy": "noeviction"
+      },
+      "remaining_demo_keys": 0
+    }
+  },
+  "image_id": "sha256:d9436322172a5b482c187bf1f363d3c4fea086fcca6b9c8a94de8f0f39ed3193",
+  "source_sha256": {
+    "ram_online/core.py": "131cd3ecdb8e520e65cac83e8ded7624fc8a219c239776ebd4877cfd1ef33d18",
+    "ram_online/demo.py": "7deb632657bbab3506b44342f4b465909f291844c85e32837f2cb91c5b34014a",
+    "ram_online/README.md": "a659b6b04c61db16bbcd5686124728770a765c51e4ab4501db2234c2292a15b1",
+    "ram_online/redis-demo.conf": "182b23e17aebf5f7089ecd2dd8175dfb88f6025133f673ffd8b70443442767f7",
+    "ram_online/requirements.txt": "a377bb2fd59c85e81307bbd880e273750a69ad38af9c7f18b3cfdde83c73057f",
+    "ram_online/streaming.py": "ec2abdbdc7cddf8765150c790529d874a1c295b2473f0bccee63ba48adae13fa",
+    "ram_online/test_ram_online.py": "21f8c185d8764a074315ed35860fbe23f2e40ddb7b6025fe6e98e4367261d953",
+    "ram_online/__init__.py": "ab57b67df45cee1a5448df347e64d44380bf80637f4bf552ea57a3c83e45bcff"
+  },
+  "report_sha256": {
+    "data/ram_online_lookup_20261026.json": "ba70e5b555783a95c6a52d4bcc0ac2f1643e534d0ca5aa5d470a15f405f57d1e",
+    "data/ram_online_lookup_strict_20261026.json": "cd75305cc6bd6a5cc76940b1e0947099a4a939566aa55bf91208246134b51ef0",
+    "data/ram_online_lookup_linux_20261026.json": "d95fb193c56741b661d12c37c5c2d6901e19e3597a558e9daf657b98abc54681",
+    "runtime/ram_online_junit_verified_20261026.xml": "ef57ec5df089839a590f969ef1732daf5a7112797de66ee08f6ace3b643e51dd"
+  },
+  "tests_passed": 17,
+  "legacy_source_unchanged": true,
+  "owned_containers_and_network_removed": true,
+  "scope": "real Redis integration and sequential lookup; Kafka consumer commit mocked; no HTTP/SIP offered-load SLA certification",
+  "linux_dependencies": "pure Python redis-py mounted; native Kafka consumer not executed in Linux measurement"
+}

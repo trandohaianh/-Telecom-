@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bản demo nói chuyện với server trong mạng nội bộ qua HTTP (10.0.2.2 hoặc IP Wi-Fi).
+     Bản phát hành thật phải dùng HTTPS và bỏ cleartext. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

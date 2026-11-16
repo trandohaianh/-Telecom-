@@ -1,0 +1,54 @@
+# Telecom Fraud Shield trên cùng VM với FieldOps (Oracle Always Free).
+# HTTPS do Caddy chung ("edge") lo: setup.sh ghi file site vào /opt/edge/sites rồi reload Caddy.
+# Chưa có Caddy của FieldOps? Chạy kèm Caddy riêng:  docker compose --profile standalone up -d
+name: telecom
+
+services:
+  telecom:
+    build:
+      context: ../..
+    image: telecom-fraud:local
+    restart: unless-stopped
+    environment:
+      FRAUD_DEMO: ${FRAUD_DEMO:-1}
+      FRAUD_PUBLIC: "1"
+      FRAUD_ADMIN_USER: ${FRAUD_ADMIN_USER:-viettel_admin}
+      FRAUD_ADMIN_PASSWORD: ${FRAUD_ADMIN_PASSWORD:?Thiếu FRAUD_ADMIN_PASSWORD trong .env}
+      FRAUD_ADMIN_EMAIL: ${FRAUD_ADMIN_EMAIL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:?Thiếu METRICS_TOKEN trong .env}
+      FRAUD_OTP_PROVIDER: ${FRAUD_OTP_PROVIDER:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      SMS_COST_USD: ${SMS_COST_USD:-0.08}
+      FRAUD_BACKUP_KEEP: ${FRAUD_BACKUP_KEEP:-7}
+      FRAUD_PIPELINE_DAILY_AT: ${FRAUD_PIPELINE_DAILY_AT:-02:30}
+    volumes:
+      - telecom_state:/srv/state
+    networks:
+      default: {}
+      edge:
+        aliases: [telecom]
+    deploy:
+      resources:
+        limits: {memory: 2g}
+
+  caddy:
+    profiles: [standalone]
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    command: caddy reverse-proxy --from ${TELECOM_DOMAIN:?Thiếu TELECOM_DOMAIN} --to telecom:8080
+    volumes:
+      - caddy_data:/data
+    networks: [edge]
+
+volumes:
+  telecom_state:
+  caddy_data:
+
+networks:
+  edge:
+    external: true
+    name: edge

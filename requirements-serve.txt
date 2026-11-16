@@ -1,0 +1,18 @@
+# Bộ phụ thuộc cố định để phục vụ (Docker/VPS). Giữ đúng phiên bản đã kiểm thử với bundle mô hình
+# runtime/artifacts_v22 (scikit-learn 1.8.0 phải khớp joblib đã lưu). numpy 2.4.0 bị PyPI "yank"
+# vì lỗi tương thích ngược nhưng là bản đã kiểm chứng với mô hình; đổi bản cần chạy lại evals/.
+numpy==2.4.0
+pandas==2.3.3
+pyarrow==22.0.0
+scikit-learn==1.8.0
+lightgbm==4.6.0
+scipy==1.16.3
+numba==0.64.0
+fastapi==0.136.3
+starlette==1.10.0
+pydantic==2.14.3
+uvicorn==0.47.0
+joblib==1.5.3
+httpx==0.28.1
+PyJWT[crypto]==2.12.1
+prometheus-client==0.23.1

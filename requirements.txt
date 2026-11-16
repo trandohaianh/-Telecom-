@@ -1,0 +1,16 @@
+numpy>=1.26
+pandas>=2.1
+pyarrow>=14
+scikit-learn==1.8.0   # pinned: models/*.joblib were fitted with 1.8.0 and scikit-learn warns
+                      # that unpickling them under another version may give invalid results
+lightgbm>=4.3
+scipy>=1.11
+numba>=0.59        # optional: fast Isolation Forest scoring (falls back to NumPy)
+fastapi>=0.110
+uvicorn>=0.47.0   # custom per-process loop factory used by launchers/verifier
+joblib>=1.3
+pytest>=8
+httpx>=0.27        # FastAPI TestClient in the tests
+xgboost>=2.0       # optional: only src/compare_models.py uses it
+PyJWT[crypto]>=2.10      # Google Sign-In (xác minh ID token RS256)
+prometheus-client>=0.21  # /metrics cho Grafana Cloud

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quản trị — Telecom Fraud Shield</title>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('tfs_theme') || 'dark'; } catch(e) {}</script>
+<style>
+:root{--bg:#0b0b0c;--panel:#141416;--line:#2a2a2e;--ink:#f4f4f5;--mut:#9a9aa2;--red:#e11d48;--amber:#f59e0b;--green:#22c55e;--blue:#60a5fa;--term:#000;
+--mono:"JetBrains Mono",ui-monospace,monospace;--display:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:dark}
+:root[data-theme="light"]{--bg:#f4f4f6;--panel:#fff;--line:#dcdce2;--ink:#111114;--mut:#5f5f69;--amber:#b45309;--green:#15803d;--blue:#1d4ed8;--term:#f1f1f4;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--display)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+.logo{width:34px;height:34px;background:var(--red);display:grid;place-items:center;font-weight:800;color:#fff}
+h1{font-size:16px;letter-spacing:.06em;margin:0}.sp{flex:1}
+a{color:var(--blue)}
+button{font:600 12px var(--display);letter-spacing:.05em;background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:7px 11px;cursor:pointer}
+button.red{background:var(--red);border-color:var(--red);color:#fff}button.ok{border-color:var(--green);color:var(--green)}
+button:disabled{opacity:.45;cursor:default}
+nav{display:flex;gap:6px;margin:14px 0;flex-wrap:wrap}nav button.on{border-color:var(--red);color:var(--red)}
+.panel{background:var(--panel);border:1px solid var(--line);padding:14px;margin-bottom:14px}
+.panel h2{font-size:12px;letter-spacing:.1em;color:var(--mut);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mut);font-weight:600;font-size:11.5px;letter-spacing:.04em}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}td.n,th.n{text-align:right;font-family:var(--mono)}
+.mono{font-family:var(--mono)}.mut{color:var(--mut)}.tag{font-size:11px;border:1px solid var(--line);padding:1px 6px}
+.st-ok{color:var(--green)}.st-warn{color:var(--amber)}.st-fail{color:var(--red)}
+input,select{font:13px var(--display);background:var(--term);color:var(--ink);border:1px solid var(--line);padding:7px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);padding:10px}.kpi b{display:block;font-size:22px;font-family:var(--mono)}.kpi span{font-size:12px;color:var(--mut)}
+.err{color:var(--red);min-height:18px;font-size:12.5px}.hide{display:none!important}
+svg text{fill:var(--mut);font:10px var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo">!</div><h1>QUẢN TRỊ · TELECOM FRAUD SHIELD</h1><div class="sp"></div>
+  <span class="tag mono" id="who">–</span><a href="/admin/"><button>← BẢNG GIÁM SÁT</button></a>
+</header>
+<nav id="tabs">
+  <button data-t="reports" class="on">BÁO CÁO SỐ</button>
+  <button data-t="pipeline">PIPELINE &amp; KPI</button>
+  <button data-t="costs" class="adm">CHI PHÍ</button>
+  <button data-t="operators" class="adm">TÀI KHOẢN NHÂN VIÊN</button>
+</nav>
+<div class="err" id="err"></div>
+
+<section id="reports" class="tab">
+  <div class="panel"><h2>SỐ BỊ THUÊ BAO BÁO CÁO</h2>
+    <div class="row" style="margin-bottom:8px"><select id="rstatus"><option value="pending">Chờ duyệt</option><option value="confirmed">Đã xác nhận (đang chặn)</option><option value="dismissed">Đã bác bỏ</option></select>
+      <span class="mut">Báo cáo của người dùng không tự chặn số. Xác nhận ⇒ luật dự phòng chặn số đó; mọi quyết định được ký vào nhật ký.</span></div>
+    <table><thead><tr><th>Số (đã che)</th><th class="n">Người báo</th><th class="n">Mô hình chặn / gắn cờ</th><th>Lý do người dùng ghi</th><th>Gần nhất</th><th></th></tr></thead><tbody id="rbody"></tbody></table>
+  </div>
+</section>
+
+<section id="pipeline" class="tab hide">
+  <div class="panel"><h2>LẦN CHẠY GẦN NHẤT</h2><table><thead><tr><th>Job</th><th>Trạng thái</th><th>Lúc</th><th>Chi tiết</th><th></th></tr></thead><tbody id="pbody"></tbody></table></div>
+  <div class="panel"><h2>KPI THEO GIỜ (48 ẢNH CHỤP GẦN NHẤT)</h2><div class="kpis" id="kpis"></div><div id="kchart" style="margin-top:12px"></div></div>
+</section>
+
+<section id="costs" class="tab hide">
+  <div class="panel"><h2>TỔNG QUAN CHI PHÍ</h2><div class="kpis" id="ckpis"></div><p class="mut" id="cnote"></p></div>
+  <div class="panel"><h2>DỊCH VỤ TÍNH TIỀN THEO LƯỢT (30 NGÀY)</h2><table><thead><tr><th>Loại</th><th>Nhà cung cấp</th><th class="n">Lượt</th><th class="n">USD</th></tr></thead><tbody id="ubody"></tbody></table></div>
+  <div class="panel"><h2>HẠ TẦNG THÁNG NÀY (NHẬP TAY)</h2>
+    <table><thead><tr><th>Nhà cung cấp</th><th>Khoản mục</th><th class="n">USD</th><th></th></tr></thead><tbody id="ibody"></tbody></table>
+    <div class="row" style="margin-top:10px"><input id="iprov" placeholder="Nhà cung cấp (VD Oracle Cloud)"><input id="iitem" placeholder="Khoản mục"><input id="iamt" type="number" step="0.01" min="0" value="0" style="width:100px"><button class="red" id="iadd">THÊM</button></div>
+  </div>
+</section>
+
+<section id="operators" class="tab hide">
+  <div class="panel"><h2>TÀI KHOẢN NHÂN VIÊN</h2>
+    <table><thead><tr><th>Tên</th><th>Vai trò</th><th>Email (Google)</th><th>Mật khẩu</th><th>Trạng thái</th><th></th></tr></thead><tbody id="obody"></tbody></table>
+  </div>
+  <div class="panel"><h2>THÊM / CẬP NHẬT</h2>
+    <div class="row"><input id="oname" placeholder="tên đăng nhập"><select id="orole"><option value="viewer">viewer — chỉ xem</option><option value="analyst">analyst — chuyên viên</option><option value="admin">admin — quản trị</option></select>
+      <input id="oemail" placeholder="email Google (tuỳ chọn)"><input id="opass" type="password" placeholder="mật khẩu mới (≥10 ký tự)"><button class="red" id="osave">LƯU</button></div>
+    <p class="mut">Nhân viên đăng nhập bằng tên + mật khẩu, hoặc nút Google nếu email Google trùng email ở đây. Để trống mật khẩu khi chỉ đổi vai trò/email.</p>
+  </div>
+</section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const when = t => t ? new Date(t * 1000).toLocaleString('vi-VN') : '—';
+const usd = v => v == null ? '—' : '$' + Number(v).toFixed(v && v < 0.01 ? 6 : 2);
+let TOKEN = ''; try { TOKEN = sessionStorage.getItem('tfs_session') || ''; } catch(e){}
+let ME = null;
+async function api(url, opts = {}){
+  const r = await fetch(url, { ...opts, headers: { 'content-type': 'application/json', ...(opts.headers || {}), Authorization: 'Bearer ' + TOKEN } });
+  if (r.status === 401){ location.href = '/admin/'; throw new Error('401'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail ? (typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)) : r.status);
+  return j;
+}
+function fail(e){ $('#err').textContent = e.message || e; }
+function show(t){
+  document.querySelectorAll('.tab').forEach(s => s.classList.toggle('hide', s.id !== t));
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  $('#err').textContent = ''; ({ reports: loadReports, pipeline: loadPipeline, costs: loadCosts, operators: loadOperators })[t]();
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => show(b.dataset.t));
+
+// ---------------------------------------------------------------- báo cáo số
+$('#rstatus').onchange = loadReports;
+async function loadReports(){
+  try {
+    const rows = await api('/api/admin/reports?status=' + $('#rstatus').value);
+    const pending = $('#rstatus').value === 'pending';
+    $('#rbody').innerHTML = rows.length ? rows.map(r => `<tr><td class="mono">${esc(r.number_masked)}</td><td class="n">${r.reporters}</td>
+      <td class="n">${r.model_blocks ?? 0} / ${r.model_flags ?? 0}</td><td>${esc(r.reasons || '—')}</td><td class="mut">${when(r.last_at)}${r.reviewer ? '<br>duyệt: ' + esc(r.reviewer) : ''}</td>
+      <td>${pending ? `<button class="red" data-k="${r.key}" data-d="confirm">XÁC NHẬN CHẶN</button> <button data-k="${r.key}" data-d="dismiss">BÁC BỎ</button>` : ''}</td></tr>`).join('')
+      : '<tr><td colspan="6" class="mut">Không có báo cáo.</td></tr>';
+    document.querySelectorAll('#rbody button').forEach(b => b.onclick = async () => {
+      const note = prompt(b.dataset.d === 'confirm' ? 'Ghi chú xác nhận (bắt buộc ghi căn cứ):' : 'Lý do bác bỏ:');
+      if (note === null) return;
+      try { await api(`/api/admin/reports/${b.dataset.k}/review`, { method: 'POST', body: JSON.stringify({ decision: b.dataset.d, note }) }); loadReports(); }
+      catch(e){ fail(e); }
+    });
+  } catch(e){ fail(e); }
+}
+
+// ---------------------------------------------------------------- pipeline & KPI
+async function loadPipeline(){
+  try {
+    const p = await api('/api/admin/pipeline');
+    $('#pbody').innerHTML = Object.entries(p.last_runs).map(([job, r]) => `<tr><td class="mono">${job}</td>
+      <td class="st-${r?.status || 'warn'}">${r ? r.status : 'chưa chạy'}</td><td class="mut">${when(r?.finished_at || r?.started_at)}</td>
+      <td class="mut mono" style="font-size:11.5px">${esc(r?.detail ? JSON.stringify(r.detail).slice(0, 180) : '')}</td>
+      <td class="adm"><button data-j="${job}">CHẠY NGAY</button></td></tr>`).join('');
+    document.querySelectorAll('#pbody button').forEach(b => b.onclick = async () => { b.disabled = true; try { await api('/api/admin/pipeline/run?job=' + b.dataset.j, { method: 'POST' }); loadPipeline(); } catch(e){ fail(e); b.disabled = false; } });
+    applyRole();
+    const k = p.kpi, last = k[k.length - 1];
+    $('#kpis').innerHTML = last ? [
+      ['Đã chấm', last.processed], ['Chặn', last.blocked], ['Gắn cờ', last.flagged], ['Fail-open', last.fail_open],
+      ['p99 (ms)', last.latency_p99_ms], ['Thuê bao', last.subscribers], ['Báo cáo chờ', last.reports_pending],
+      ['Drift PSI', last.drift_max_psi == null ? '—' : last.drift_max_psi + ' · ' + last.drift_status]]
+      .map(([l, v]) => `<div class="kpi"><b>${esc(v ?? '—')}</b><span>${l}</span></div>`).join('') : '<p class="mut">Chưa có ảnh chụp KPI (job chạy mỗi giờ).</p>';
+    $('#kchart').innerHTML = chart(k.map(x => ({ t: x.taken_at, v: x.latency_p99_ms ?? 0 })), 'p99 độ trễ quyết định (ms)');
+  } catch(e){ fail(e); }
+}
+function chart(pts, label){
+  if (pts.length < 2) return '';
+  const W = 1100, H = 140, pl = 44, pb = 20, max = Math.max(...pts.map(p => p.v), 1);
+  const x = i => pl + i * (W - pl - 6) / (pts.length - 1), y = v => 8 + (H - pb - 8) * (1 - v / max);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${label}"><text x="0" y="12">${max.toFixed(1)}</text><text x="0" y="${H - pb}">0</text>
+    <line x1="${pl}" x2="${W}" y1="${H - pb}" y2="${H - pb}" stroke="currentColor" opacity=".2"/><path d="${d}" fill="none" stroke="#e11d48" stroke-width="2"/>
+    <text x="${pl}" y="${H - 4}">${label}</text></svg>`;
+}
+
+// ---------------------------------------------------------------- chi phí
+async function loadCosts(){
+  try {
+    const c = await api('/api/admin/costs');
+    const cm = c.compute;
+    $('#ckpis').innerHTML = [
+      ['Hạ tầng tháng ' + c.infra.month, usd(c.infra.total_usd)], ['Dịch vụ theo lượt (30 ngày)', usd(c.external_usage.total_usd)],
+      ['Ước tính tháng', usd(c.total_month_estimate_usd)], ['Chi phí / 1.000 quyết định', usd(cm.infra_cost_per_1k_decisions_usd)],
+      ['CPU ms / 1.000 quyết định', cm.cpu_ms_per_1k_decisions ?? '—'], ['Quyết định / giây', cm.decisions_per_s], ['RAM đỉnh (MB)', cm.rss_mb_peak]]
+      .map(([l, v]) => `<div class="kpi"><b>${esc(v)}</b><span>${l}</span></div>`).join('');
+    $('#cnote').textContent = c.note;
+    $('#ubody').innerHTML = c.external_usage.by_kind.length ? c.external_usage.by_kind.map(r => `<tr><td>${esc(r.kind)}</td><td>${esc(r.provider || '')}</td><td class="n">${r.units}</td><td class="n">${usd(r.cost_usd)}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="mut">Chưa có (chế độ demo không gửi SMS).</td></tr>';
+    $('#ibody').innerHTML = c.infra.items.map(r => `<tr><td>${esc(r.provider)}</td><td>${esc(r.item)}</td><td class="n">${usd(r.amount_usd)}</td><td><button data-id="${r.id}">XOÁ</button></td></tr>`).join('')
+      || '<tr><td colspan="4" class="mut">Chưa nhập.</td></tr>';
+    document.querySelectorAll('#ibody button').forEach(b => b.onclick = async () => { try { await api('/api/admin/costs/infra/' + b.dataset.id, { method: 'DELETE' }); loadCosts(); } catch(e){ fail(e); } });
+    $('#iadd').onclick = async () => {
+      try { await api('/api/admin/costs/infra', { method: 'POST', body: JSON.stringify({ month: c.infra.month, provider: $('#iprov').value, item: $('#iitem').value, amount_usd: Number($('#iamt').value) || 0 }) });
+            $('#iprov').value = $('#iitem').value = ''; loadCosts(); } catch(e){ fail(e); }
+    };
+  } catch(e){ fail(e); }
+}
+
+// ---------------------------------------------------------------- tài khoản nhân viên
+async function loadOperators(){
+  try {
+    const rows = await api('/api/admin/operators');
+    $('#obody').innerHTML = rows.map(o => `<tr><td class="mono">${esc(o.name)}</td><td>${esc(o.role_label)}</td><td>${esc(o.email || '—')}</td>
+      <td>${o.has_password ? 'đã đặt' : '<span class="st-warn">chưa có</span>'}</td><td class="${o.disabled || o.suspended ? 'st-fail' : 'st-ok'}">${o.disabled ? 'đã khoá' : o.suspended ? 'tạm khoá (agent)' : 'hoạt động'}</td>
+      <td>${o.name === ME.name ? '' : `<button data-n="${esc(o.name)}" data-r="${o.role}" data-d="${o.disabled ? '0' : '1'}">${o.disabled ? 'MỞ KHOÁ' : 'KHOÁ'}</button>`}</td></tr>`).join('');
+    document.querySelectorAll('#obody button').forEach(b => b.onclick = async () => {
+      try { await api('/api/admin/operators', { method: 'POST', body: JSON.stringify({ name: b.dataset.n, role: b.dataset.r, disabled: b.dataset.d === '1' }) }); loadOperators(); } catch(e){ fail(e); }
+    });
+  } catch(e){ fail(e); }
+}
+$('#osave').onclick = async () => {
+  const body = { name: $('#oname').value.trim(), role: $('#orole').value, email: $('#oemail').value.trim() || null };
+  if ($('#opass').value) body.password = $('#opass').value;
+  try { await api('/api/admin/operators', { method: 'POST', body: JSON.stringify(body) }); $('#opass').value = ''; loadOperators(); } catch(e){ fail(e); }
+};
+
+function applyRole(){ document.querySelectorAll('.adm').forEach(e => e.classList.toggle('hide', ME?.role !== 'admin')); }
+(async () => {
+  if (!TOKEN){ location.href = '/admin/'; return; }
+  try { ME = await api('/api/whoami'); } catch(e){ return; }
+  if (ME.role === 'viewer'){ document.body.innerHTML = '<div class="wrap"><p>Vai trò viewer không có quyền quản trị. <a href="/admin/">Quay lại</a></p></div>'; return; }
+  $('#who').textContent = `${ME.name} · ${(ME.role_label || ME.role).toUpperCase()}`;
+  applyRole(); show('reports');
+})();
+</script>
+</body>
+</html>

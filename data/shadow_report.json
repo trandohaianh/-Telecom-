@@ -1,0 +1,100 @@
+{
+ "mode": "SHADOW",
+ "enforced_actions": 0,
+ "events": 50000,
+ "ingest": {
+  "keys": 2647,
+  "max_ts": 43762.315025915785,
+  "watermark": 43642.315025915785,
+  "dedup_ttl_s": 900.0,
+  "allowed_lateness_s": 120.0,
+  "admitted": 50000,
+  "duplicate": 0,
+  "late": 0
+ },
+ "would_have": {
+  "ALLOW": 49878,
+  "FLAG": 88,
+  "BLOCK": 34
+ },
+ "would_have_pct": {
+  "ALLOW": 99.756,
+  "FLAG": 0.176,
+  "BLOCK": 0.068
+ },
+ "agreement_with_labels": {
+  "true_negative": 49867,
+  "false_positive": 67,
+  "true_positive": 55,
+  "false_negative": 11
+ },
+ "if_enforced": {
+  "legitimate_events": 49934,
+  "legitimate_actioned_pct": 0.134177,
+  "fraud_events": 66,
+  "fraud_caught_pct": 83.3333
+ },
+ "by_family": {
+  "CLEAN": {
+   "ALLOW": 49867,
+   "FLAG": 67
+  },
+  "CLI_SPOOF": {
+   "BLOCK": 4
+  },
+  "DEEPFAKE_VOICE": {
+   "ALLOW": 4,
+   "FLAG": 4,
+   "BLOCK": 2
+  },
+  "SIM_BOX": {
+   "ALLOW": 6,
+   "FLAG": 6,
+   "BLOCK": 22
+  },
+  "SMS_PHISH": {
+   "BLOCK": 6
+  },
+  "ZERO_DAY_WANGIRI": {
+   "ALLOW": 1,
+   "FLAG": 11
+  }
+ },
+ "drift": {
+  "features": {
+   "calls_1m": 0.0068,
+   "calls_10m": 0.0206,
+   "calls_1h": 0.0398,
+   "callee_dispersion_1h": 0.0037,
+   "in_out_ratio_24h": 0.0311,
+   "incoming_24h": 0.1231,
+   "short_call_ratio": 0.035,
+   "mean_log_duration": 0.0123,
+   "completed_calls_seen": 0.0321,
+   "imei_per_msisdn_24h": 0.0004,
+   "msisdn_per_imei_24h": 0.0004,
+   "velocity_kmh": 0.0012,
+   "new_sims_on_cell_1h": 0.0012,
+   "caller_age_days": 0.0489
+  },
+  "watch": [
+   "incoming_24h"
+  ],
+  "alert": [],
+  "max_feature_psi": 0.1231,
+  "null_psi_max": 0.0005,
+  "band_shares": {
+   "BLOCK": 0.000968,
+   "FLAG": 0.001195,
+   "ALLOW": 0.997837
+  },
+  "band_share_ratio": {
+   "BLOCK": 0.059,
+   "FLAG": 1.835,
+   "ALLOW": 1.015
+  },
+  "block_band_moved": true,
+  "recommendation": "INVESTIGATE",
+  "scope": "all scored CALL events in the window"
+ }
+}

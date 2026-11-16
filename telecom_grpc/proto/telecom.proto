@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package telecom.v1;
+
+service CallPolicy {
+  rpc CheckCallAllowed (CheckCallRequest) returns (CheckCallReply);
+  rpc Health (HealthRequest) returns (HealthReply);
+}
+
+// Versioned API for new IMS adapters. CallPolicy remains for existing clients.
+service TelecomDecision {
+  rpc CheckCallAllowed (CallRequest) returns (CallResponse);
+}
+
+message CallRequest {
+  string phone_number = 1; // canonical E.164
+  string imsi = 2; // optional correlation/adapter field; never used as policy key
+}
+
+message CallResponse {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    ALLOW = 1;
+    BLOCK = 2;
+    UNKNOWN = 3;
+  }
+  bool allowed = 1;
+  string policy_version = 2;
+  Status status = 3;
+}
+
+message CheckCallRequest {
+  string phone_number = 1; // canonical E.164
+  string call_id = 2;
+}
+
+enum Decision { DECISION_UNSPECIFIED = 0; ALLOW = 1; BLOCK = 2; UNKNOWN = 3; }
+message CheckCallReply {
+  Decision decision = 1;
+  string policy_status = 2; // known | unavailable; fail-open is observable
+  string reason = 3;
+  double latency_ms = 4;
+}
+message HealthRequest {}
+message HealthReply { string status = 1; string circuit = 2; }

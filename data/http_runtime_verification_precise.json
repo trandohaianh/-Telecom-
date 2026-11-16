@@ -1,0 +1,161 @@
+{
+  "verified_at_utc": "2026-10-21T02:51:02Z",
+  "isolation": "fresh local temporary credentials/state; user logs and secrets unchanged",
+  "artifacts_dir": "C:\\Users\\TRANDO~1\\AppData\\Local\\Temp\\telecom_live_http_6plzhbs_",
+  "smoke": {
+    "signed_setup": true,
+    "duplicate_no_second_update": true,
+    "conflicting_identity_409": true,
+    "unsigned_401": true,
+    "cdr_retry_idempotent": true,
+    "real_wav_observation": true,
+    "unvalidated_enforce_refused": true,
+    "restart_setup_and_voice_idempotent": true
+  },
+  "runs": [
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 10.0,
+      "offered_events": 30,
+      "completed_requests": 30,
+      "client_shed": 0,
+      "wall_s": 2.927,
+      "completed_eps": 10.25,
+      "http_status": {
+        "200": 30
+      },
+      "decisions": {
+        "ALLOW": 2,
+        "FLAG": 28
+      },
+      "ingest": {
+        "ADMITTED": 30
+      },
+      "fail_open": 0,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 30.782,
+        "p95": 47.623,
+        "p99": 54.464
+      },
+      "scheduler_delay_ms": {
+        "p50": 9.687,
+        "p95": 21.451,
+        "p99": 24.034
+      },
+      "request_roundtrip_ms": {
+        "p50": 23.38,
+        "p95": 32.682,
+        "p99": 35.511
+      },
+      "server_reported_latency_ms": {
+        "p50": 12.027,
+        "p95": 16.37,
+        "p99": 23.493
+      },
+      "responses_within_30ms_pct": 50.0,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    },
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 50.0,
+      "offered_events": 150,
+      "completed_requests": 150,
+      "client_shed": 0,
+      "wall_s": 3.049,
+      "completed_eps": 49.19,
+      "http_status": {
+        "200": 150
+      },
+      "decisions": {
+        "BLOCK": 28,
+        "FLAG": 5,
+        "ALLOW": 117
+      },
+      "ingest": {
+        "ADMITTED": 33,
+        "PENDING": 117
+      },
+      "fail_open": 117,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 49.774,
+        "p95": 63.907,
+        "p99": 68.469
+      },
+      "scheduler_delay_ms": {
+        "p50": 5.236,
+        "p95": 14.998,
+        "p99": 17.211
+      },
+      "request_roundtrip_ms": {
+        "p50": 44.535,
+        "p95": 53.436,
+        "p99": 58.164
+      },
+      "server_reported_latency_ms": {
+        "p50": 31.631,
+        "p95": 38.86,
+        "p99": 45.318
+      },
+      "responses_within_30ms_pct": 14.667,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    },
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 100.0,
+      "offered_events": 300,
+      "completed_requests": 300,
+      "client_shed": 0,
+      "wall_s": 3.025,
+      "completed_eps": 99.19,
+      "http_status": {
+        "200": 300
+      },
+      "decisions": {
+        "BLOCK": 2,
+        "FLAG": 1,
+        "ALLOW": 297
+      },
+      "ingest": {
+        "ADMITTED": 3,
+        "PENDING": 277,
+        "OVERLOAD": 20
+      },
+      "fail_open": 297,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 43.654,
+        "p95": 57.264,
+        "p99": 60.841
+      },
+      "scheduler_delay_ms": {
+        "p50": 2.548,
+        "p95": 11.703,
+        "p99": 13.973
+      },
+      "request_roundtrip_ms": {
+        "p50": 39.682,
+        "p95": 49.719,
+        "p99": 54.594
+      },
+      "server_reported_latency_ms": {
+        "p50": 31.242,
+        "p95": 36.955,
+        "p99": 39.015
+      },
+      "responses_within_30ms_pct": 4.0,
+      "note": "all offered requests are denominator; client shedding is reported, not hidden"
+    }
+  ],
+  "evidence_chain_valid": true,
+  "evidence_records_before_restart": 857,
+  "journal_counts": {
+    "CDR": 1,
+    "OBSERVATION": 1,
+    "RETRO": 379,
+    "VERDICT": 481
+  },
+  "model_scope": "synthetic model bundle; runtime/transport verification, not real-world accuracy evidence",
+  "model_version": "tfd-v2.2"
+}

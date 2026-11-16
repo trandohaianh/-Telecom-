@@ -1,0 +1,2 @@
+# Optional local ASR. Supply an existing faster-whisper model directory; no automatic downloads.
+faster-whisper>=1.1,<2

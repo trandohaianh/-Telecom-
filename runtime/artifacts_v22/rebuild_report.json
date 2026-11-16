@@ -1,0 +1,35 @@
+{
+  "model_version": "tfd-v2.2",
+  "created_utc": "2026-10-20T15:05:07.401722+00:00",
+  "output_dir": "D:\\Du_An_1_Telecom_AI_Full\\v2\\runtime\\artifacts_v22",
+  "baseline_preserved": true,
+  "stages": [
+    {
+      "script": "build_dataset.py",
+      "exit_code": 0,
+      "seconds": 77.814
+    },
+    {
+      "script": "train.py",
+      "exit_code": 0,
+      "seconds": 24.0
+    },
+    {
+      "script": "evaluate.py",
+      "exit_code": 0,
+      "seconds": 454.005
+    },
+    {
+      "script": "make_drift_baseline.py",
+      "exit_code": 0,
+      "seconds": 6.056
+    },
+    {
+      "script": "shadow_run.py",
+      "exit_code": 0,
+      "seconds": 26.991
+    }
+  ],
+  "traffic_source": "synthetic_simulator",
+  "manifest_verified": true
+}

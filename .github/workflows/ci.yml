@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {lfs: true}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-serve.txt
+      - name: Install
+        run: pip install -r requirements-serve.txt pytest==9.1.1
+      - name: Unit + API tests
+        run: python -B -m pytest -q -p no:cacheprovider
+      - name: Eval — model quality + real HTTP serving SLA (gated)
+        run: python -B evals/run_evals.py --output-dir reports/evals
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: eval-report, path: reports/evals/, retention-days: 60}
+      - name: Validate alert rules
+        run: |
+          curl -sSL https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz | tar xz
+          ./prometheus-3.5.0.linux-amd64/promtool check rules monitoring/alerts/telecom-rules.yml
+
+  docker-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with: {lfs: true}
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (amd64, load)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: telecom-fraud:ci
+          cache-from: type=gha,scope=tfs
+          cache-to: type=gha,scope=tfs,mode=max
+      - name: Smoke test container
+        run: |
+          docker run -d --name tfs -p 8080:8080 -e FRAUD_ADMIN_PASSWORD=ci-password-123 -e METRICS_TOKEN=ci telecom-fraud:ci
+          for i in $(seq 1 60); do curl -fs localhost:8080/health/ready && break; sleep 3; done
+          curl -fsS localhost:8080/health/ready
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/metrics)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/app/demo-numbers)" = 403
+          tok=$(curl -fsS -X POST localhost:8080/api/app/auth/register -H 'content-type: application/json' \
+                -d '{"email":"ci@example.com","password":"ci-password-1"}' | python -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+          curl -fsS -X POST localhost:8080/api/app/phone/claim-demo -H "Authorization: Bearer $tok"
+          curl -fsS localhost:8080/api/app/inbox -H "Authorization: Bearer $tok" >/dev/null
+          curl -fsS -X POST localhost:8080/api/login -H 'content-type: application/json' \
+               -d '{"username":"viettel_admin","password":"ci-password-123"}' >/dev/null
+          curl -fsS -H "Authorization: Bearer ci" localhost:8080/metrics | grep -q tfs_processed_events
+          docker logs tfs 2>&1 | tail -20
+      - name: Build arm64 (Oracle Ampere)
+        if: github.event_name == 'push'
+        run: docker buildx build --platform linux/arm64 --cache-from type=gha,scope=tfs-arm --cache-to type=gha,scope=tfs-arm,mode=max .
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: "17"}
+      - name: Build debug + release APK (release chỉ HTTPS)
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug assembleRelease -PreleaseServer=https://telecom-demo.duckdns.org/app/

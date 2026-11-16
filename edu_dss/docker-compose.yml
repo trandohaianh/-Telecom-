@@ -1,0 +1,105 @@
+name: edu-dss
+services:
+  nginx-gateway:
+    image: nginx:1.28.0-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${NGINX_TLS_DIR:-./secrets/tls}:/etc/nginx/tls:ro
+    depends_on:
+      fastapi-backend: { condition: service_healthy }
+      streamlit-ui: { condition: service_started }
+    networks: [edge, backend]
+    read_only: true
+    tmpfs: [/var/cache/nginx, /var/run]
+    security_opt: [no-new-privileges:true]
+
+  streamlit-ui:
+    build: ./ui
+    restart: unless-stopped
+    environment: { EDU_API_BASE_URL: http://fastapi-backend:8000 }
+    expose: ["8501"]
+    networks: [edge, backend]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+
+  fastapi-backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      JWT_ISSUER: ${JWT_ISSUER:-edu-dss}
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      EDU_ADAPTER_TOKEN_FILE: /run/secrets/edu_adapter_token
+      EDU_EXPLANATION_ADAPTER: ${EDU_EXPLANATION_ADAPTER:-}
+      EDU_ADVICE_ADAPTER: ${EDU_ADVICE_ADAPTER:-}
+      EDU_GRADE_ADAPTER: ${EDU_GRADE_ADAPTER:-}
+      EDU_DEMO_MODE: ${EDU_DEMO_MODE:-0}
+      EDU_LLM_REQUESTS_PER_MINUTE: ${EDU_LLM_REQUESTS_PER_MINUTE:-60}
+      EDU_LLM_TASK_RATE_LIMIT: ${EDU_LLM_TASK_RATE_LIMIT:-5/m}
+    secrets: [jwt_secret, redis_password, edu_adapter_token]
+    expose: ["8000"]
+    depends_on: { redis-cache: { condition: service_healthy } }
+    networks: [backend, data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready',timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+
+  redis-cache:
+    image: redis:7.4.12-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--aclfile", "/run/secrets/redis_acl", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
+    expose: ["6379"]
+    volumes: [redis-data:/data]
+    secrets: [redis_acl, redis_password]
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --user default --pass \"$$(cat /run/secrets/redis_password)\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+
+  celery-worker:
+    build: ./backend
+    restart: unless-stopped
+    command: ["sh", "/srv/worker-entrypoint.sh"]
+    environment:
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      EDU_ADAPTER_TOKEN_FILE: /run/secrets/edu_adapter_token
+      CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-2}
+      CELERY_MAX_TASKS_PER_CHILD: ${CELERY_MAX_TASKS_PER_CHILD:-50}
+      EDU_AUTOML_ADAPTER: ${EDU_AUTOML_ADAPTER:-}
+      EDU_EXPLANATION_ADAPTER: ${EDU_EXPLANATION_ADAPTER:-}
+      EDU_ADVICE_ADAPTER: ${EDU_ADVICE_ADAPTER:-}
+      EDU_DEMO_MODE: ${EDU_DEMO_MODE:-0}
+      EDU_LLM_REQUESTS_PER_MINUTE: ${EDU_LLM_REQUESTS_PER_MINUTE:-60}
+      EDU_LLM_TASK_RATE_LIMIT: ${EDU_LLM_TASK_RATE_LIMIT:-5/m}
+    secrets: [jwt_secret, redis_password, edu_adapter_token]
+    depends_on: { redis-cache: { condition: service_healthy } }
+    networks: [data, worker-egress]
+    read_only: true
+    mem_limit: 2g
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+
+secrets:
+  jwt_secret: { file: ./secrets/jwt_secret }
+  redis_password: { file: ./secrets/redis_password }
+  redis_acl: { file: ./secrets/redis_acl }
+  edu_adapter_token: { file: ./secrets/edu_adapter_token }
+volumes:
+  redis-data:
+networks:
+  edge: {}
+  backend: { internal: true }
+  data: { internal: true }
+  worker-egress: {}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lá chắn</string>
+    <string name="error_title">Không kết nối được máy chủ</string>
+    <string name="error_body">Đang thử: %1$s\n(%2$s)\n\nHãy chắc chắn máy tính đang chạy python run_demo.py.</string>
+    <string name="retry">Thử lại</string>
+    <string name="server_title">Máy chủ</string>
+    <string name="server_hint">Trình giả lập: http://10.0.2.2:8080\nĐiện thoại thật: http://&lt;IP Wi-Fi của máy tính&gt;:8080</string>
+    <string name="save">Lưu</string>
+    <string name="reset">Mặc định</string>
+</resources>

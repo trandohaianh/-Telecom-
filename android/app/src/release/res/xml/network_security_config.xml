@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bản phát hành: chỉ HTTPS, không cho lưu lượng không mã hoá. Bản debug dùng cấu hình ở src/main (cho phép HTTP nội bộ). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

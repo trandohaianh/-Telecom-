@@ -1,0 +1,2795 @@
+{
+  "meta": {
+    "runtime_s": 773.1,
+    "test_sms": 157494,
+    "test_fraud": 60,
+    "stress_msgs": 14400,
+    "legit_perturbed_msgs": 20000
+  },
+  "summary": {
+    "LogReg (đang dùng)": {
+      "legit_block_per_run": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "legit_block_mean": 1.67,
+      "legit_flag_mean": 90.7,
+      "test_fraud_any_mean": 100.0,
+      "stress": {
+        "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 99.33,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 99.78,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 98.97,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 95.83,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        }
+      },
+      "legit_perturbed_block_mean": {
+        "Teencode / viết tắt": 0.17,
+        "Leetspeak mới (4, 7, 9, 8)": 9.67,
+        "Chèn emoji + khoảng trắng": 0.17
+      },
+      "stress_any_overall": 100.0,
+      "stress_block_overall": 99.75
+    },
+    "Linear SVM": {
+      "legit_block_per_run": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "legit_block_mean": 0.0,
+      "legit_flag_mean": 184.8,
+      "test_fraud_any_mean": 100.0,
+      "stress": {
+        "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        }
+      },
+      "legit_perturbed_block_mean": {
+        "Teencode / viết tắt": 2092.0,
+        "Leetspeak mới (4, 7, 9, 8)": 8272.83,
+        "Chèn emoji + khoảng trắng": 0.0
+      },
+      "stress_any_overall": 100.0,
+      "stress_block_overall": 100.0
+    },
+    "Naive Bayes": {
+      "legit_block_per_run": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "legit_block_mean": 0.0,
+      "legit_flag_mean": 242.8,
+      "test_fraud_any_mean": 100.0,
+      "stress": {
+        "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+          "block_mean": 97.55,
+          "any_mean": 99.83,
+          "any_min": 99.83
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+          "block_mean": 100.0,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+          "block_mean": 92.92,
+          "any_mean": 98.03,
+          "any_min": 97.83
+        },
+        "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+          "block_mean": 91.7,
+          "any_mean": 100.0,
+          "any_min": 100.0
+        }
+      },
+      "legit_perturbed_block_mean": {
+        "Teencode / viết tắt": 0.0,
+        "Leetspeak mới (4, 7, 9, 8)": 94.0,
+        "Chèn emoji + khoảng trắng": 0.0
+      },
+      "stress_any_overall": 99.91,
+      "stress_block_overall": 99.26
+    }
+  },
+  "verdict": {
+    "Linear SVM": {
+      "step2_runs_better": 1,
+      "step2_runs_equal": 5,
+      "step2": "thắng",
+      "step3_any_diff_pts": 0.0,
+      "step3_block_diff_pts": 0.25,
+      "step3": "hòa",
+      "legit_flag_ratio": 2.04,
+      "legit_perturbed_block": 10364.8,
+      "legit_perturbed_block_base": 10.0,
+      "legit_cost": "thua",
+      "switch_recommended": false
+    },
+    "Naive Bayes": {
+      "step2_runs_better": 1,
+      "step2_runs_equal": 5,
+      "step2": "thắng",
+      "step3_any_diff_pts": -0.09,
+      "step3_block_diff_pts": -0.49,
+      "step3": "hòa",
+      "legit_flag_ratio": 2.68,
+      "legit_perturbed_block": 94.0,
+      "legit_perturbed_block_base": 10.0,
+      "legit_cost": "thua",
+      "switch_recommended": false
+    }
+  },
+  "runs": [
+    {
+      "seeds": [
+        11,
+        22
+      ],
+      "models": {
+        "LogReg (đang dùng)": {
+          "legit_block": 10,
+          "legit_flag_or_block": 230,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 1,
+              "flag_or_block": 27
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 32,
+              "flag_or_block": 780
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 1,
+              "flag_or_block": 27
+            }
+          }
+        },
+        "Linear SVM": {
+          "legit_block": 0,
+          "legit_flag_or_block": 214,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 2204,
+              "flag_or_block": 3498
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 8975,
+              "flag_or_block": 9280
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 26
+            }
+          }
+        },
+        "Naive Bayes": {
+          "legit_block": 0,
+          "legit_flag_or_block": 181,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 97.5,
+              "any_pct": 99.83
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 92.83,
+              "any_pct": 98.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 16
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 392,
+              "flag_or_block": 1071
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 16
+            }
+          }
+        }
+      },
+      "mcnemar": {
+        "Linear SVM": {
+          "false_block_legit": {
+            "only_base": 10,
+            "only_other": 0,
+            "p_value": 0.00195
+          },
+          "stress_caught_any": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          }
+        },
+        "Naive Bayes": {
+          "false_block_legit": {
+            "only_base": 10,
+            "only_other": 0,
+            "p_value": 0.00195
+          },
+          "stress_caught_any": {
+            "only_base": 13,
+            "only_other": 0,
+            "p_value": 0.00024
+          }
+        }
+      }
+    },
+    {
+      "seeds": [
+        301,
+        401
+      ],
+      "models": {
+        "LogReg (đang dùng)": {
+          "legit_block": 0,
+          "legit_flag_or_block": 0,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 97.17,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 99.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 96.83,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 0
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 0,
+              "flag_or_block": 14
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 0
+            }
+          }
+        },
+        "Linear SVM": {
+          "legit_block": 0,
+          "legit_flag_or_block": 157,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 2229,
+              "flag_or_block": 2544
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 8287,
+              "flag_or_block": 8540
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 16
+            }
+          }
+        },
+        "Naive Bayes": {
+          "legit_block": 0,
+          "legit_flag_or_block": 305,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 97.33,
+              "any_pct": 99.83
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 93.33,
+              "any_pct": 98.33
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 30
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 36,
+              "flag_or_block": 112
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 30
+            }
+          }
+        }
+      },
+      "mcnemar": {
+        "Linear SVM": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          }
+        },
+        "Naive Bayes": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 11,
+            "only_other": 0,
+            "p_value": 0.00098
+          }
+        }
+      }
+    },
+    {
+      "seeds": [
+        302,
+        402
+      ],
+      "models": {
+        "LogReg (đang dùng)": {
+          "legit_block": 0,
+          "legit_flag_or_block": 0,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 99.83,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 0
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 1,
+              "flag_or_block": 27
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 0
+            }
+          }
+        },
+        "Linear SVM": {
+          "legit_block": 0,
+          "legit_flag_or_block": 156,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 2229,
+              "flag_or_block": 3669
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 8233,
+              "flag_or_block": 8558
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 15
+            }
+          }
+        },
+        "Naive Bayes": {
+          "legit_block": 0,
+          "legit_flag_or_block": 278,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 97.83,
+              "any_pct": 99.83
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 93.67,
+              "any_pct": 98.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 33
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 38,
+              "flag_or_block": 113
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 33
+            }
+          }
+        }
+      },
+      "mcnemar": {
+        "Linear SVM": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          }
+        },
+        "Naive Bayes": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 13,
+            "only_other": 0,
+            "p_value": 0.00024
+          }
+        }
+      }
+    },
+    {
+      "seeds": [
+        303,
+        403
+      ],
+      "models": {
+        "LogReg (đang dùng)": {
+          "legit_block": 0,
+          "legit_flag_or_block": 0,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 98.83,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 99.67,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 97.17,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 0
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 0,
+              "flag_or_block": 26
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 0
+            }
+          }
+        },
+        "Linear SVM": {
+          "legit_block": 0,
+          "legit_flag_or_block": 143,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 2229,
+              "flag_or_block": 2540
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 8295,
+              "flag_or_block": 8525
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 12
+            }
+          }
+        },
+        "Naive Bayes": {
+          "legit_block": 0,
+          "legit_flag_or_block": 256,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 97.67,
+              "any_pct": 99.83
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 92.67,
+              "any_pct": 98.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.83,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 27
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 34,
+              "flag_or_block": 114
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 27
+            }
+          }
+        }
+      },
+      "mcnemar": {
+        "Linear SVM": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          }
+        },
+        "Naive Bayes": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 13,
+            "only_other": 0,
+            "p_value": 0.00024
+          }
+        }
+      }
+    },
+    {
+      "seeds": [
+        304,
+        404
+      ],
+      "models": {
+        "LogReg (đang dùng)": {
+          "legit_block": 0,
+          "legit_flag_or_block": 187,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 21
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 16,
+              "flag_or_block": 428
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 21
+            }
+          }
+        },
+        "Linear SVM": {
+          "legit_block": 0,
+          "legit_flag_or_block": 204,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 1821,
+              "flag_or_block": 3492
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 7880,
+              "flag_or_block": 8467
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 22
+            }
+          }
+        },
+        "Naive Bayes": {
+          "legit_block": 0,
+          "legit_flag_or_block": 170,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 97.5,
+              "any_pct": 99.83
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 92.0,
+              "any_pct": 98.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 22
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 25,
+              "flag_or_block": 90
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 22
+            }
+          }
+        }
+      },
+      "mcnemar": {
+        "Linear SVM": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          }
+        },
+        "Naive Bayes": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 13,
+            "only_other": 0,
+            "p_value": 0.00024
+          }
+        }
+      }
+    },
+    {
+      "seeds": [
+        305,
+        405
+      ],
+      "models": {
+        "LogReg (đang dùng)": {
+          "legit_block": 0,
+          "legit_flag_or_block": 127,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 16
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 9,
+              "flag_or_block": 49
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 16
+            }
+          }
+        },
+        "Linear SVM": {
+          "legit_block": 0,
+          "legit_flag_or_block": 235,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 1840,
+              "flag_or_block": 3505
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 7967,
+              "flag_or_block": 8509
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 33
+            }
+          }
+        },
+        "Naive Bayes": {
+          "legit_block": 0,
+          "legit_flag_or_block": 267,
+          "fraud_block_pct": 100.0,
+          "fraud_any_pct": 100.0,
+          "stress": {
+            "A. Kênh gốc của kẻ lừa | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "A. Kênh gốc của kẻ lừa | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "B. Gửi P2P từ SIM thường | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Gốc (không đổi)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Tách chữ (t.a.i k-h-o-a-n, ký tự ẩn)": {
+              "block_pct": 97.5,
+              "any_pct": 99.83
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Leetspeak mới (4, 7, 9, 8)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Teencode / viết tắt": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Diễn đạt lại (từ đồng nghĩa)": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Chèn emoji + khoảng trắng": {
+              "block_pct": 100.0,
+              "any_pct": 100.0
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Kết hợp (tách + leet + đồng nghĩa)": {
+              "block_pct": 93.0,
+              "any_pct": 97.83
+            },
+            "C. P2P + link trên domain hợp lệ (khó nhất) | Mẫu lừa hoàn toàn mới (12 kịch bản)": {
+              "block_pct": 91.67,
+              "any_pct": 100.0
+            }
+          },
+          "legit_perturbed": {
+            "Teencode / viết tắt": {
+              "block": 0,
+              "flag_or_block": 38
+            },
+            "Leetspeak mới (4, 7, 9, 8)": {
+              "block": 39,
+              "flag_or_block": 101
+            },
+            "Chèn emoji + khoảng trắng": {
+              "block": 0,
+              "flag_or_block": 38
+            }
+          }
+        }
+      },
+      "mcnemar": {
+        "Linear SVM": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          }
+        },
+        "Naive Bayes": {
+          "false_block_legit": {
+            "only_base": 0,
+            "only_other": 0,
+            "p_value": 1.0
+          },
+          "stress_caught_any": {
+            "only_base": 14,
+            "only_other": 0,
+            "p_value": 0.00012
+          }
+        }
+      }
+    }
+  ]
+}

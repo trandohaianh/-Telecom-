@@ -1,0 +1,59 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+:: loading settings :: url = jar:file:/usr/local/lib/python3.11/site-packages/pyspark/jars/ivy-2.5.3.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: /home/spark/.ivy2/cache
+The jars for the packages stored in: /home/spark/.ivy2/jars
+org.apache.spark#spark-sql-kafka-0-10_2.13 added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-e384637c-ec84-49a4-95c0-1b030e39d8b6;1.0
+	confs: [default]
+	found org.apache.spark#spark-sql-kafka-0-10_2.13;4.2.0 in central
+	found org.apache.spark#spark-token-provider-kafka-0-10_2.13;4.2.0 in central
+	found org.apache.kafka#kafka-clients;3.9.2 in central
+	found at.yawk.lz4#lz4-java;1.11.0 in central
+	found org.xerial.snappy#snappy-java;1.1.10.8 in central
+	found org.slf4j#slf4j-api;2.0.17 in central
+	found org.apache.hadoop#hadoop-client-runtime;3.5.0 in central
+	found org.apache.hadoop#hadoop-client-api;3.5.0 in central
+	found com.google.code.findbugs#jsr305;3.0.0 in central
+	found org.scala-lang.modules#scala-parallel-collections_2.13;1.2.0 in central
+	found org.apache.commons#commons-pool2;2.13.1 in central
+:: resolution report :: resolve 665ms :: artifacts dl 20ms
+	:: modules in use:
+	at.yawk.lz4#lz4-java;1.11.0 from central in [default]
+	com.google.code.findbugs#jsr305;3.0.0 from central in [default]
+	org.apache.commons#commons-pool2;2.13.1 from central in [default]
+	org.apache.hadoop#hadoop-client-api;3.5.0 from central in [default]
+	org.apache.hadoop#hadoop-client-runtime;3.5.0 from central in [default]
+	org.apache.kafka#kafka-clients;3.9.2 from central in [default]
+	org.apache.spark#spark-sql-kafka-0-10_2.13;4.2.0 from central in [default]
+	org.apache.spark#spark-token-provider-kafka-0-10_2.13;4.2.0 from central in [default]
+	org.scala-lang.modules#scala-parallel-collections_2.13;1.2.0 from central in [default]
+	org.slf4j#slf4j-api;2.0.17 from central in [default]
+	org.xerial.snappy#snappy-java;1.1.10.8 from central in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   11  |   0   |   0   |   0   ||   11  |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-e384637c-ec84-49a4-95c0-1b030e39d8b6
+	confs: [default]
+	0 artifacts copied, 11 already retrieved (0kB/11ms)
+26/10/15 14:47:23 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+26/10/15 14:47:34 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
+[Stage 0:>                                                          (0 + 4) / 4]                                                                                
+--- batch 0: 1018 CALL, 27 features ---
+ event_id  calls_1m  calls_1h  incoming_24h  msisdn_per_imei_24h
+TE0000003       1.0       1.0           0.0                  1.0
+TE0000004       1.0       1.0           0.0                  1.0
+TE0000006       1.0       1.0           0.0                  1.0
+TE0000006       2.0       2.0           0.0                  1.0
+TE0000007       1.0       1.0           0.0                  1.0
+TE0000010       1.0       1.0           0.0                  1.0
+TE0000011       1.0       1.0           0.0                  1.0
+TE0000011       2.0       2.0           0.0                  1.0
+TE0000012       1.0       1.0           0.0                  1.0
+TE0000012       2.0       2.0           0.0                  1.0
+26/10/15 14:47:41 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 5000 milliseconds, but spent 5966 milliseconds

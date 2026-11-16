@@ -1,0 +1,27 @@
+{
+  "kind": "real_spark_contract_recovery",
+  "verified_at_utc": "2026-10-22T07:35:23Z",
+  "image": "spark-spark:latest",
+  "image_id": "sha256:72465a8e262861b8fc789ff5f0c5119edf8d5129a5b128e1e6f2a65c7d35e033",
+  "exit_code": 0,
+  "wall_s": 89.296,
+  "valid_events": 5,
+  "quarantined_events": 3,
+  "feature_columns_verified": 27,
+  "separate_spark_processes": 2,
+  "true_structured_streaming_offsets_restart": true,
+  "valid_csv_accepted": true,
+  "extra_csv_column_rejected": true,
+  "cross_engine_checkpoint_rejected": true,
+  "source_sha256": {
+    "spark/event_contract.py": "c422de0810fc57a728512a36be37965a292e5db5c293abaf1dbb2840ac0770d3",
+    "spark/stateful_stream.py": "6bb736e4728c8e402b33c1e509ee99e9d89bcd1c69ba466cd1c70c4db0937773",
+    "spark/distributed_stream.py": "098dd3a7e7c0f61664b3add8377aab80f6c18a1eab83ceb284bba9277dc5da6c",
+    "spark/distributed_features.py": "ef998eaa0a68358899e104834255e136d03de189ee2ae4f9ec027824da74fc7b",
+    "spark/spark_features.py": "45d7ded7ef150a2b4ca1972f4a84d0a2905218067e586deb18bd9228d71a7e68",
+    "src/feature_store.py": "c8558e6e9fd9a845c3ee147a38a69430e361fbf0385380b704fdc0bdbd5a8d2e"
+  },
+  "isolation": "read-only sources; networknone;2CPU/2GiB;exec tmpfs only for disposable Spark state, not SQLite capacity",
+  "stdout_log": "runtime/artifacts_v22/logs/spark-contracts-final.stdout.log",
+  "stderr_log": "runtime/artifacts_v22/logs/spark-contracts-final.stderr.log"
+}

@@ -1,0 +1,312 @@
+{
+  "verified_at_utc": "2026-10-22T07:39:12Z",
+  "isolation": "fresh local temporary credentials/state; user logs and secrets unchanged",
+  "artifacts_dir": "C:\\Users\\TRANDO~1\\AppData\\Local\\Temp\\telecom_live_http_6zlqeequ",
+  "smoke": {
+    "signed_setup": true,
+    "duplicate_no_second_update": true,
+    "conflicting_identity_409": true,
+    "unsigned_401": true,
+    "cdr_retry_idempotent": true,
+    "real_wav_observation": true,
+    "unvalidated_enforce_refused": true,
+    "restart_setup_and_voice_idempotent": true
+  },
+  "runs": [
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 10.0,
+      "offered_events": 300,
+      "completed_requests": 300,
+      "client_shed": 0,
+      "wall_s": 29.916,
+      "completed_eps": 10.03,
+      "http_status": {
+        "200": 300
+      },
+      "decisions": {
+        "ALLOW": 7,
+        "FLAG": 293
+      },
+      "ingest": {
+        "ADMITTED": 298,
+        "PENDING": 2
+      },
+      "fail_open": 4,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 19.753,
+        "p95": 24.085,
+        "p99": 43.449
+      },
+      "scheduler_delay_ms": {
+        "p50": 10.639,
+        "p95": 13.457,
+        "p99": 14.79
+      },
+      "request_roundtrip_ms": {
+        "p50": 8.937,
+        "p95": 12.525,
+        "p99": 35.063
+      },
+      "server_reported_latency_ms": {
+        "p50": 5.233,
+        "p95": 7.77,
+        "p99": 30.978
+      },
+      "responses_within_30ms_pct": 97.333,
+      "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
+      "deadline_ms": 30.0,
+      "denominator": "offered_events",
+      "concurrency": 32,
+      "offered_window_s": 30.0,
+      "timeout_s": 2.0,
+      "response_outcomes": {
+        "scored_before_deadline": 296,
+        "pending": 2,
+        "fail_open": 2,
+        "scored_after_deadline": 0,
+        "scored_deadline_unverified": 0,
+        "not_scored": 0,
+        "scoring_unreported": 0,
+        "scoring_inconsistent": 0,
+        "http_error": 0,
+        "invalid_response": 0,
+        "client_error": 0,
+        "client_shed": 0
+      },
+      "scored_responses": 298,
+      "pending_responses": 2,
+      "pending_responses_pct": 0.667,
+      "fail_open_pct": 1.333,
+      "scoring_unreported": 0,
+      "scored_before_deadline": 296,
+      "scored_before_deadline_pct": 98.667,
+      "scored_within_http_30ms": 292,
+      "scored_within_http_30ms_pct": 97.333,
+      "http_responses_within_30ms": 292,
+      "http_responses_within_30ms_pct": 97.333,
+      "server_responses_within_30ms": 296,
+      "server_responses_within_30ms_pct": 98.667,
+      "server_commit_ms": {
+        "p50": 1.982,
+        "p95": 3.243,
+        "p99": 15.789
+      },
+      "server_queue_ms": {
+        "p50": 0.351,
+        "p95": 0.542,
+        "p99": 0.756
+      },
+      "metric_definitions": {
+        "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; not pending/fail_open; finite server latency <=30ms",
+        "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
+        "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
+        "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap"
+      }
+    },
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 50.0,
+      "offered_events": 1500,
+      "completed_requests": 1500,
+      "client_shed": 0,
+      "wall_s": 29.998,
+      "completed_eps": 50.0,
+      "http_status": {
+        "200": 1500
+      },
+      "decisions": {
+        "BLOCK": 770,
+        "FLAG": 664,
+        "ALLOW": 66
+      },
+      "ingest": {
+        "ADMITTED": 1447,
+        "PENDING": 53
+      },
+      "fail_open": 66,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 15.318,
+        "p95": 37.944,
+        "p99": 50.72
+      },
+      "scheduler_delay_ms": {
+        "p50": 4.447,
+        "p95": 14.868,
+        "p99": 16.182
+      },
+      "request_roundtrip_ms": {
+        "p50": 9.692,
+        "p95": 30.476,
+        "p99": 42.536
+      },
+      "server_reported_latency_ms": {
+        "p50": 5.46,
+        "p95": 23.245,
+        "p99": 35.575
+      },
+      "responses_within_30ms_pct": 91.933,
+      "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
+      "deadline_ms": 30.0,
+      "denominator": "offered_events",
+      "concurrency": 32,
+      "offered_window_s": 30.0,
+      "timeout_s": 2.0,
+      "response_outcomes": {
+        "scored_before_deadline": 1434,
+        "pending": 53,
+        "fail_open": 13,
+        "scored_after_deadline": 0,
+        "scored_deadline_unverified": 0,
+        "not_scored": 0,
+        "scoring_unreported": 0,
+        "scoring_inconsistent": 0,
+        "http_error": 0,
+        "invalid_response": 0,
+        "client_error": 0,
+        "client_shed": 0
+      },
+      "scored_responses": 1447,
+      "pending_responses": 53,
+      "pending_responses_pct": 3.533,
+      "fail_open_pct": 4.4,
+      "scoring_unreported": 0,
+      "scored_before_deadline": 1434,
+      "scored_before_deadline_pct": 95.6,
+      "scored_within_http_30ms": 1379,
+      "scored_within_http_30ms_pct": 91.933,
+      "http_responses_within_30ms": 1379,
+      "http_responses_within_30ms_pct": 91.933,
+      "server_responses_within_30ms": 1434,
+      "server_responses_within_30ms_pct": 95.6,
+      "server_commit_ms": {
+        "p50": 1.949,
+        "p95": 3.159,
+        "p99": 14.082
+      },
+      "server_queue_ms": {
+        "p50": 0.396,
+        "p95": 4.395,
+        "p99": 14.95
+      },
+      "metric_definitions": {
+        "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; not pending/fail_open; finite server latency <=30ms",
+        "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
+        "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
+        "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap"
+      }
+    },
+    {
+      "kind": "http_end_to_end",
+      "offered_rate_eps": 100.0,
+      "offered_events": 3000,
+      "completed_requests": 3000,
+      "client_shed": 0,
+      "wall_s": 30.037,
+      "completed_eps": 99.88,
+      "http_status": {
+        "200": 3000
+      },
+      "decisions": {
+        "BLOCK": 838,
+        "FLAG": 1,
+        "ALLOW": 2161
+      },
+      "ingest": {
+        "ADMITTED": 1053,
+        "PENDING": 1845,
+        "ADMISSION_OVERLOAD": 102
+      },
+      "fail_open": 2161,
+      "unexpected_enforce": 0,
+      "latency_ms": {
+        "p50": 40.986,
+        "p95": 61.189,
+        "p99": 72.399
+      },
+      "scheduler_delay_ms": {
+        "p50": 3.541,
+        "p95": 12.365,
+        "p99": 15.097
+      },
+      "request_roundtrip_ms": {
+        "p50": 36.79,
+        "p95": 54.581,
+        "p99": 64.007
+      },
+      "server_reported_latency_ms": {
+        "p50": 31.136,
+        "p95": 42.334,
+        "p99": 47.537
+      },
+      "responses_within_30ms_pct": 26.533,
+      "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
+      "deadline_ms": 30.0,
+      "denominator": "offered_events",
+      "concurrency": 32,
+      "offered_window_s": 30.0,
+      "timeout_s": 2.0,
+      "response_outcomes": {
+        "scored_before_deadline": 839,
+        "pending": 1845,
+        "fail_open": 316,
+        "scored_after_deadline": 0,
+        "scored_deadline_unverified": 0,
+        "not_scored": 0,
+        "scoring_unreported": 0,
+        "scoring_inconsistent": 0,
+        "http_error": 0,
+        "invalid_response": 0,
+        "client_error": 0,
+        "client_shed": 0
+      },
+      "scored_responses": 1053,
+      "pending_responses": 1845,
+      "pending_responses_pct": 61.5,
+      "fail_open_pct": 72.033,
+      "scoring_unreported": 0,
+      "scored_before_deadline": 839,
+      "scored_before_deadline_pct": 27.967,
+      "scored_within_http_30ms": 703,
+      "scored_within_http_30ms_pct": 23.433,
+      "http_responses_within_30ms": 796,
+      "http_responses_within_30ms_pct": 26.533,
+      "server_responses_within_30ms": 941,
+      "server_responses_within_30ms_pct": 31.367,
+      "server_commit_ms": {
+        "p50": 0.0,
+        "p95": 2.445,
+        "p99": 11.055
+      },
+      "server_queue_ms": {
+        "p50": 0.0,
+        "p95": 4.944,
+        "p99": 14.917
+      },
+      "metric_definitions": {
+        "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; not pending/fail_open; finite server latency <=30ms",
+        "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
+        "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
+        "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap"
+      }
+    }
+  ],
+  "evidence_chain_valid": true,
+  "evidence_records_before_restart": 4692,
+  "journal_counts": {
+    "CDR": 1,
+    "OBSERVATION": 1,
+    "VERDICT": 4699
+  },
+  "model_scope": "synthetic model bundle; runtime/transport verification, not real-world accuracy evidence",
+  "model_version": "tfd-v2.2",
+  "event_loop": {
+    "factory": "precise_event_loop:uvicorn_loop_factory",
+    "loop_class": "PreciseProactorEventLoop",
+    "precise_windows_clock": true,
+    "standard_monotonic_resolution_s": 0.015625,
+    "performance_counter_resolution_s": 1e-07
+  }
+}

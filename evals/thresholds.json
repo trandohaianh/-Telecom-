@@ -1,0 +1,19 @@
+{
+  "_note": "Cổng chặn hồi quy trên dữ liệu MÔ PHỎNG. FPR chặn cứng là ràng buộc an toàn quan trọng nhất (mục tiêu < 0,01%). SLA đo ở 50–100 EPS trên runner 2 CPU.",
+  "min": {
+    "block_recall_pct": 45,
+    "block_precision_pct": 95,
+    "any_recall_pct": 80,
+    "family_min_detected_pct": 75,
+    "zero_day_caught_pct": 80,
+    "serving_scored_within_30ms_pct": 95
+  },
+  "max": {
+    "block_fpr_ci_hi_pct": 0.01,
+    "any_fpr_pct": 0.2,
+    "serving_p99_ms": 30,
+    "serving_fail_open": 0,
+    "serving_unexpected_enforce": 0
+  },
+  "must_be_true": ["evidence_chain_valid"]
+}

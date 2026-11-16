@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Khiên trắng có dấu tích, cùng hình với icon của bản web (icon.svg). Vùng an toàn 66dp ở giữa. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,27l22,7.8v16.9c0,15 -9.4,25 -22,29.9c-12.6,-4.9 -22,-14.9 -22,-29.9V34.8z" />
+    <path
+        android:pathData="M45.9,54.1l5.8,5.8l11.4,-12.6"
+        android:strokeWidth="4.9"
+        android:strokeColor="#E11D48"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

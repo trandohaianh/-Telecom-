@@ -1,0 +1,14 @@
+{
+  "namespace": "demo-2a54cd0710c54ab1bc32bb34bc1188b0",
+  "samples": 1000,
+  "correct_within_budget": 1000,
+  "degraded": 0,
+  "lookup_budget_ms": 5.0,
+  "all_attempt_latency_ms": {
+    "p50": 1.3223499990999699,
+    "p99": 2.311099990038201
+  },
+  "scope": "sequential in-process function + real Redis; no HTTP/SIP load or capacity certification",
+  "bloom_bytes": 2397,
+  "bloom_hashes": 13
+}

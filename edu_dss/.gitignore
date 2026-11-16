@@ -1,0 +1,7 @@
+.env
+secrets/jwt_secret
+secrets/redis_password
+secrets/redis_acl
+secrets/edu_adapter_token
+secrets/tls/*
+!secrets/tls/.gitkeep

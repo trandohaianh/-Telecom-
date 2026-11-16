@@ -1,0 +1,54 @@
+name: telecom-call-policy
+services:
+  redis-policy:
+    image: redis:7.4.12-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--aclfile", "/run/secrets/policy_redis_acl", "--maxmemory", "2gb", "--maxmemory-policy", "noeviction"]
+    expose: ["6379"]
+    volumes: [policy-data:/data]
+    secrets: [policy_redis_acl, policy_redis_password]
+    networks: [policy]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --user default --pass \"$$(cat /run/secrets/policy_redis_password)\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  call-policy-grpc:
+    build:
+      context: ..
+      dockerfile: telecom_grpc/Dockerfile
+    restart: unless-stopped
+    environment:
+      POLICY_REDIS_URL: redis://redis-policy:6379/0
+      POLICY_REDIS_PASSWORD_FILE: /run/secrets/policy_redis_password
+      GRPC_BIND: 0.0.0.0:50051
+      GRPC_SERVER_CERT: /run/tls/server.crt
+      GRPC_SERVER_KEY: /run/tls/server.key
+      GRPC_CLIENT_CA: /run/tls/client-ca.crt
+      REDIS_SOCKET_TIMEOUT_MS: ${REDIS_SOCKET_TIMEOUT_MS:-10}
+      # Fast mode skips Redis for Bloom negatives and therefore accepts the
+      # snapshot refresh interval as blacklist propagation delay. Strict default.
+      TELECOM_BLOOM_FAST_ALLOW: ${TELECOM_BLOOM_FAST_ALLOW:-0}
+      ONLINE_BUDGET_MS: ${ONLINE_BUDGET_MS:-25}
+      MAX_INFLIGHT: ${MAX_INFLIGHT:-1024}
+    volumes:
+      - ${TELECOM_SERVER_CERT_FILE:-./tls/server.crt}:/run/tls/server.crt:ro
+      - ${TELECOM_SERVER_KEY_FILE:-./tls/server.key}:/run/tls/server.key:ro
+      - ${TELECOM_CLIENT_CA_FILE:-./tls/client-ca.crt}:/run/tls/client-ca.crt:ro
+    secrets: [policy_redis_password]
+    depends_on: { redis-policy: { condition: service_healthy } }
+    expose: ["50051"]
+    networks: [policy, telecom-client]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  policy-data:
+secrets:
+  policy_redis_password: { file: ./secrets/redis_password }
+  policy_redis_acl: { file: ./secrets/redis_acl }
+networks:
+  policy: { internal: true }
+  telecom-client: {}

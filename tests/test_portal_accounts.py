@@ -286,3 +286,37 @@ def test_real_engine_pushes_inbox_through_hook():
     eng.inbox_hook = lambda who, item: seen.append((who, item["id"]))
     eng._push_inbox("84900000001", {"id": "X1"})
     assert seen == [("84900000001", "X1")] and eng.inbox["84900000001"][0]["id"] == "X1"
+
+
+# ---------------------------------------------------------------- chạy thử 1 phút trên app
+def test_app_simulate_stream_sends_mixed_events_to_the_subscriber(env, monkeypatch):
+    import server
+
+    c, eng, _ = env
+    sent = []
+    eng.inject = lambda kind, target=None: sent.append((kind, target)) or []
+    monkeypatch.setattr(server, "DEMO_MODE", True)
+    monkeypatch.setattr(server.time, "sleep", lambda s: None)
+    a = _register(c, "stream@example.com")
+    num = c.post("/api/app/phone/claim-demo", headers=a).json()["msisdn"]
+    r = c.post("/api/app/simulate-stream", headers=a)
+    assert r.status_code == 200 and r.json()["events"] == len(server.APP_STREAM_KINDS)
+    for t in threading.enumerate():
+        if t.name == "app-stream":
+            t.join(5)
+    assert sorted(k for k, _ in sent) == sorted(server.APP_STREAM_KINDS)
+    assert {t for _, t in sent} == {num}                 # mọi sự kiện nhắm đúng số của người dùng
+    assert num not in server._app_streams                # chạy xong thì được chạy lại
+
+
+def test_app_simulate_stream_is_demo_only_and_not_concurrent(env, monkeypatch):
+    import server
+
+    c, eng, _ = env
+    a = _register(c, "stream2@example.com")
+    num = c.post("/api/app/phone/claim-demo", headers=a).json()["msisdn"]
+    monkeypatch.setattr(server, "DEMO_MODE", False)
+    assert c.post("/api/app/simulate-stream", headers=a).status_code == 403
+    monkeypatch.setattr(server, "DEMO_MODE", True)
+    monkeypatch.setitem(server._app_streams, num, server.time.time() + 60)
+    assert c.post("/api/app/simulate-stream", headers=a).status_code == 409

@@ -69,6 +69,14 @@ padding:calc(48px + env(safe-area-inset-top)) 24px calc(36px + env(safe-area-ins
 .login-wrap{display:grid;gap:12px;margin-top:30px}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;display:none;max-width:90%}
 .toast.show{display:block}
+/* Thông báo kiểu "heads-up" của điện thoại: hiện ở đỉnh màn hình khi nhà mạng vừa chặn / có cuộc gọi tới. */
+.heads{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translate(-50%,-140%);transition:transform .25s ease;
+width:calc(100% - 20px);max-width:460px;z-index:15;border-radius:18px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;
+background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);border-left:6px solid var(--green);cursor:pointer}
+.heads.show{transform:translate(-50%,0)}.heads.BLOCK{border-left-color:var(--red)}.heads.FLAG{border-left-color:var(--amber)}
+.heads .ic{font-size:24px;flex:none;line-height:1.2}.heads b{display:block;font-size:14.5px}.heads span{display:block;font-size:13px;color:var(--mut);margin-top:2px}
+.heads small{display:block;font-size:11.5px;color:var(--mut);margin-top:4px}
+.run{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin-top:10px;min-height:20px}
 .note{font-size:12.5px;color:var(--mut)}
 </style>
 </head>
@@ -137,6 +145,12 @@ padding:calc(48px + env(safe-area-inset-top)) 24px calc(36px + env(safe-area-ins
         <button data-k="VOICE_HARVEST" style="grid-column:span 2">🤐 Cuộc gọi im lặng thu giọng</button>
       </div>
     </div>
+    <div class="card">
+      <div class="note" style="margin-bottom:10px">Chạy thử như ngoài đời: trong khoảng một phút, hệ thống tự gửi 10 cuộc gọi và tin nhắn
+        (cả bình thường lẫn lừa đảo) tới số của bạn. Bạn không cần bấm gì: cuộc nào bị chặn sẽ hiện thông báo, cuộc nào nghi ngờ sẽ hiện màn hình cảnh báo.</div>
+      <div class="grid2"><button class="pri" id="runBtn">▶️ Chạy thử 1 phút</button><button id="notifBtn">🔔 Bật thông báo</button></div>
+      <div class="run" id="runInfo"></div>
+    </div>
     <h2>Gần đây</h2>
     <div class="card" id="recent"><div class="empty">Chưa có cuộc gọi hay tin nhắn nào.</div></div>
 
@@ -201,6 +215,7 @@ padding:calc(48px + env(safe-area-inset-top)) 24px calc(36px + env(safe-area-ins
 
 <div class="overlay" id="ov"></div>
 <div class="toast" id="toast"></div>
+<div class="heads" id="heads" role="status" aria-live="polite"></div>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -308,19 +323,101 @@ function renderInbox(){
   $('#recent').innerHTML = items.slice(0, 4).map(row).join('') || '<div class="empty">Chưa có cuộc gọi hay tin nhắn nào.</div>';
   document.querySelectorAll('.item').forEach(el => el.onclick = () => el.classList.toggle('open'));
 }
+let LOADED = false, PAUSE = 0;
+const SHOWN = new Set();                   // sự kiện đã hiện màn hình (bấm nút giả lập) thì không báo lại
 async function refresh(){
   if (!TOKEN || !MSISDN) return;
   try {
     const r = await api('/api/app/inbox');
     // Thông báo nổi khi có cảnh báo mới về người thân hoặc từ nhà mạng.
     const seen = new Set(items.map(i => i.id));
-    const fresh = items.length ? r.items.filter(i => !seen.has(i.id) && (i.type === 'FAMILY' || i.type === 'WARN')) : [];
-    if (fresh.length) toast((fresh[0].type === 'FAMILY' ? '👪 ' : '📣 ') + fresh[0].action);
+    const fresh = LOADED ? r.items.filter(i => !seen.has(i.id)) : [];
+    const fam = fresh.filter(i => i.type === 'FAMILY' || i.type === 'WARN');
+    if (fam.length) toast((fam[0].type === 'FAMILY' ? '👪 ' : '📣 ') + fam[0].action);
+    const calls = fresh.filter(i => ['CALL', 'SMS', 'AUDIO'].includes(i.type) && !SHOWN.has(i.id));
+    if (PAUSE) calls.forEach(i => SHOWN.add(i.id));   // đang bấm nút giả lập: màn hình của nút sẽ hiện, không báo trùng
+    else alertIncoming(calls);
+    LOADED = true;
     items = r.items;
     $('#st_b').textContent = r.stats.blocked; $('#st_w').textContent = r.stats.warned; $('#st_a').textContent = r.stats.allowed;
     renderInbox();
   } catch(e){}
 }
+
+// ------------------------------------------------------------------ cuộc gọi / tin nhắn tới thật (qua hộp thư)
+// Điện thoại thật: cuộc bị nhà mạng chặn KHÔNG đổ chuông, chỉ để lại một thông báo; cuộc nghi ngờ vẫn đổ chuông
+// kèm màn hình cảnh báo; cuộc bình thường đổ chuông như mọi khi.
+const RANK = { ALLOW: 0, FLAG: 1, BLOCK: 2 };
+function alertIncoming(fresh){
+  if (!fresh.length) return;
+  // Cùng một cuộc gọi có thể có sự kiện CALL rồi AUDIO (giọng nói trong cuộc gọi): lấy quyết định nặng nhất.
+  const top = fresh.slice().sort((a, b) => RANK[b.decision] - RANK[a.decision])[0];
+  fresh.forEach(i => SHOWN.add(i.id));
+  const what = top.type === 'SMS' ? 'tin nhắn' : 'cuộc gọi';
+  if (top.decision === 'FLAG' || (top.decision === 'BLOCK' && top.type === 'AUDIO')) { incoming(top); notify(top); return; }
+  const title = top.decision === 'BLOCK' ? `🚫 Đã chặn ${what} lừa đảo` : top.type === 'SMS' ? '✉️ Tin nhắn mới' : '📞 Cuộc gọi đến';
+  const body = top.decision === 'BLOCK' ? (top.reasons[0] || 'Dấu hiệu lừa đảo') : 'Không có dấu hiệu lừa đảo';
+  heads(top.decision, title, pretty(top.from), body, () => incoming(top));
+  notify(top, title, body);
+}
+function heads(decision, title, who, body, onTap){
+  const h = $('#heads');
+  h.className = 'heads ' + decision;
+  h.innerHTML = `<div class="ic">${decision === 'BLOCK' ? '🛡️' : decision === 'FLAG' ? '⚠️' : '📞'}</div>
+    <div><b>${esc(title)}</b><span>${esc(who)} · ${esc(body)}</span><small>Lá chắn · bây giờ · chạm để xem lý do</small></div>`;
+  h.onclick = () => { h.classList.remove('show'); onTap && onTap(); };
+  requestAnimationFrame(() => h.classList.add('show'));
+  clearTimeout(h._t); h._t = setTimeout(() => h.classList.remove('show'), 5200);
+}
+function incoming(i){
+  const ov = $('#ov'); const reasons = (i.reasons || []).slice(0, 3).map(r => `<li>${esc(r)}</li>`).join('');
+  if (i.type === 'SMS'){
+    const head = { BLOCK: '🚫 Tin nhắn lừa đảo đã bị chặn', FLAG: '⚠️ Cảnh báo: tin nhắn nghi lừa đảo', ALLOW: '✉️ Tin nhắn mới' }[i.decision];
+    ov.innerHTML = `<div><div class="lab">Tin nhắn từ</div><div class="who">${esc(pretty(i.from))}</div>
+      ${i.text ? `<div class="sms">${esc(i.text)}</div>` : ''}
+      <div class="banner"><b>${head}</b>${i.decision === 'BLOCK' ? '<div style="font-size:14px;margin-bottom:6px">Tin nhắn đã được nhà mạng cách ly, bạn sẽ không nhận được nó.</div>' : ''}<ul>${reasons || '<li>Không có dấu hiệu bất thường.</li>'}</ul></div></div>
+      <div class="acts"><button class="b-rep" data-rep="${esc(i.from)}">Báo cáo</button><button class="b-ok" data-close>Đóng</button></div>`;
+  } else {
+    const inCall = i.type === 'AUDIO';
+    const head = inCall ? (i.decision === 'BLOCK' ? '🚫 Đã ngắt cuộc gọi: phát hiện dấu hiệu lừa đảo trong cuộc gọi' : '⚠️ Cảnh báo trong cuộc gọi: hãy cẩn thận, đừng đọc OTP')
+               : { BLOCK: '🚫 Nhà mạng đã chặn cuộc gọi lừa đảo', FLAG: '⚠️ Cuộc gọi nghi lừa đảo', ALLOW: '✅ Không có dấu hiệu lừa đảo' }[i.decision];
+    const acts = i.decision === 'BLOCK'
+      ? `<button class="b-rep" data-rep="${esc(i.from)}">Báo cáo</button><button class="b-ok" data-close>Đã hiểu</button>`
+      : `<button class="b-dec" data-close>Từ chối</button><button class="b-acc" data-close>${i.decision === 'FLAG' ? 'Vẫn nghe' : 'Nghe'}</button>`;
+    ov.innerHTML = `<div><div class="lab">${i.decision === 'BLOCK' && !inCall ? 'Cuộc gọi bị chặn' : 'Cuộc gọi đến'}</div><div class="who">${esc(pretty(i.from))}</div>
+      <div class="banner"><b>${head}</b>${i.decision === 'BLOCK' && !inCall ? '<div style="font-size:14px;margin-bottom:6px">Điện thoại của bạn không đổ chuông với cuộc gọi này.</div>' : ''}<ul>${reasons || '<li>Số gọi có lịch sử hoạt động bình thường.</li>'}</ul></div></div>
+      <div class="acts">${acts}</div>`;
+  }
+  ov.className = 'overlay show ' + i.decision;
+  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { ov.className = 'overlay'; });
+  ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => { await report(b.dataset.rep, 'Báo cáo từ màn hình cảnh báo'); ov.className = 'overlay'; });
+}
+// Thông báo hệ thống (khi người dùng cho phép và app đang chạy nền).
+function notify(i, title, body){
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+  title = title || (i.decision === 'BLOCK' ? '🚫 Đã chặn lừa đảo' : '⚠️ Nghi lừa đảo');
+  body = `${pretty(i.from)} · ${body || i.reasons[0] || ''}`;
+  navigator.serviceWorker?.ready.then(r => r.showNotification(title, { body, tag: i.id, icon: 'icon.svg' })).catch(() => {});
+}
+$('#notifBtn').onclick = async () => {
+  if (!('Notification' in window)) { toast('Trình duyệt này không hỗ trợ thông báo.'); return; }
+  const p = await Notification.requestPermission();
+  toast(p === 'granted' ? 'Đã bật thông báo khi app chạy nền.' : 'Chưa được phép gửi thông báo.');
+};
+$('#runBtn').onclick = async () => {
+  const b = $('#runBtn'); b.disabled = true;
+  try {
+    const r = await api('/api/app/simulate-stream', { method: 'POST' });
+    let left = r.seconds + 4;
+    $('#runInfo').textContent = `Đang chạy thử: ${r.events} cuộc gọi / tin nhắn sẽ tới trong khoảng ${r.seconds} giây.`;
+    clearInterval(b._t);
+    b._t = setInterval(() => {
+      left -= 1;
+      if (left <= 0) { clearInterval(b._t); b.disabled = false; $('#runInfo').textContent = 'Xong. Xem lại toàn bộ trong mục Lịch sử.'; return; }
+      $('#runInfo').textContent = `Đang chạy thử… còn khoảng ${left} giây.`;
+    }, 1000);
+  } catch(e){ toast('Không chạy thử được: ' + e.message); b.disabled = false; }
+};
 
 // ------------------------------------------------------------------ màn hình cuộc gọi / tin nhắn đến (demo)
 function overlay(kind, res){
@@ -366,10 +463,14 @@ function overlay(kind, res){
   ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => { await report(b.dataset.rep, 'Báo cáo từ màn hình cảnh báo'); ov.className = 'overlay'; refresh(); });
 }
 document.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
-  b.disabled = true; const old = b.textContent; b.textContent = '…';
-  try { const r = await api('/api/app/simulate?kind=' + b.dataset.k, { method: 'POST' }); overlay(b.dataset.k, r.results); }
+  b.disabled = true; const old = b.textContent; b.textContent = '…'; PAUSE++;
+  try {
+    const r = await api('/api/app/simulate?kind=' + b.dataset.k, { method: 'POST' });
+    (r.results || []).forEach(x => x.event_id && SHOWN.add(x.event_id));   // đã hiện màn hình rồi, hộp thư không báo lại
+    overlay(b.dataset.k, r.results);
+  }
   catch(e){ toast('Không giả lập được: ' + e.message); }
-  b.disabled = false; b.textContent = old;
+  PAUSE--; b.disabled = false; b.textContent = old;
 });
 
 // ------------------------------------------------------------------ tra cứu & báo cáo

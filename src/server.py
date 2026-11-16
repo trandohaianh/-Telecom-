@@ -457,7 +457,7 @@ class LiveEngine:
         # Chờ tối đa 10 giây; timeout sẽ báo lỗi thay vì giả vờ injection thành công.
         res = fut.result(timeout=10)
         # Chỉ trả các trường cần thiết để giao diện thống kê và hiển thị lý do.
-        return [{"event_type": e["event_type"], "decision": r["decision"], "risk": r.get("risk"),
+        return [{"event_id": e["event_id"], "event_type": e["event_type"], "decision": r["decision"], "risk": r.get("risk"),
                  "reasons": r.get("reasons", []), "zero_day": r.get("zero_day", False),
                  "to_target": bool(target) and r.get("counterparty") == target, "party": r.get("party"),
                  "action": r.get("action_vi"), "text": e.get("text", "")} for e, r in zip(evs, res)]
@@ -924,6 +924,45 @@ def app_simulate(kind: str, msisdn=Depends(app_user), _=Depends(demo_only)):
     portal.simulate_allowed(msisdn)
     res = [r for r in engine.inject(kind, target=msisdn) if r["to_target"]]
     return {"kind": kind, "results": res}
+
+
+# Kịch bản chạy thử một phút: cuộc gọi/tin nhắn bình thường xen lẫn các kiểu lừa đảo, gửi tới số của người dùng
+# với khoảng nghỉ ngẫu nhiên như ngoài đời. Mỗi sự kiện vẫn đi qua đúng hệ thống AI (engine.inject), app nhận qua
+# hộp thư như cuộc gọi thật, KHÔNG qua phản hồi của nút bấm.
+APP_STREAM_KINDS = ["LEGIT", "SMS_PHISH", "LEGIT", "CLI_SPOOF", "LEGIT", "SIM_BOX", "WANGIRI", "LEGIT",
+                    "DEEPFAKE_VOICE", "VOICE_HARVEST"]
+_app_streams: dict[str, float] = {}
+_app_streams_lock = threading.Lock()
+
+
+def _run_app_stream(msisdn: str, kinds: list[str], gaps: list[float]) -> None:
+    try:
+        for kind, gap in zip(kinds, gaps):
+            time.sleep(gap)
+            try:
+                engine.inject(kind, target=msisdn)
+            except Exception:                    # một sự kiện lỗi (hàng đợi đầy) không dừng cả kịch bản
+                continue
+    finally:
+        with _app_streams_lock:
+            _app_streams.pop(msisdn, None)
+
+
+@app.post("/api/app/simulate-stream")
+# Chế độ demo: chạy thử khoảng một phút với dữ liệu giả lập; app tự hiện màn hình chặn / cảnh báo khi sự kiện tới.
+def app_simulate_stream(msisdn=Depends(app_user), _=Depends(demo_only)):
+    with _app_streams_lock:
+        until = _app_streams.get(msisdn, 0)
+        if until > time.time():
+            raise HTTPException(409, f"đang chạy thử, còn khoảng {int(until - time.time())} giây")
+        portal.simulate_allowed(msisdn)
+        rng = np.random.default_rng()
+        kinds = [str(k) for k in rng.permutation(APP_STREAM_KINDS)]
+        gaps = [float(g) for g in rng.uniform(4.0, 8.0, size=len(kinds))]
+        _app_streams[msisdn] = time.time() + sum(gaps) + 15
+    threading.Thread(target=_run_app_stream, args=(msisdn, kinds, gaps), daemon=True, name="app-stream").start()
+    return {"started": True, "events": len(kinds), "seconds": round(sum(gaps)),
+            "kinds": collections.Counter(kinds)}
 
 
 @app.get("/api/app/lookup")

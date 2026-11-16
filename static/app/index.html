@@ -17,6 +17,7 @@
 :root{--bg:#f3f7fa;--card:#ffffff;--ink:#0b1b2b;--mut:#52657a;--line:#d6e1ea;--red:#e11d48;--red-bg:#fde7ec;--amber:#b45309;--amber-bg:#fef3c7;--green:#15803d;--green-bg:#dcfce7;--blue:#0e7490;--brand:#0e7490;--on-brand:#ffffff;--shadow:0 1px 2px rgba(11,27,43,.06),0 4px 16px rgba(11,27,43,.05);color-scheme:light}
 :root[data-theme="dark"]{--bg:#07111f;--card:#0d1a2b;--ink:#e6f1fa;--mut:#8da2b8;--line:#1f3550;--red:#ff4d6d;--red-bg:#3b0d18;--amber:#fbbf24;--amber-bg:#3a2a06;--green:#4ade80;--green-bg:#0d2e18;--blue:#22d3ee;--brand:#22d3ee;--on-brand:#04222b;--shadow:none;color-scheme:dark}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#07111f;--card:#0d1a2b;--ink:#e6f1fa;--mut:#8da2b8;--line:#1f3550;--red:#ff4d6d;--red-bg:#3b0d18;--amber:#fbbf24;--amber-bg:#3a2a06;--green:#4ade80;--green-bg:#0d2e18;--blue:#22d3ee;--brand:#22d3ee;--on-brand:#04222b;--shadow:none;color-scheme:dark}}
+.login-wrap button{border-radius:999px}.login-wrap{border-radius:22px}
 .tt{min-height:36px;padding:6px 10px;font-size:12px;border-radius:10px;display:inline-flex;align-items:center;gap:6px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -44,7 +45,7 @@ button:active{transform:scale(.98)}
 .chip{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;white-space:nowrap}
 .c-BLOCK{background:var(--red-bg);color:var(--red)}.c-FLAG{background:var(--amber-bg);color:var(--amber)}.c-ALLOW{background:var(--green-bg);color:var(--green)}
 .empty{color:var(--mut);text-align:center;padding:22px 8px;font-size:14px}
-input,select{font:16px system-ui,sans-serif;width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+input,select{font:16px system-ui,sans-serif;width:100%;padding:12px 18px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink)}
 .verdict{border-radius:12px;padding:14px;margin-top:12px}.v-info{background:var(--line);color:var(--blue)}.v-danger{background:var(--red-bg);color:var(--red)}.v-warn{background:var(--amber-bg);color:var(--amber)}.v-ok{background:var(--green-bg);color:var(--green)}
 .verdict b{display:block;font-size:15px;margin-bottom:4px}.verdict span{color:var(--ink);font-size:13px}
 .tip{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.tip:last-child{border-bottom:0}.tip .ic{font-size:22px;flex:none}

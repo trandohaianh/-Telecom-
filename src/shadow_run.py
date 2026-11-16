@@ -24,7 +24,6 @@ import drift
 from config import DATA_DIR, MODEL_DIR
 from detector import Detector
 from events_io import load_events
-from feature_store import CALL_FEATURES
 from ingest_guard import IngestGuard
 from make_drift_baseline import WATCHED
 

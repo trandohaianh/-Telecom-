@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 
 ARTIFACTS = ("tier1_call_lgbm.txt", "tier2_audio_lgbm.txt", "tier1_zero_day_iforest.joblib",

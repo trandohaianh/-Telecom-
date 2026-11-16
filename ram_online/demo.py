@@ -1,6 +1,5 @@
 """Executable simulation. Provision only an explicitly isolated demo namespace."""
 import argparse
-import asyncio
 import json
 import statistics
 import time

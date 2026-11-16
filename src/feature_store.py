@@ -17,7 +17,7 @@ import re
 import time
 from collections import defaultdict, deque
 
-from data_generator import CONSUMER_TACS, GATEWAY_TACS, OFFICIAL_DOMAINS, PROTECTED_CLI, REGISTERED_CELLS, BRAND_SENDERS
+from data_generator import GATEWAY_TACS, OFFICIAL_DOMAINS, PROTECTED_CLI, REGISTERED_CELLS, BRAND_SENDERS
 
 # Các hằng số thời gian xác định window 1 phút, 10 phút, 1 giờ và 24 giờ cho feature.
 H1, M10, M1, D1 = 3600.0, 600.0, 60.0, 86400.0

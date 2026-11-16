@@ -11,9 +11,7 @@ from pathlib import Path
 import sqlite3
 import sys
 import threading
-import time
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from backend_runtime import InferenceRuntime

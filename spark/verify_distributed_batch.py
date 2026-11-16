@@ -1,7 +1,6 @@
 """Real Spark shuffle parity check; writes only below an isolated output directory."""
 import argparse
 from pathlib import Path
-import sys
 import tempfile
 
 import pandas as pd

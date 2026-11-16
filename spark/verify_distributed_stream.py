@@ -4,7 +4,6 @@ The controller and every keyed state transition run on Spark workers; only the
 verification step collects the final bounded feature output for comparison.
 """
 import argparse
-import json
 from pathlib import Path
 import subprocess
 import sys

@@ -32,7 +32,6 @@ def shard_of(ev: dict, n: int) -> int:
 def run_replicated(n: int, events, warm):
     """Mỗi shard chấm sự kiện của mình và nhận side update (observe_foreign) của mọi sự kiện khác,
     đúng thứ tự thời gian — mô phỏng chính xác triển khai N tiến trình + luồng broadcast."""
-    import evaluate
     from build_dataset import prime
     from detector import Detector
 

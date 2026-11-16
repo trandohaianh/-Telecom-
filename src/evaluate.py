@@ -6,7 +6,6 @@ Run:  python evaluate.py            -> data/benchmark_results.json
 from __future__ import annotations
 
 import json
-import math
 import time
 from collections import Counter, defaultdict
 

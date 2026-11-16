@@ -150,7 +150,6 @@ def test_detector_scores_real_events_end_to_end():
     # Chạy mô hình thật trên sự kiện thật: bắt lỗi kiểu method bị lùi lề ra khỏi class mà test đơn vị bỏ sót.
     from detector import Detector
     from events_io import load_events
-    import pandas as pd
     evs = load_events(ROOT / "data" / "test_events_50k.csv")[:300]
     res = Detector().score_batch(evs)
     assert len(res) == 300 and {r["decision"] for r in res} <= {"ALLOW", "FLAG", "BLOCK"}

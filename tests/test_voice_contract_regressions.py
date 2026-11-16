@@ -1,6 +1,5 @@
 """Regression contracts for real-WAV delivery, cancellation and numeric safety."""
 import asyncio
-import base64
 import io
 from pathlib import Path
 import sys

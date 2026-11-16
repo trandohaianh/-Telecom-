@@ -6,21 +6,20 @@ import re
 from xml.sax.saxutils import escape
 
 from docx import Document
-from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (PageBreak, Paragraph, Preformatted, SimpleDocTemplate,
-                                Spacer, Table, TableStyle, HRFlowable, KeepTogether)
+                                Spacer, Table, TableStyle)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -200,17 +199,12 @@ def render_docx(blocks):
         p.add_run(title)
     doc.add_page_break()
 
-    first_title_seen = False
-    in_main_content = False
     for block in blocks:
         kind = block[0]
         if kind == "heading":
             level, title = block[1]
             if level == 1 and title.startswith("HỒ SƠ"):  # represented by the cover
-                first_title_seen = True
                 continue
-            if level == 2 and title.startswith("Fraud Telecom"):
-                in_main_content = True
             style_level = min(max(level, 1), 3)
             doc.add_paragraph(title, style=f"Heading {style_level}")
         elif kind == "paragraph":

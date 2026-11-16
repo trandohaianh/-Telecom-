@@ -332,8 +332,7 @@ def test_formatted_phone_numbers_remain_masked(number):
 
 def test_review_only_retro_does_not_reach_subscribers_or_group_tracking():
     import server
-    from collections import deque, defaultdict, Counter
-    from types import SimpleNamespace
+    from collections import deque, defaultdict
     engine = server.LiveEngine.__new__(server.LiveEngine)
     engine.lock = threading.RLock()
     engine.alerts = deque(maxlen=60)

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from backend_state import BackendState, EventConflict
 from backend_model_identity import loaded_model_identity
 from config import MODEL_VERSION
-from ingest_guard import ADMITTED, DUPLICATE, IngestGuard
+from ingest_guard import ADMITTED, IngestGuard
 from resilience import fail_open_result, RescoreStateRestoreError
 
 REQUIRED = {

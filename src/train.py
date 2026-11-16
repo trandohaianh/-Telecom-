@@ -10,7 +10,6 @@ The 50,000-event test window is never touched here.
 """
 # Nạp thư viện thao tác dữ liệu, huấn luyện mô hình và lưu mô hình.
 import json
-import unicodedata
 
 import joblib
 import lightgbm as lgb

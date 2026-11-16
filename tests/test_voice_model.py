@@ -1,6 +1,4 @@
 import csv
-import hashlib
-import json
 from pathlib import Path
 import sys
 

@@ -30,7 +30,6 @@ from sklearn.svm import LinearSVC
 from compare_models import TEST_NAMES, WINDOWS, features
 from config import DATA_DIR, TARGET_BLOCK_FPR, TARGET_FLAG_FPR
 from data_generator import BRAND_SENDERS
-from feature_store import SMS_META_FEATURES
 from train import sms_matrix, threshold_for_fpr
 
 warnings.filterwarnings("ignore")

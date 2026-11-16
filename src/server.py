@@ -18,7 +18,6 @@ from pathlib import Path
 # contextlib tạo lifespan (khởi động / tắt) cho FastAPI.
 import contextlib
 # gc dùng để dọn rác và đóng băng các đối tượng dùng chung trước khi stream chạy.
-import gc
 # json đọc các file số liệu đã lưu và giải mã bản ghi bằng chứng.
 import json
 # queue chuyển các sự kiện thử tấn công từ request API sang thread xử lý.

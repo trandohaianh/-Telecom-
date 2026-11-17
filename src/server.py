@@ -573,7 +573,9 @@ def health_ready():
         raise HTTPException(503, {"message": "inference owner unavailable", "progress": progress})
     return {"status": "ready", "progress": progress, "mode": engine.network_mode, "demo": engine.demo_mode,
             "model_version": engine.runtime.model_version, "model_identity": engine.runtime.model_identity,
-            "model_manifest": getattr(engine.g.det, "model_manifest", {"status": "legacy_unverified"})}
+            "model_manifest": getattr(engine.g.det, "model_manifest", {"status": "legacy_unverified"}),
+            # NORMAL is an opt-in durability trade-off (FRAUD_SQLITE_SYNCHRONOUS); operators must see it.
+            "journal_durability": getattr(engine.runtime.state, "synchronous", "FULL")}
 
 
 @app.get("/")

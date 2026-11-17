@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 import hashlib
 import json
+import math
 import os
 import sqlite3
 import threading
@@ -47,6 +48,23 @@ class BackendState:
                 raise ValueError("WAL autocheckpoint pages must be an integer in [1, 65536]") from None
         if type(wal_autocheckpoint_pages) is not int or not 1 <= wal_autocheckpoint_pages <= 65536:
             raise ValueError("WAL autocheckpoint pages must be an integer in [1, 65536]")
+        # Durability of each verdict COMMIT. FULL (default): fsync on every commit, nothing acknowledged is
+        # lost even on power loss. NORMAL (opt-in, owner decision): WAL is fsynced only at checkpoints, so
+        # an OS crash / power loss can drop the verdicts committed since the last checkpoint (< ~1 s with
+        # the background checkpointer); a process crash loses nothing. Measured 2026-11-17 on a WSL virtual
+        # disk at 100 EPS: commit p50 4.6 -> 0.17 ms, p99 11-16 -> 1-4 ms, fail-opens 56-216 -> 0-34.
+        synchronous = os.environ.get("FRAUD_SQLITE_SYNCHRONOUS", "FULL").strip().upper()
+        if synchronous not in ("FULL", "NORMAL"):
+            raise ValueError("FRAUD_SQLITE_SYNCHRONOUS must be FULL or NORMAL")
+        self.synchronous = synchronous
+        raw_interval = os.environ.get("FRAUD_SQLITE_CHECKPOINT_INTERVAL_S")
+        try:
+            interval = self.BACKGROUND_CHECKPOINT_INTERVAL_S if raw_interval is None else float(raw_interval)
+        except ValueError:
+            interval = math.nan
+        if not math.isfinite(interval) or not 0.05 <= interval <= 10.0:
+            raise ValueError("FRAUD_SQLITE_CHECKPOINT_INTERVAL_S must be within [0.05, 10] seconds")
+        self.checkpoint_interval_s = interval
         self.path = Path(path).resolve() if path is not None else None
         if self.path:
             self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -59,7 +77,7 @@ class BackendState:
         self._transaction_evidence_acks = set()
         self._owner_file = None
         self.db.execute("PRAGMA journal_mode=WAL")
-        self.db.execute("PRAGMA synchronous=FULL")
+        self.db.execute(f"PRAGMA synchronous={self.synchronous}")
         # Allow measured checkpoint tuning without changing FULL durability.
         # Preserve SQLite's usual 1000-page default. Readers can pin older
         # frames, so this threshold is not a hard WAL size cap.
@@ -348,7 +366,7 @@ class BackendState:
         conn = sqlite3.connect(str(self.path), timeout=5.0, check_same_thread=False, isolation_level=None)
         try:
             conn.execute("PRAGMA wal_autocheckpoint=0")
-            while not self._checkpoint_stop.wait(self.BACKGROUND_CHECKPOINT_INTERVAL_S):
+            while not self._checkpoint_stop.wait(self.checkpoint_interval_s):
                 self.checkpoint_wal(conn)
             self.checkpoint_wal(conn)
         finally:

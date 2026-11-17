@@ -407,4 +407,23 @@ Không có bằng chứng nào thì BLOCK được hạ xuống FLAG (mã P001).
 - Đã gỡ ba nguồn dừng đo được (§1.16). Cùng máy này, vòng 5 đo p99 221 ms với 210 fail-open; nay là 33,4 ms với 4 fail-open.
 - Phần còn lại là độ trễ fsync của đĩa ảo WSL: một commit `synchronous=FULL` dao động 4–25 ms tuỳ lúc. Tám lần đo A/B liên tiếp có cùng mã mà kết quả chênh nhau từ 0 tới 132 fail-open, nên **máy này không đủ yên để chốt SLA**.
 - Baseline đo trên runner CI là p99 18,6 ms và vẫn được giữ.
-- **Bước còn lại:** chạy `python -B src/verify_live_http.py --rates 50,100 --seconds 30` trên runner CI hoặc phần cứng đích (SSD có fsync < 1 ms), ba lần liên tiếp. Nếu vẫn đỏ, phương án tiếp theo là **group commit** (gom nhiều phán quyết vào một fsync). Phương án `synchronous=NORMAL` thì đổi độ bền khi mất điện, cần chủ dự án quyết.
+- **Group commit: đã có sẵn, không phải lời giải.** Owner loop vốn lấy hết các request đang chờ (tối đa 16) vào **một** giao dịch, tức một lần fsync. Đề xuất "làm group commit" ở lượt trước của tôi là sai, vì nó đã tồn tại.
+- **Thí nghiệm đã chạy** (100 EPS, 600 sự kiện mỗi lần, đọc `commit_ms` phía server):
+
+  | Cấu hình | commit p50 | commit p99 | fail-open (3 lần) |
+  |---|---|---|---|
+  | Hiện tại: `FULL`, checkpoint nền 0,25 s, evidence gom 20 ms | 4,6–4,9 ms | 11–16 ms | 28 / 9 / 69, lần sau 56 / 216 / 64 |
+  | Evidence gom 200 ms | 4,8–5,0 ms | 14–16 ms | 108 / 94 / 11 |
+  | Evidence gom 200 ms + checkpoint 1 s | 4,5–4,7 ms | 11–16 ms | 10 / 145 / 60 |
+  | Checkpoint ngay trong COMMIT (như cũ) | 2,2–2,3 ms | 11–16 ms | 45 / 69 / 82 |
+  | **`synchronous=NORMAL`** | **0,17 ms** | **1–4 ms** | **0 / 34 / 1** |
+
+- **Kết luận đo được:** nút thắt là **fsync bắt buộc ở mỗi COMMIT** trên đĩa ảo WSL (4–25 ms). Giãn các fsync phụ không làm p99 của COMMIT giảm. Chỉ bỏ fsync mỗi COMMIT mới đưa đường phục vụ về trong 30 ms trên máy này.
+- **Đã thêm (mặc định không đổi):**
+  - `FRAUD_SQLITE_SYNCHRONOUS=FULL|NORMAL`, mặc định FULL, được hiện ở `/health/ready` qua trường `journal_durability`;
+  - `FRAUD_SQLITE_CHECKPOINT_INTERVAL_S` (0,05–10 s);
+  - `FRAUD_EVIDENCE_COALESCE_S` (0–5 s).
+  Mọi giá trị sai đều báo lỗi ngay lúc khởi động.
+- **Cần chủ dự án quyết:**
+  1. **Giữ `FULL`** và chốt SLA trên phần cứng đích. SSD trung tâm dữ liệu có tụ chống mất điện thường fsync dưới 0,5 ms. Lệnh đo: `python -B src/verify_live_http.py --rates 50,100 --seconds 30`, chạy 3 lần.
+  2. **Đổi mặc định sang `NORMAL`.** Tiến trình sập không mất gì. Mất điện hoặc OS sập có thể mất các phán quyết commit sau lần checkpoint gần nhất (khoảng dưới 1 giây). Khi đó nhà mạng gửi lại (at-least-once) thì sự kiện được chấm lại, nhưng bản ghi bằng chứng của những phán quyết đã trả lời trước đó sẽ không còn.

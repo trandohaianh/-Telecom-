@@ -11,6 +11,22 @@ import time
 from evidence import GENESIS, verify
 
 
+
+def _env_seconds(name, default, lo, hi):
+    """Finite float from the environment within [lo, hi]; anything else is a configuration error."""
+    import math
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be a number of seconds") from None
+    if not math.isfinite(value) or not lo <= value <= hi:
+        raise ValueError(f"{name} must be within [{lo}, {hi}] seconds")
+    return value
+
+
 class DurableEvidenceLog:
     def __init__(self, path, state, capacity=8192, sample_allow_every=1000):
         if type(sample_allow_every) is not int or sample_allow_every < 1:
@@ -53,6 +69,7 @@ class DurableEvidenceLog:
             state.set("store_id", self.store_id)
         if policy is None:
             state.set("evidence_export_policy", {"sample_allow_every": sample_allow_every})
+        self.coalesce_s = _env_seconds("FRAUD_EVIDENCE_COALESCE_S", 0.02, 0.0, 5.0)
         self._thread = threading.Thread(target=self._run, name="evidence-writer", daemon=True)
         self._thread.start()
 
@@ -105,7 +122,7 @@ class DurableEvidenceLog:
                     if not self._stop.is_set():
                         self._wake.wait(0.1)
                         self._wake.clear()
-                        self._stop.wait(0.02)  # Coalesce exports; SQLite results are already FULL durable.
+                        self._stop.wait(self.coalesce_s)  # Coalesce exports; SQLite results are already FULL durable.
                     rows = self.state.pending_evidence(limit=1000)
                     handled = []
                     for seq, record in rows:

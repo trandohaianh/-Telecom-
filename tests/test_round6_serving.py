@@ -10,6 +10,8 @@ import gc
 import json
 from pathlib import Path
 
+import pytest
+
 
 from backend_state import BackendState
 
@@ -100,3 +102,42 @@ def test_analyst_verify_endpoint_also_runs_out_of_process():
     src = (ROOT / "src" / "server.py").read_text(encoding="utf-8")
     body = src.split("def api_verify(", 1)[1].split("\n@app.", 1)[0]
     assert "verify_in_subprocess" in body and "read_text" not in body
+
+
+def test_journal_durability_defaults_to_full_and_normal_is_explicit_opt_in(tmp_path, monkeypatch):
+    monkeypatch.delenv("FRAUD_SQLITE_SYNCHRONOUS", raising=False)
+    full = BackendState(tmp_path / "f.sqlite3")
+    try:
+        assert full.synchronous == "FULL" and full.db.execute("PRAGMA synchronous").fetchone()[0] == 2
+    finally:
+        full.close()
+    monkeypatch.setenv("FRAUD_SQLITE_SYNCHRONOUS", "normal")
+    normal = BackendState(tmp_path / "n.sqlite3")
+    try:
+        assert normal.synchronous == "NORMAL" and normal.db.execute("PRAGMA synchronous").fetchone()[0] == 1
+    finally:
+        normal.close()
+    monkeypatch.setenv("FRAUD_SQLITE_SYNCHRONOUS", "OFF")
+    with pytest.raises(ValueError, match="FULL or NORMAL"):
+        BackendState(tmp_path / "x.sqlite3")
+    src = (ROOT / "src" / "server.py").read_text(encoding="utf-8")
+    assert '"journal_durability"' in src.split("def health_ready", 1)[1].split("@app.", 1)[0]
+
+
+def test_evidence_coalescing_and_checkpoint_interval_are_bounded_settings(monkeypatch):
+    from backend_evidence import _env_seconds
+    monkeypatch.delenv("X_S", raising=False)
+    assert _env_seconds("X_S", 0.02, 0.0, 5.0) == 0.02
+    monkeypatch.setenv("X_S", "0.2")
+    assert _env_seconds("X_S", 0.02, 0.0, 5.0) == 0.2
+    for bad in ("nan", "-1", "9", "abc"):
+        monkeypatch.setenv("X_S", bad)
+        with pytest.raises(ValueError):
+            _env_seconds("X_S", 0.02, 0.0, 5.0)
+
+
+def test_invalid_checkpoint_interval_fails_at_start_not_in_the_thread(tmp_path, monkeypatch):
+    for bad in ("0", "nan", "abc", "60"):
+        monkeypatch.setenv("FRAUD_SQLITE_CHECKPOINT_INTERVAL_S", bad)
+        with pytest.raises(ValueError, match="CHECKPOINT_INTERVAL"):
+            BackendState(tmp_path / "c.sqlite3")

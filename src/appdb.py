@@ -29,6 +29,14 @@ CREATE TABLE IF NOT EXISTS subscriber_sessions (
     last_seen REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_sessions_sub ON subscriber_sessions(subscriber_id);
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY,
+    subscriber_id INTEGER NOT NULL REFERENCES subscribers(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS otp_codes (
     phone TEXT PRIMARY KEY,
     subscriber_id INTEGER NOT NULL,

@@ -1,45 +1,196 @@
 {
   "tier1_call": {
-    "val_pr_auc": 0.9982822159132475,
-    "val_roc_auc": 0.9999660125275843,
-    "best_iteration": 179,
+    "val_pr_auc": 0.9826084897271538,
+    "val_roc_auc": 0.9998489373779211,
+    "best_iteration": 164,
     "thresholds": {
-      "block": 0.9189562726142347,
-      "flag": 0.2563290655282122,
+      "block": 0.8158905661683605,
+      "flag": 0.22773202649900856,
       "anomaly_flag": {
-        "domestic": 0.6602395933447861,
-        "foreign": 0.6432012918753437,
-        "trunk": 0.6285742770770295
+        "domestic": 0.6596104927977631,
+        "foreign": 0.639912813907175,
+        "trunk": 0.6795055288915036
       }
     },
+    "threshold_validation": {
+      "scope": "independent calibration window; held-out evaluation still required",
+      "probabilities_calibrated": false,
+      "certifies_deployment_fpr": false,
+      "selection_note": "thresholds were selected on these negatives; validate on untouched traffic",
+      "actions": {
+        "block": {
+          "false_positives": 5,
+          "negative_events": 105427,
+          "empirical_fpr": 4.742618114904152e-05,
+          "fpr_95ci": [
+            2.025749569255273e-05,
+            0.0001110285662409603
+          ],
+          "target_fpr": 0.0001,
+          "upper_95ci_within_target": false,
+          "minimum_negatives_if_zero_fp": 38413,
+          "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+        },
+        "flag": {
+          "false_positives": 52,
+          "negative_events": 105427,
+          "empirical_fpr": 0.0004932322839500318,
+          "fpr_95ci": [
+            0.0003761761737143604,
+            0.0006466896060082972
+          ],
+          "target_fpr": 0.001,
+          "upper_95ci_within_target": true,
+          "minimum_negatives_if_zero_fp": 3838,
+          "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+        }
+      },
+      "calibration_window": "cal",
+      "independent_of_early_stopping": true
+    },
+    "anomaly_threshold_validation": {
+      "domestic": {
+        "false_positives": 25,
+        "negative_events": 101804,
+        "empirical_fpr": 0.0002455699186672429,
+        "fpr_95ci": [
+          0.0001663478584483155,
+          0.00036250727838428766
+        ],
+        "target_fpr": 0.0005,
+        "upper_95ci_within_target": true,
+        "minimum_negatives_if_zero_fp": 7680,
+        "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+      },
+      "foreign": {
+        "false_positives": 16,
+        "negative_events": 3281,
+        "empirical_fpr": 0.0048765620237732395,
+        "fpr_95ci": [
+          0.0030039558645614207,
+          0.007907255196574675
+        ],
+        "target_fpr": 0.01,
+        "upper_95ci_within_target": true,
+        "minimum_negatives_if_zero_fp": 381,
+        "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+      },
+      "trunk": {
+        "false_positives": 0,
+        "negative_events": 342,
+        "empirical_fpr": 0.0,
+        "fpr_95ci": [
+          0.0,
+          0.011107975443093021
+        ],
+        "target_fpr": 0.005,
+        "upper_95ci_within_target": false,
+        "minimum_negatives_if_zero_fp": 765,
+        "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+      }
+    },
+    "threshold_window_reused_for_early_stopping": false,
     "feature_importance_gain": {
-      "active_hours_on_network": 1340825.8,
-      "incoming_24h": 260461.4,
-      "imei_per_msisdn_24h": 66415.1,
-      "calls_1h": 65316.3,
-      "msisdn_per_imei_24h": 42510.1,
-      "new_sims_on_cell_1h": 10553.9,
-      "caller_age_days": 8546.0,
-      "hour_of_day": 8005.4,
-      "protected_cli_mismatch": 6344.2,
-      "in_out_ratio_24h": 6159.5
+      "active_hours_on_network": 1331068.2,
+      "incoming_24h": 191896.5,
+      "in_out_ratio_24h": 76581.6,
+      "protected_cli_mismatch": 58801.4,
+      "msisdn_per_imei_24h": 46286.2,
+      "imei_per_msisdn_24h": 21116.7,
+      "caller_age_days": 9801.4,
+      "hour_of_day": 5933.3,
+      "new_sims_on_cell_1h": 3840.5,
+      "mean_log_duration": 3312.6
     }
   },
   "sms": {
-    "val_pr_auc": 1.0,
+    "val_pr_auc": 0.9999999999999999,
     "val_roc_auc": 1.0,
     "thresholds": {
       "block": 0.9,
       "flag": 0.5
+    },
+    "threshold_validation": {
+      "scope": "independent calibration window; held-out evaluation still required",
+      "probabilities_calibrated": false,
+      "certifies_deployment_fpr": false,
+      "selection_note": "thresholds were selected on these negatives; validate on untouched traffic",
+      "actions": {
+        "block": {
+          "false_positives": 0,
+          "negative_events": 51038,
+          "empirical_fpr": 0.0,
+          "fpr_95ci": [
+            0.0,
+            7.526374205118806e-05
+          ],
+          "target_fpr": 0.0001,
+          "upper_95ci_within_target": true,
+          "minimum_negatives_if_zero_fp": 38413,
+          "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+        },
+        "flag": {
+          "false_positives": 0,
+          "negative_events": 51038,
+          "empirical_fpr": 0.0,
+          "fpr_95ci": [
+            0.0,
+            7.526374205118806e-05
+          ],
+          "target_fpr": 0.005,
+          "upper_95ci_within_target": true,
+          "minimum_negatives_if_zero_fp": 765,
+          "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+        }
+      },
+      "calibration_window": "cal",
+      "independent_of_early_stopping": true
     }
   },
   "tier2_audio": {
-    "val_pr_auc": 0.8871509807169826,
-    "val_roc_auc": 0.9911515483713057,
-    "best_iteration": 57,
+    "val_pr_auc": 0.9175166044663614,
+    "val_roc_auc": 0.9939139577986883,
+    "best_iteration": 76,
     "thresholds": {
-      "block": 0.908414173062539,
-      "flag": 0.5186308426956013
-    }
+      "block": 1.0000000000000002,
+      "flag": 0.7137985458958046
+    },
+    "threshold_validation": {
+      "scope": "independent calibration window; held-out evaluation still required",
+      "probabilities_calibrated": false,
+      "certifies_deployment_fpr": false,
+      "selection_note": "thresholds were selected on these negatives; validate on untouched traffic",
+      "actions": {
+        "block": {
+          "false_positives": 0,
+          "negative_events": 2965,
+          "empirical_fpr": 0.0,
+          "fpr_95ci": [
+            0.0,
+            0.0012939727063916108
+          ],
+          "target_fpr": 0.0001,
+          "upper_95ci_within_target": false,
+          "minimum_negatives_if_zero_fp": 38413,
+          "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+        },
+        "flag": {
+          "false_positives": 7,
+          "negative_events": 2965,
+          "empirical_fpr": 0.002360876897133221,
+          "fpr_95ci": [
+            0.0011440703939338843,
+            0.004865546286188086
+          ],
+          "target_fpr": 0.005,
+          "upper_95ci_within_target": true,
+          "minimum_negatives_if_zero_fp": 765,
+          "interval_assumption": "binomial observations; correlated traffic needs cluster validation"
+        }
+      },
+      "calibration_window": "cal",
+      "independent_of_early_stopping": true
+    },
+    "threshold_window_reused_for_early_stopping": false
   }
 }

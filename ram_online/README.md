@@ -1,3 +1,6 @@
+> **Trạng thái: thử nghiệm, không triển khai** — quyết định 17/11/2026: API chính là nguồn quyết định duy nhất; dùng `src/carrier_bridge.py` để đưa dữ liệu nhà mạng vào.
+> Lý do: bảng chính sách tra cứu trong RAM là một đường quyết định thứ hai, không chung khử trùng, nhật ký bằng chứng và chế độ shadow/enforce với API chính.
+
 # RAM-first policy lookup prototype
 
 Standalone Python >=3.11, independent of the existing live API.

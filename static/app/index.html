@@ -18,7 +18,7 @@
 :root[data-theme="dark"]{--bg:#07111f;--card:#0d1a2b;--ink:#e6f1fa;--mut:#8da2b8;--line:#1f3550;--red:#ff4d6d;--red-bg:#3b0d18;--amber:#fbbf24;--amber-bg:#3a2a06;--green:#4ade80;--green-bg:#0d2e18;--blue:#22d3ee;--brand:#22d3ee;--on-brand:#04222b;--shadow:none;color-scheme:dark}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#07111f;--card:#0d1a2b;--ink:#e6f1fa;--mut:#8da2b8;--line:#1f3550;--red:#ff4d6d;--red-bg:#3b0d18;--amber:#fbbf24;--amber-bg:#3a2a06;--green:#4ade80;--green-bg:#0d2e18;--blue:#22d3ee;--brand:#22d3ee;--on-brand:#04222b;--shadow:none;color-scheme:dark}}
 .login-wrap button{border-radius:999px}.login-wrap{border-radius:22px}
-.tt{min-height:36px;padding:6px 10px;font-size:12px;border-radius:10px;display:inline-flex;align-items:center;gap:6px}
+.tt{min-height:44px;padding:6px 10px;font-size:12px;border-radius:10px;display:inline-flex;align-items:center;gap:6px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .app{max-width:480px;margin:0 auto;min-height:100vh;padding:0 16px calc(84px + env(safe-area-inset-bottom))}
@@ -30,19 +30,19 @@ h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)
 .shield{display:flex;gap:14px;align-items:center}.shield .ic{width:52px;height:52px;border-radius:14px;background:var(--green-bg);display:grid;place-items:center;font-size:26px;flex:none}
 .shield b{display:block;font-size:16px}.shield span{color:var(--mut);font-size:13px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-.stat{border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font-size:22px}.stat span{font-size:11.5px;color:var(--mut)}
+.stat{border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:var(--mut)}
 .s-red{background:var(--red-bg)}.s-red b{color:var(--red)}.s-amb{background:var(--amber-bg)}.s-amb b{color:var(--amber)}.s-grn{background:var(--green-bg)}.s-grn b{color:var(--green)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 button{font:600 14px system-ui,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px;cursor:pointer;min-height:46px}
 button.pri{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}button.full{width:100%}
 button:active{transform:scale(.98)}
-.demo-tag{font-size:11px;font-weight:700;color:var(--blue);border:1px solid var(--blue);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.demo-tag{font-size:12px;font-weight:700;color:var(--blue);border:1px solid var(--blue);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 .item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}.item:last-child{border-bottom:0}
 .item .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none}
 .item .body{flex:1;min-width:0}.item .t{display:flex;justify-content:space-between;gap:8px}.item .num{font-weight:700;font-variant-numeric:tabular-nums}
 .item .time{font-size:12px;color:var(--mut)}.item .sub{font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item.open .sub{white-space:normal}.item ul{margin:6px 0 0;padding-left:18px;font-size:13px;display:none}.item.open ul{display:block}
-.chip{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.chip{font-size:12px;font-weight:700;border-radius:6px;padding:2px 7px;white-space:nowrap}
 .c-BLOCK{background:var(--red-bg);color:var(--red)}.c-FLAG{background:var(--amber-bg);color:var(--amber)}.c-ALLOW{background:var(--green-bg);color:var(--green)}
 .empty{color:var(--mut);text-align:center;padding:22px 8px;font-size:14px}
 input,select{font:16px system-ui,sans-serif;width:100%;padding:12px 18px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink)}
@@ -52,8 +52,8 @@ input,select{font:16px system-ui,sans-serif;width:100%;padding:12px 18px;border:
 .tip b{display:block}.tip span{font-size:13px;color:var(--mut)}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center;z-index:5}
 nav .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:480px}
-nav button{border:0;background:none;display:grid;gap:2px;justify-items:center;font-size:11.5px;color:var(--mut);padding:6px 0;min-height:52px}
-nav button i{font-style:normal;font-size:21px}nav button.on{color:var(--red)}
+nav button{border:0;background:none;display:grid;gap:2px;justify-items:center;font-size:12px;color:var(--mut);padding:6px 0;min-height:52px}
+nav button i{font-style:normal;font-size:21px}nav button.on{color:var(--brand);font-weight:800}
 .tab{display:none}.tab.on{display:block}
 /* Màn hình cuộc gọi đến / tin nhắn đến (giả lập trong chế độ demo). */
 .overlay{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;align-items:center;justify-content:space-between;
@@ -75,9 +75,15 @@ width:calc(100% - 20px);max-width:460px;z-index:15;border-radius:18px;padding:12
 background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);border-left:6px solid var(--green);cursor:pointer}
 .heads.show{transform:translate(-50%,0)}.heads.BLOCK{border-left-color:var(--red)}.heads.FLAG{border-left-color:var(--amber)}
 .heads .ic{font-size:24px;flex:none;line-height:1.2}.heads b{display:block;font-size:14.5px}.heads span{display:block;font-size:13px;color:var(--mut);margin-top:2px}
-.heads small{display:block;font-size:11.5px;color:var(--mut);margin-top:4px}
+.heads small{display:block;font-size:12px;color:var(--mut);margin-top:4px}
 .run{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin-top:10px;min-height:20px}
 .note{font-size:12.5px;color:var(--mut)}
+/* Viền focus khi điều khiển bằng bàn phím; vùng chạm tối thiểu 44 px cho liên kết "gỡ". */
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.item:focus-visible{outline-offset:-2px;border-radius:8px}
+a.rm{display:inline-flex;align-items:center;min-height:44px;min-width:44px;padding:0 10px;color:var(--brand);font-weight:700}
+.err-msg{color:var(--red);background:var(--red-bg);border-radius:12px;padding:10px 12px;font-size:13px;margin:8px 0}
+.loading{color:var(--mut);font-size:13px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -87,6 +93,7 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
     <div style="display:flex;gap:8px;align-items:center"><div class="me" id="me"></div>
       <button class="tt" id="themeBtn" type="button" aria-label="Đổi giao diện sáng/tối"></button></div>
   </header>
+  <div class="err-msg" id="netErr" role="alert" hidden></div>
 
   <!-- Đăng nhập bằng tài khoản thật (email/mật khẩu hoặc Google), sau đó gắn số điện thoại. -->
   <section id="login" class="tab">
@@ -124,7 +131,7 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
   <!-- Trang chủ: trạng thái bảo vệ, thống kê và nút giả lập cuộc gọi / tin nhắn tới. -->
   <section id="home" class="tab">
     <div class="card">
-      <div class="shield"><div class="ic">🛡️</div><div><b>Đang được bảo vệ</b><span>Cuộc gọi và tin nhắn tới số của bạn được kiểm tra ở tầng nhà mạng.</span></div></div>
+      <div class="shield"><div class="ic" aria-hidden="true">🛡️</div><div><b>Đang được bảo vệ</b><span>Cuộc gọi và tin nhắn tới số của bạn được kiểm tra ở tầng nhà mạng.</span></div></div>
       <div class="stats">
         <div class="stat s-red"><b id="st_b">0</b><span>đã chặn</span></div>
         <div class="stat s-amb"><b id="st_w">0</b><span>cảnh báo</span></div>
@@ -135,20 +142,20 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
     <div class="card demo-only">
       <div class="note" style="margin-bottom:10px">Giả lập một cuộc gọi hoặc tin nhắn gửi tới số của bạn, chạy qua đúng hệ thống AI của nhà mạng.</div>
       <div class="grid2">
-        <button data-k="LEGIT">📞 Cuộc gọi bình thường</button>
+        <button data-k="LEGIT"><span aria-hidden="true">📞</span> Cuộc gọi bình thường</button>
         <!-- Cùng tên với dashboard vận hành (bảng FRAUD_NAMES). -->
-        <button data-k="CLI_SPOOF">🏦 Giả mạo số tổng đài</button>
-        <button data-k="SMS_PHISH">✉️ SMS lừa đảo</button>
-        <button data-k="SIM_BOX">📡 SIM box</button>
-        <button data-k="DEEPFAKE_VOICE">🎭 Giọng nói deepfake</button>
-        <button data-k="WANGIRI">🔔 Wangiri (gọi nháy 1 tiếng)</button>
-        <button data-k="VOICE_HARVEST" style="grid-column:span 2">🤐 Cuộc gọi im lặng thu giọng</button>
+        <button data-k="CLI_SPOOF"><span aria-hidden="true">🏦</span> Giả mạo số tổng đài</button>
+        <button data-k="SMS_PHISH"><span aria-hidden="true">✉️</span> SMS lừa đảo</button>
+        <button data-k="SIM_BOX"><span aria-hidden="true">📡</span> SIM box</button>
+        <button data-k="DEEPFAKE_VOICE"><span aria-hidden="true">🎭</span> Giọng nói deepfake</button>
+        <button data-k="WANGIRI"><span aria-hidden="true">🔔</span> Wangiri (gọi nháy 1 tiếng)</button>
+        <button data-k="VOICE_HARVEST" style="grid-column:span 2"><span aria-hidden="true">🤐</span> Cuộc gọi im lặng thu giọng</button>
       </div>
     </div>
     <div class="card">
       <div class="note" style="margin-bottom:10px">Chạy thử như ngoài đời: trong khoảng một phút, hệ thống tự gửi 10 cuộc gọi và tin nhắn
         (cả bình thường lẫn lừa đảo) tới số của bạn. Bạn không cần bấm gì: cuộc nào bị chặn sẽ hiện thông báo, cuộc nào nghi ngờ sẽ hiện màn hình cảnh báo.</div>
-      <div class="grid2"><button class="pri" id="runBtn">▶️ Chạy thử 1 phút</button><button id="notifBtn">🔔 Bật thông báo</button></div>
+      <div class="grid2"><button class="pri" id="runBtn"><span aria-hidden="true">▶️</span> Chạy thử 1 phút</button><button id="notifBtn"><span aria-hidden="true">🔔</span> Bật thông báo</button></div>
       <div class="run" id="runInfo"></div>
     </div>
     <h2>Gần đây</h2>
@@ -176,7 +183,7 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
     <div class="card">
       <input id="q" inputmode="tel" aria-label="Số cần tra cứu" placeholder="Nhập số điện thoại, ví dụ 0901234567">
       <button class="pri full" id="go" style="margin-top:10px">Kiểm tra</button>
-      <div id="vres"></div>
+      <div id="vres" aria-live="polite"></div>
     </div>
     <h2>Báo cáo số lừa đảo</h2>
     <div class="card">
@@ -194,11 +201,11 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
   <section id="tips" class="tab">
     <h2>Tự bảo vệ</h2>
     <div class="card">
-      <div class="tip"><div class="ic">🤐</div><div><b>Đừng nói “Alo” trước với số lạ</b><span>Có cuộc gọi chỉ để ghi lại giọng bạn rồi dùng AI giả giọng đi lừa người thân. Hãy để bên kia nói trước; nếu im lặng, cúp máy.</span></div></div>
-      <div class="tip"><div class="ic">🔔</div><div><b>Không gọi lại số nháy máy lạ</b><span>Đặc biệt đầu số nước ngoài lạ: gọi lại có thể bị tính cước rất cao.</span></div></div>
-      <div class="tip"><div class="ic">🔑</div><div><b>Không bao giờ đọc mã OTP</b><span>Ngân hàng, công an, nhà mạng không bao giờ hỏi OTP qua điện thoại hay tin nhắn.</span></div></div>
-      <div class="tip"><div class="ic">🔗</div><div><b>Không bấm link trong tin nhắn lạ</b><span>Kể cả tin viết không dấu, có tên ngân hàng: hãy tự mở app ngân hàng để kiểm tra.</span></div></div>
-      <div class="tip"><div class="ic">👪</div><div><b>Người thân gọi xin tiền gấp?</b><span>Cúp máy và gọi lại vào số quen của người đó trước khi chuyển tiền.</span></div></div>
+      <div class="tip"><div class="ic" aria-hidden="true">🤐</div><div><b>Đừng nói “Alo” trước với số lạ</b><span>Có cuộc gọi chỉ để ghi lại giọng bạn rồi dùng AI giả giọng đi lừa người thân. Hãy để bên kia nói trước; nếu im lặng, cúp máy.</span></div></div>
+      <div class="tip"><div class="ic" aria-hidden="true">🔔</div><div><b>Không gọi lại số nháy máy lạ</b><span>Đặc biệt đầu số nước ngoài lạ: gọi lại có thể bị tính cước rất cao.</span></div></div>
+      <div class="tip"><div class="ic" aria-hidden="true">🔑</div><div><b>Không bao giờ đọc mã OTP</b><span>Ngân hàng, công an, nhà mạng không bao giờ hỏi OTP qua điện thoại hay tin nhắn.</span></div></div>
+      <div class="tip"><div class="ic" aria-hidden="true">🔗</div><div><b>Không bấm link trong tin nhắn lạ</b><span>Kể cả tin viết không dấu, có tên ngân hàng: hãy tự mở app ngân hàng để kiểm tra.</span></div></div>
+      <div class="tip"><div class="ic" aria-hidden="true">👪</div><div><b>Người thân gọi xin tiền gấp?</b><span>Cúp máy và gọi lại vào số quen của người đó trước khi chuyển tiền.</span></div></div>
     </div>
     <h2>Quyền riêng tư</h2>
     <div class="card note">App chỉ hiển thị cuộc gọi và tin nhắn gửi tới chính số của bạn. App không đọc danh bạ, không tải danh bạ lên máy chủ. Việc phát hiện diễn ra ở tầng nhà mạng.</div>
@@ -206,14 +213,14 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
   </section>
 </div>
 
-<nav id="nav" style="display:none"><div class="in">
-  <button data-t="home" class="on"><i>🏠</i>Trang chủ</button>
-  <button data-t="history"><i>🕘</i>Lịch sử</button>
-  <button data-t="lookup"><i>🔎</i>Tra cứu</button>
-  <button data-t="tips"><i>💡</i>Hướng dẫn</button>
+<nav id="nav" style="display:none" aria-label="Điều hướng chính"><div class="in">
+  <button data-t="home" class="on" aria-current="page"><i aria-hidden="true">🏠</i>Trang chủ</button>
+  <button data-t="history"><i aria-hidden="true">🕘</i>Lịch sử</button>
+  <button data-t="lookup"><i aria-hidden="true">🔎</i>Tra cứu</button>
+  <button data-t="tips"><i aria-hidden="true">💡</i>Hướng dẫn</button>
 </div></nav>
 
-<div class="overlay" id="ov"></div>
+<div class="overlay" id="ov" role="dialog" aria-modal="true" aria-label="Cuộc gọi hoặc tin nhắn đến" tabindex="-1"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="heads" id="heads" role="status" aria-live="polite"></div>
 
@@ -237,9 +244,14 @@ async function api(url, opts = {}){
 }
 function show(tab){
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === tab));
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
+  document.querySelectorAll('nav button').forEach(b => {
+    const on = b.dataset.t === tab; b.classList.toggle('on', on);
+    if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
   window.scrollTo(0, 0);
 }
+// Lỗi mạng hiển thị rõ (không nuốt lỗi im lặng); tự ẩn khi lần gọi sau thành công.
+function netErr(msg){ const e = $('#netErr'); e.textContent = msg || ''; e.hidden = !msg; }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.t));
 
 // ------------------------------------------------------------------ đăng nhập (tài khoản thật)
@@ -299,6 +311,7 @@ async function initGoogle(){
   document.head.appendChild(sc);
 }
 function signOut(){
+  if (TOKEN) pushUnsubscribe(TOKEN);   // thiết bị dùng chung: không nhận cảnh báo của tài khoản cũ
   if (TOKEN) fetch('/api/app/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN } }).catch(() => {});
   TOKEN = ''; MSISDN = ''; store.set('tfs_app', ''); store.set('tfs_app_num', ''); $('#nav').style.display = 'none'; $('#me').textContent = ''; show('login');
 }
@@ -312,16 +325,26 @@ function row(i){
   const what = i.type === 'SMS' ? (i.text || 'Tin nhắn') : (i.action || (i.type === 'AUDIO' ? 'Trong cuộc gọi' : 'Cuộc gọi'));
   const bg = i.decision === 'BLOCK' ? 'var(--red-bg)' : i.decision === 'FLAG' ? 'var(--amber-bg)' : 'var(--green-bg)';
   const extra = (i.retro ? ' · phát hiện sau sự cố' : '') + (i.degraded ? ' · chế độ dự phòng' : '');
-  return `<div class="item" data-id="${esc(i.id)}"><div class="ic" style="background:${bg}">${ICON[i.type] || '•'}</div><div class="body">
+  const open = OPEN.has(String(i.id));
+  return `<div class="item${open ? ' open' : ''}" data-id="${esc(i.id)}" role="button" tabindex="0" aria-expanded="${open}"><div class="ic" style="background:${bg}" aria-hidden="true">${ICON[i.type] || '•'}</div><div class="body">
     <div class="t"><span class="num">${esc(pretty(i.from))}</span><span class="chip c-${esc(i.decision)}">${LABEL[i.decision] || esc(i.decision)}</span></div>
     <div class="sub">${esc(what)}</div><div class="time">${esc(i.time)}${extra}</div>
     <ul>${(i.reasons || []).map(r => `<li>${esc(r)}</li>`).join('') || '<li>Không có dấu hiệu bất thường.</li>'}</ul></div></div>`;
 }
+// Hàng đang mở và hàng đang được focus được giữ nguyên qua mỗi lần làm mới (2 giây/lần).
+const OPEN = new Set();
 function renderInbox(){
+  const act = document.activeElement, focusId = act && act.classList && act.classList.contains('item') ? act.dataset.id : null;
+  const focusBox = focusId ? act.parentElement.id : null;
   const html = items.map(row).join('');
   $('#list').innerHTML = html || '<div class="empty">Chưa có cuộc gọi hay tin nhắn nào.</div>';
   $('#recent').innerHTML = items.slice(0, 4).map(row).join('') || '<div class="empty">Chưa có cuộc gọi hay tin nhắn nào.</div>';
-  document.querySelectorAll('.item').forEach(el => el.onclick = () => el.classList.toggle('open'));
+  if (focusId && focusBox) { const again = [...document.querySelectorAll('#' + focusBox + ' .item')].find(x => x.dataset.id === focusId); if (again) again.focus(); }
+  document.querySelectorAll('.item').forEach(el => {
+    const toggle = () => { const on = el.classList.toggle('open'); el.setAttribute('aria-expanded', String(on)); if (on) OPEN.add(el.dataset.id); else OPEN.delete(el.dataset.id); };
+    el.onclick = toggle;
+    el.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(); } };
+  });
 }
 let LOADED = false, PAUSE = 0;
 const SHOWN = new Set();                   // sự kiện đã hiện màn hình (bấm nút giả lập) thì không báo lại
@@ -341,7 +364,8 @@ async function refresh(){
     items = r.items;
     $('#st_b').textContent = r.stats.blocked; $('#st_w').textContent = r.stats.warned; $('#st_a').textContent = r.stats.allowed;
     renderInbox();
-  } catch(e){}
+    netErr('');
+  } catch(e){ netErr('Không tải được lịch sử cuộc gọi: ' + e.message + '. Đang thử lại…'); }
 }
 
 // ------------------------------------------------------------------ cuộc gọi / tin nhắn tới thật (qua hộp thư)
@@ -363,12 +387,41 @@ function alertIncoming(fresh){
 function heads(decision, title, who, body, onTap){
   const h = $('#heads');
   h.className = 'heads ' + decision;
-  h.innerHTML = `<div class="ic">${decision === 'BLOCK' ? '🛡️' : decision === 'FLAG' ? '⚠️' : '📞'}</div>
+  h.innerHTML = `<div class="ic" aria-hidden="true">${decision === 'BLOCK' ? '🛡️' : decision === 'FLAG' ? '⚠️' : '📞'}</div>
     <div><b>${esc(title)}</b><span>${esc(who)} · ${esc(body)}</span><small>Lá chắn · bây giờ · chạm để xem lý do</small></div>`;
   h.onclick = () => { h.classList.remove('show'); onTap && onTap(); };
   requestAnimationFrame(() => h.classList.add('show'));
   clearTimeout(h._t); h._t = setTimeout(() => h.classList.remove('show'), 5200);
 }
+// Màn hình cuộc gọi/tin nhắn đến là hộp thoại thật: focus vào trong, Tab chỉ chạy trong hộp thoại,
+// Escape để đóng, đóng xong trả focus về nút đã mở nó.
+let OV_OPEN = false, OV_OPENER = null, OV_ONCLOSE = null;
+const ovFocusables = () => [...$('#ov').querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled);
+function openOv(onClose){
+  if (!OV_OPEN) OV_OPENER = document.activeElement;
+  OV_OPEN = true; OV_ONCLOSE = onClose || null;
+  const ov = $('#ov'), first = ovFocusables()[0];
+  ov.setAttribute('aria-label', (ov.querySelector('.lab')?.textContent || 'Cuộc gọi đến') + ' ' + (ov.querySelector('.who')?.textContent || ''));
+  (first || ov).focus();
+}
+function closeOv(){
+  const ov = $('#ov'); ov.className = 'overlay';
+  if (!OV_OPEN) return;
+  OV_OPEN = false;
+  const cb = OV_ONCLOSE, opener = OV_OPENER; OV_ONCLOSE = null; OV_OPENER = null;
+  if (opener && opener !== document.body && document.contains(opener) && opener.focus) opener.focus();
+  if (cb) cb();
+}
+document.addEventListener('keydown', ev => {
+  if (!OV_OPEN) return;
+  if (ev.key === 'Escape') { ev.preventDefault(); closeOv(); return; }
+  if (ev.key === 'Tab') {
+    const f = ovFocusables(); if (!f.length) { ev.preventDefault(); $('#ov').focus(); return; }
+    const first = f[0], lastEl = f[f.length - 1];
+    if (ev.shiftKey && (document.activeElement === first || !$('#ov').contains(document.activeElement))) { ev.preventDefault(); lastEl.focus(); }
+    else if (!ev.shiftKey && (document.activeElement === lastEl || !$('#ov').contains(document.activeElement))) { ev.preventDefault(); first.focus(); }
+  }
+});
 function incoming(i){
   const ov = $('#ov'); const reasons = (i.reasons || []).slice(0, 3).map(r => `<li>${esc(r)}</li>`).join('');
   if (i.type === 'SMS'){
@@ -389,8 +442,9 @@ function incoming(i){
       <div class="acts">${acts}</div>`;
   }
   ov.className = 'overlay show ' + i.decision;
-  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { ov.className = 'overlay'; });
-  ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => { await report(b.dataset.rep, 'Báo cáo từ màn hình cảnh báo'); ov.className = 'overlay'; });
+  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeOv());
+  ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => { await report(b.dataset.rep, 'Báo cáo từ màn hình cảnh báo'); closeOv(); });
+  openOv();
 }
 // Thông báo hệ thống (khi người dùng cho phép và app đang chạy nền).
 function notify(i, title, body){
@@ -399,10 +453,36 @@ function notify(i, title, body){
   body = `${pretty(i.from)} · ${body || i.reasons[0] || ''}`;
   navigator.serviceWorker?.ready.then(r => r.showNotification(title, { body, tag: i.id, icon: 'icon.svg' })).catch(() => {});
 }
+// Web Push (VAPID): nhận cảnh báo cả khi app đã đóng. Payload không chứa số điện thoại / nội dung tin.
+function b64uToBytes(s){
+  const pad = '='.repeat((4 - s.length % 4) % 4), raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+async function pushSubscribe(){
+  if (!('PushManager' in window) || !navigator.serviceWorker) return false;
+  try {
+    const { public_key } = await api('/api/app/push/key');
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(public_key) });
+    await api('/api/app/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub.toJSON()) });
+    return true;
+  } catch(e){ return false; }
+}
+async function pushUnsubscribe(token){
+  try {
+    const reg = await navigator.serviceWorker?.ready, sub = reg && await reg.pushManager?.getSubscription();
+    if (!sub) return;
+    await fetch('/api/app/push/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                               body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
+    await sub.unsubscribe();
+  } catch(e){}
+}
 $('#notifBtn').onclick = async () => {
   if (!('Notification' in window)) { toast('Trình duyệt này không hỗ trợ thông báo.'); return; }
   const p = await Notification.requestPermission();
-  toast(p === 'granted' ? 'Đã bật thông báo khi app chạy nền.' : 'Chưa được phép gửi thông báo.');
+  if (p !== 'granted') { toast('Chưa được phép gửi thông báo.'); return; }
+  toast(await pushSubscribe() ? 'Đã bật thông báo, kể cả khi app đã đóng.' : 'Đã bật thông báo khi app chạy nền.');
 };
 $('#runBtn').onclick = async () => {
   const b = $('#runBtn'); b.disabled = true;
@@ -459,27 +539,32 @@ function overlay(kind, res){
     ov.className = 'overlay show ' + d;
   }
   ov.innerHTML = html;
-  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { ov.className = 'overlay'; refresh(); });
-  ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => { await report(b.dataset.rep, 'Báo cáo từ màn hình cảnh báo'); ov.className = 'overlay'; refresh(); });
+  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeOv());
+  ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => { await report(b.dataset.rep, 'Báo cáo từ màn hình cảnh báo'); closeOv(); });
+  openOv(refresh);
 }
 document.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
-  b.disabled = true; const old = b.textContent; b.textContent = '…'; PAUSE++;
+  b.disabled = true; const old = b.innerHTML; b.textContent = '…'; PAUSE++;
   try {
     const r = await api('/api/app/simulate?kind=' + b.dataset.k, { method: 'POST' });
     (r.results || []).forEach(x => x.event_id && SHOWN.add(x.event_id));   // đã hiện màn hình rồi, hộp thư không báo lại
     overlay(b.dataset.k, r.results);
   }
   catch(e){ toast('Không giả lập được: ' + e.message); }
-  PAUSE--; b.disabled = false; b.textContent = old;
+  PAUSE--; b.disabled = false; b.innerHTML = old;
 });
 
 // ------------------------------------------------------------------ tra cứu & báo cáo
 $('#go').onclick = async () => {
-  const n = $('#q').value.trim(); if (!n) return;
+  const n = $('#q').value.trim();
+  if (!n) { $('#vres').innerHTML = '<div class="err-msg" role="alert">Hãy nhập số điện thoại cần tra cứu.</div>'; $('#q').focus(); return; }
+  const go = $('#go'); go.disabled = true; go.setAttribute('aria-busy', 'true');
+  $('#vres').innerHTML = '<div class="loading" role="status">Đang tra cứu…</div>';
   try {
     const r = await api('/api/app/lookup?number=' + encodeURIComponent(n));
-    $('#vres').innerHTML = `<div class="verdict v-${r.level}"><b>${esc(r.verdict)}</b><span>${esc(pretty(r.number))} · nhà mạng chặn ${r.blocked} lần · cảnh báo ${r.flagged} lần · ${r.user_reports} người dùng báo cáo</span></div>`;
-  } catch(e){ toast('Không tra cứu được: ' + e.message); }
+    $('#vres').innerHTML = `<div class="verdict v-${esc(r.level)}"><b>${esc(r.verdict)}</b><span>${esc(pretty(r.number))} · nhà mạng chặn ${esc(r.blocked)} lần · cảnh báo ${esc(r.flagged)} lần · ${esc(r.user_reports)} người dùng báo cáo</span></div>`;
+  } catch(e){ $('#vres').innerHTML = `<div class="err-msg" role="alert">Không tra cứu được: ${esc(e.message)}</div>`; }
+  finally { go.disabled = false; go.removeAttribute('aria-busy'); }
 };
 async function report(number, why){
   try { const r = await api('/api/app/report?number=' + encodeURIComponent(number) + '&reason=' + encodeURIComponent(why), { method: 'POST' }); toast('Đã gửi báo cáo. ' + r.note); }
@@ -496,16 +581,17 @@ async function loadFamily(){
       <div style="display:flex;gap:8px;margin-top:8px"><button class="pri" data-acc="${esc(g)}">Đồng ý</button><button data-dec="${esc(g)}">Từ chối</button></div></div>`).join('');
     const parts = [];
     if (f.protecting.length) parts.push('Bạn đang bảo vệ: ' + f.protecting.map(pretty).join(', '));
-    if (f.guardians.length) parts.push('Người bảo vệ bạn: ' + f.guardians.map(g => `${pretty(g)} <a href="#" data-rm="${esc(g)}">gỡ</a>`).join(', '));
+    if (f.guardians.length) parts.push('Người bảo vệ bạn: ' + f.guardians.map(g => `${pretty(g)} <a href="#" class="rm" data-rm="${esc(g)}" aria-label="Gỡ người bảo vệ ${esc(pretty(g))}">gỡ</a>`).join(', '));
     if (f.invites_sent.length) parts.push('Đã mời, chờ đồng ý: ' + f.invites_sent.map(pretty).join(', '));
     $('#fam_list').innerHTML = parts.join('<br>') || 'Chưa liên kết người thân nào.';
     document.querySelectorAll('[data-acc],[data-dec],[data-rm]').forEach(b => b.onclick = async ev => {
       ev.preventDefault();
       const g = b.dataset.acc || b.dataset.dec || b.dataset.rm;
-      await api(`/api/app/family/respond?guardian=${encodeURIComponent(g)}&accept=${b.dataset.acc ? 'true' : 'false'}`, { method: 'POST' });
+      try { await api(`/api/app/family/respond?guardian=${encodeURIComponent(g)}&accept=${b.dataset.acc ? 'true' : 'false'}`, { method: 'POST' }); }
+      catch(e){ toast('Không cập nhật được: ' + e.message); return; }
       toast(b.dataset.acc ? 'Đã đồng ý. Người thân sẽ nhận cảnh báo khi bạn gặp lừa đảo.' : 'Đã cập nhật.'); loadFamily();
     });
-  } catch(e){}
+  } catch(e){ $('#fam_list').innerHTML = `<span class="err-msg" role="alert" style="display:block">Không tải được danh sách người thân: ${esc(e.message)}</span>`; }
 }
 $('#fam_inv').onclick = async () => {
   const n = $('#fam_num').value.trim(); if (!n) return;
@@ -524,6 +610,7 @@ setInterval(() => { if (visible()) refresh(); }, 2000);
 document.addEventListener('visibilitychange', () => { if (visible() && MSISDN) { refresh(); loadFamily(); } });
 initGoogle();
 if (TOKEN) afterLogin(); else show('login');
+if (TOKEN && 'Notification' in window && Notification.permission === 'granted') pushSubscribe();   // gia hạn đăng ký
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 <script>

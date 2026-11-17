@@ -33,20 +33,20 @@
       ]
     },
     "block_or_flag": {
-      "TP": 61,
-      "FP": 31,
-      "FN": 10,
-      "TN": 49898,
-      "recall_pct": 85.92,
+      "TP": 62,
+      "FP": 30,
+      "FN": 9,
+      "TN": 49899,
+      "recall_pct": 87.32,
       "recall_95ci_pct": [
-        76.0,
-        92.2
+        77.6,
+        93.2
       ],
-      "precision_pct": 66.3,
-      "fpr_pct": 0.0621,
+      "precision_pct": 67.39,
+      "fpr_pct": 0.0601,
       "fpr_95ci_pct": [
-        0.0437,
-        0.0881
+        0.0421,
+        0.0858
       ]
     },
     "by_family": {
@@ -67,9 +67,9 @@
       "SIM_BOX": {
         "events": 49,
         "blocked": 32,
-        "flagged": 8,
-        "missed": 9,
-        "detected_pct": 81.6
+        "flagged": 9,
+        "missed": 8,
+        "detected_pct": 83.7
       },
       "SMS_PHISH": {
         "events": 5,
@@ -91,9 +91,9 @@
         "events": 35139,
         "fraud": 60,
         "blocked_fraud": 35,
-        "flagged_fraud": 12,
+        "flagged_fraud": 13,
         "blocked_legit": 0,
-        "flagged_legit": 31
+        "flagged_legit": 30
       },
       "SMS": {
         "events": 14084,
@@ -146,6 +146,38 @@
         "median_events_until_first_hit": 2.0
       }
     },
+    "by_actor": {
+      "ZERO_DAY_WANGIRI|WG": {
+        "events": 5,
+        "detected": 4,
+        "blocked": 0
+      },
+      "CLI_SPOOF|CS": {
+        "events": 3,
+        "detected": 3,
+        "blocked": 3
+      },
+      "DEEPFAKE_VOICE|DF": {
+        "events": 9,
+        "detected": 9,
+        "blocked": 0
+      },
+      "SMS_PHISH|PH": {
+        "events": 5,
+        "detected": 5,
+        "blocked": 5
+      },
+      "SIM_BOX|SB_T2_STEALTH": {
+        "events": 21,
+        "detected": 13,
+        "blocked": 4
+      },
+      "SIM_BOX|SB_T1": {
+        "events": 28,
+        "detected": 28,
+        "blocked": 28
+      }
+    },
     "call_sessions": {
       "unit": "CALL session, one observation per setup (AUDIO chunks excluded)",
       "calls": 35139,
@@ -177,23 +209,23 @@
         }
       },
       "pre_ring_block_or_flag": {
-        "TP": 47,
-        "FP": 31,
-        "FN": 13,
-        "TN": 35048,
-        "recall_pct": 78.33333333333333,
+        "TP": 48,
+        "FP": 30,
+        "FN": 12,
+        "TN": 35049,
+        "recall_pct": 80.0,
         "recall_95ci_pct": [
-          66.37973165265748,
-          86.87707895359299
+          68.21795390818299,
+          88.17161026314105
         ],
-        "precision_pct": 60.256410256410255,
+        "precision_pct": 61.53846153846154,
         "fpr": {
-          "false_positives": 31,
+          "false_positives": 30,
           "negative_events": 35079,
-          "empirical_fpr": 0.0008837196043216739,
+          "empirical_fpr": 0.0008552125203112974,
           "fpr_95ci": [
-            0.0006226684356449795,
-            0.0012540780591429454
+            0.0005991382945182871,
+            0.0012206002753471594
           ],
           "target_fpr": 0.0001,
           "upper_95ci_within_target": false,
@@ -227,23 +259,23 @@
         }
       },
       "final_block_or_flag": {
-        "TP": 50,
-        "FP": 31,
-        "FN": 10,
-        "TN": 35048,
-        "recall_pct": 83.33333333333333,
+        "TP": 51,
+        "FP": 30,
+        "FN": 9,
+        "TN": 35049,
+        "recall_pct": 85.0,
         "recall_95ci_pct": [
-          71.96814850279219,
-          90.68692279867896
+          73.88517410884039,
+          91.90265075770431
         ],
-        "precision_pct": 61.72839506172839,
+        "precision_pct": 62.96296296296296,
         "fpr": {
-          "false_positives": 31,
+          "false_positives": 30,
           "negative_events": 35079,
-          "empirical_fpr": 0.0008837196043216739,
+          "empirical_fpr": 0.0008552125203112974,
           "fpr_95ci": [
-            0.0006226684356449795,
-            0.0012540780591429454
+            0.0005991382945182871,
+            0.0012206002753471594
           ],
           "target_fpr": 0.0001,
           "upper_95ci_within_target": false,
@@ -252,7 +284,7 @@
         }
       },
       "fraud_time_to_first_action_s": {
-        "detected_calls": 50,
+        "detected_calls": 51,
         "median": 0.0,
         "max": 2.0
       },
@@ -280,17 +312,17 @@
   "latency_single_event": {
     "CALL": {
       "decision_ms": {
-        "p50": 0.346,
-        "p95": 0.815,
-        "p99": 1.146,
-        "max": 4.873,
+        "p50": 0.951,
+        "p95": 1.836,
+        "p99": 4.432,
+        "max": 15.273,
         "n": 4174
       },
       "feature_store_ms": {
-        "p50": 0.028,
-        "p95": 0.061,
-        "p99": 0.107,
-        "max": 0.305,
+        "p50": 0.08,
+        "p95": 0.3,
+        "p99": 0.507,
+        "max": 12.458,
         "n": 4174
       },
       "budget_ms": 30.0,
@@ -299,17 +331,17 @@
     },
     "SMS": {
       "decision_ms": {
-        "p50": 0.146,
-        "p95": 0.276,
-        "p99": 0.408,
-        "max": 0.681,
+        "p50": 0.29,
+        "p95": 0.507,
+        "p99": 0.769,
+        "max": 6.755,
         "n": 1734
       },
       "feature_store_ms": {
-        "p50": 0.008,
-        "p95": 0.016,
-        "p99": 0.033,
-        "max": 0.081,
+        "p50": 0.015,
+        "p95": 0.032,
+        "p99": 0.063,
+        "max": 0.195,
         "n": 1734
       },
       "budget_ms": 170.0,
@@ -318,17 +350,17 @@
     },
     "AUDIO": {
       "decision_ms": {
-        "p50": 0.135,
-        "p95": 0.284,
-        "p99": 0.488,
-        "max": 0.501,
+        "p50": 0.326,
+        "p95": 0.525,
+        "p99": 0.805,
+        "max": 1.657,
         "n": 92
       },
       "feature_store_ms": {
-        "p50": 0.007,
-        "p95": 0.012,
-        "p99": 0.021,
-        "max": 0.031,
+        "p50": 0.014,
+        "p95": 0.025,
+        "p99": 0.054,
+        "max": 0.068,
         "n": 92
       },
       "budget_ms": 170.0,
@@ -347,7 +379,7 @@
         "recall_any_pct": 88.46,
         "recall_block_pct": 53.85,
         "fp_block": 1,
-        "fp_any": 11,
+        "fp_any": 9,
         "legit": 3256,
         "zero_day_events": 1,
         "zero_day_missed": 1,
@@ -373,7 +405,7 @@
         "recall_any_pct": 95.24,
         "recall_block_pct": 47.62,
         "fp_block": 0,
-        "fp_any": 13,
+        "fp_any": 11,
         "legit": 4989,
         "zero_day_events": 0,
         "zero_day_missed": 0,
@@ -394,17 +426,17 @@
         "seed": 203,
         "start_hour_local": 4.8,
         "fraud_events": 38,
-        "recall_any_pct": 73.68,
-        "recall_block_pct": 31.58,
+        "recall_any_pct": 68.42,
+        "recall_block_pct": 42.11,
         "fp_block": 0,
-        "fp_any": 19,
+        "fp_any": 20,
         "legit": 21699,
         "zero_day_events": 3,
         "zero_day_missed": 1,
         "by_family": {
           "CLI_SPOOF": 100.0,
           "DEEPFAKE_VOICE": 71.4,
-          "SIM_BOX": 61.1,
+          "SIM_BOX": 50.0,
           "SMS_PHISH": 100.0,
           "ZERO_DAY_WANGIRI": 66.7
         },
@@ -420,17 +452,17 @@
         "seed": 204,
         "start_hour_local": 7.2,
         "fraud_events": 65,
-        "recall_any_pct": 84.62,
-        "recall_block_pct": 32.31,
+        "recall_any_pct": 86.15,
+        "recall_block_pct": 33.85,
         "fp_block": 0,
-        "fp_any": 23,
+        "fp_any": 20,
         "legit": 46249,
         "zero_day_events": 20,
         "zero_day_missed": 1,
         "by_family": {
           "CLI_SPOOF": 100.0,
           "DEEPFAKE_VOICE": 100.0,
-          "SIM_BOX": 66.7,
+          "SIM_BOX": 70.4,
           "SMS_PHISH": 100.0,
           "ZERO_DAY_WANGIRI": 95.0
         },
@@ -446,24 +478,24 @@
         "seed": 205,
         "start_hour_local": 9.6,
         "fraud_events": 72,
-        "recall_any_pct": 76.39,
-        "recall_block_pct": 40.28,
+        "recall_any_pct": 73.61,
+        "recall_block_pct": 41.67,
         "fp_block": 0,
-        "fp_any": 39,
+        "fp_any": 42,
         "legit": 49380,
         "zero_day_events": 17,
         "zero_day_missed": 1,
         "by_family": {
           "CLI_SPOOF": 100.0,
           "DEEPFAKE_VOICE": 77.8,
-          "SIM_BOX": 61.1,
+          "SIM_BOX": 55.6,
           "SMS_PHISH": 100.0,
           "ZERO_DAY_WANGIRI": 94.1
         },
         "numbers_caught": {
           "CLI_SPOOF": "3/3",
           "DEEPFAKE_VOICE": "3/3",
-          "SIM_BOX": "4/4",
+          "SIM_BOX": "2/4",
           "SMS_PHISH": "5/5",
           "ZERO_DAY_WANGIRI": "1/1"
         }
@@ -499,9 +531,9 @@
         "start_hour_local": 14.4,
         "fraud_events": 70,
         "recall_any_pct": 68.57,
-        "recall_block_pct": 44.29,
+        "recall_block_pct": 45.71,
         "fp_block": 0,
-        "fp_any": 29,
+        "fp_any": 32,
         "legit": 49578,
         "zero_day_events": 6,
         "zero_day_missed": 1,
@@ -527,7 +559,7 @@
         "recall_any_pct": 82.14,
         "recall_block_pct": 42.86,
         "fp_block": 0,
-        "fp_any": 13,
+        "fp_any": 17,
         "legit": 35066,
         "zero_day_events": 14,
         "zero_day_missed": 1,
@@ -551,7 +583,7 @@
         "start_hour_local": 19.2,
         "fraud_events": 55,
         "recall_any_pct": 74.55,
-        "recall_block_pct": 38.18,
+        "recall_block_pct": 40.0,
         "fp_block": 0,
         "fp_any": 15,
         "legit": 22445,
@@ -577,9 +609,9 @@
         "start_hour_local": 21.6,
         "fraud_events": 42,
         "recall_any_pct": 83.33,
-        "recall_block_pct": 45.24,
+        "recall_block_pct": 47.62,
         "fp_block": 0,
-        "fp_any": 5,
+        "fp_any": 7,
         "legit": 8761,
         "zero_day_events": 9,
         "zero_day_missed": 1,
@@ -599,15 +631,15 @@
         }
       }
     ],
-    "recall_any_mean_pct": 81.88,
-    "recall_any_min_pct": 68.57,
-    "recall_block_mean_pct": 42.54,
+    "recall_any_mean_pct": 81.23,
+    "recall_any_min_pct": 68.42,
+    "recall_block_mean_pct": 44.45,
     "block_fpr_pct": 0.00035,
     "block_fpr_95ci_pct": [
       6e-05,
       0.00196
     ],
-    "flag_or_block_fpr_pct": 0.0717
+    "flag_or_block_fpr_pct": 0.0738
   },
   "new_threats_5x50k": {
     "windows": 5,
@@ -645,13 +677,13 @@
         "seed": 505,
         "fraud_events": 66,
         "harvest_calls": 30,
-        "harvest_calls_blocked_pre_ring": 21,
+        "harvest_calls_blocked_pre_ring": 22,
         "harvest_blocked_by_memory": 19
       }
     ],
     "detected_by_family_mean_pct": {
       "SIM_BOX": 97.8,
-      "VOICE_HARVEST": 89.2
+      "VOICE_HARVEST": 89.7
     },
     "numbers": {
       "SIM_BOX": {
@@ -671,5 +703,5 @@
       0.00154
     ]
   },
-  "runtime_s": 180.6
+  "runtime_s": 412.0
 }

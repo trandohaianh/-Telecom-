@@ -1,33 +1,33 @@
 {
-  "model_version": "tfd-v2.4",
-  "created_utc": "2026-11-17T08:39:58.685137+00:00",
-  "output_dir": "/home/tran_do_hai_anh/tfs/build24",
+  "model_version": "tfd-v2.5",
+  "created_utc": "2026-11-17T10:40:07.352054+00:00",
+  "output_dir": "/home/tran_do_hai_anh/tfs/build25",
   "baseline_preserved": true,
   "stages": [
     {
       "script": "build_dataset.py",
       "exit_code": 0,
-      "seconds": 156.782
+      "seconds": 232.598
     },
     {
       "script": "train.py",
       "exit_code": 0,
-      "seconds": 28.029
+      "seconds": 31.871
     },
     {
       "script": "evaluate.py",
       "exit_code": 0,
-      "seconds": 179.731
+      "seconds": 397.666
     },
     {
       "script": "make_drift_baseline.py",
       "exit_code": 0,
-      "seconds": 2.419
+      "seconds": 3.29
     },
     {
       "script": "shadow_run.py",
       "exit_code": 0,
-      "seconds": 17.405
+      "seconds": 29.843
     }
   ],
   "traffic_source": "synthetic_simulator",

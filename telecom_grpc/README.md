@@ -1,3 +1,6 @@
+> **Trạng thái: thử nghiệm, không triển khai** — quyết định 17/11/2026: API chính là nguồn quyết định duy nhất; dùng `src/carrier_bridge.py` để đưa dữ liệu nhà mạng vào.
+> Lý do: dịch vụ gRPC ở biên tự quyết định từ snapshot riêng, tạo nguồn quyết định thứ hai có thể lệch với API chính.
+
 # Telecom gRPC online policy edge
 
 ```text

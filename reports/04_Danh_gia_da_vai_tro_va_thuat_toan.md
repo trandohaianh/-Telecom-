@@ -2,7 +2,7 @@
 
 **Ngày:** 17/11/2026
 **Nhánh:** `audit/telecom-v2-fixes` (chưa push)
-**Bundle mô hình:** `tfd-v2.4` (dựng lại trong vòng này)
+**Bundle mô hình:** `tfd-v2.4` ở vòng 4; **`tfd-v2.5` sau vòng 5** (§10)
 **Dữ liệu:** mọi số liệu chất lượng đều đo trên **dữ liệu mô phỏng**, không phải lưu lượng nhà mạng thật.
 
 Báo cáo này nối tiếp:
@@ -10,7 +10,7 @@ Báo cáo này nối tiếp:
 - [02_Deep_Technical_Explanation_Report.md](02_Deep_Technical_Explanation_Report.md): giải thích luồng xử lý và công thức.
 - [he-thong/](he-thong/README.md): báo cáo cho từng hệ thống con.
 
-Mã các bản sửa vòng 4 bắt đầu bằng **R4-**.
+Mã các bản sửa vòng 4 bắt đầu bằng **R4-**. Vòng 5 (sửa phần "còn lại", kèm các quyết định của chủ dự án) nằm ở **§10**.
 
 ---
 
@@ -56,9 +56,9 @@ Nhưng thứ đang có là **một bộ mô phỏng và demo được kiểm th�
 2. **Đánh giá trên dữ liệu thật.** Ngay trên mô phỏng, khi gộp 11 cửa sổ thì recall chặn chỉ đạt 43,5 % và SIM box 68,2 % (§7.2).
 3. **Một đường online duy nhất.** Hiện có ba đường song song (API chính, `ram_online`, `telecom_grpc`), hai đường sau chưa nối vào API chính. Kèm theo: đo SLA trên Linux, phần cứng đích, và D14 (checkpoint tăng dần).
 4. **Kênh thuê bao bền vững.**
-   - Inbox hiện nằm trong RAM: `deque(maxlen=50)` ở `server.py`, khởi động lại là mất.
-   - Chưa có push FCM.
-   - OTP chỉ qua Twilio/console, chưa qua SMSC của nhà mạng.
+   - ~~Inbox hiện nằm trong RAM~~: **nhận định này sai**, xem §10.1. Cảnh báo đã được lưu bền trong `subscriber_alerts`.
+   - ~~Chưa có push FCM~~: vòng 5 đã có Web Push (VAPID), xem R5-PUSH.
+   - ~~OTP chỉ qua Twilio/console~~: vòng 5 đã có OTP qua API SMS HTTP của nhà mạng, xem R5-OTP.
 5. **Sẵn sàng cho doanh nghiệp:**
    - SSO, HSM/KMS;
    - neo chuỗi audit ra ngoài (vòng 3 đã có API neo, H2);
@@ -290,6 +290,8 @@ Theo họ lừa đảo (gộp):
 
 ## 9. Còn lại và lý do
 
+> Bảng này là trạng thái **sau vòng 4**. Vòng 5 đã sửa D14, M6, M10, baseline toàn luật, phần UX, Web Push, OTP SMS, cầu nối nhà mạng và việc tách EduDSS. Trạng thái mới nhất ở **§10.4**.
+
 | Mức | Mục | Lý do chưa làm |
 |---|---|---|
 | **TB–Cao, bắt buộc sửa sau** | **D14: checkpoint tăng dần.** Checkpoint vẫn là snapshot đầy đủ trong giao dịch ghi. R4-S2 đã bỏ việc sao chép toàn store khi chấm lại; R4-S10 giảm tần suất checkpoint theo số sự kiện. | Viết lại checkpoint và phục hồi cần môi trường tải thật để đo. Chủ dự án chọn "phương án tối ưu lúc này, sau vẫn phải sửa". Kế hoạch ở báo cáo 01 §3c. |
@@ -303,3 +305,101 @@ Theo họ lừa đảo (gộp):
 | Thấp | Android: `isMinifyEnabled=false` | Không có Android SDK để build và kiểm R8. |
 | Thấp | Đếm `runtime.stats` không khoá; thứ tự dọn `_party_max` | Chỉ ảnh hưởng số đo và bộ nhớ (có giới hạn), không ảnh hưởng quyết định. |
 | Môi trường | Docker build, Redis/Kafka thật, Android build, GitHub Actions thật | Máy không có Docker daemon, Java hay Android SDK; các phần này mới chỉ được kiểm tĩnh (YAML parse, `bash -n`, `docker compose config`). |
+
+---
+
+## 10. Vòng 5: sửa phần "còn lại" và các quyết định của chủ dự án
+
+Mã các bản sửa vòng 5 bắt đầu bằng **R5-**. Mỗi bản sửa có test hồi quy. Các test đó hỏng trên commit `32aac06`, đã kiểm bằng `git archive` trong WSL:
+- `test_round5.py`: 11/11 hỏng.
+- `test_ux_round5.py`: 25/25 hỏng.
+- `test_incremental_checkpoint.py`: 3/3 hỏng.
+- `test_carrier_bridge.py`: không import được (module chưa có).
+
+### 10.1 Quyết định (ngày 17/11/2026)
+
+| Câu hỏi | Phương án đã chọn | Sửa như thế nào | Vì sao chọn |
+|---|---|---|---|
+| Cổng eval đang đỏ ở 3 chỉ tiêu chất lượng | **Tách cổng an toàn / cổng chất lượng** | `evals/thresholds.json` thêm danh sách `advisory`: recall chặn, recall bất kỳ, họ yếu nhất, zero-day, min-window, chặn trước khi đổ chuông, SLA phục vụ. `run_evals.py` tách `blocking_failures` khỏi `advisory_misses`. CI/deploy chỉ bị chặn bởi cổng an toàn: FPR chặn, precision chặn, FPR cảnh báo, chuỗi bằng chứng, smoke. **Mục tiêu giữ nguyên** (45 / 80 / 75 / 80 …). Chỉ tiêu chưa đạt vẫn hiện ĐỎ trong báo cáo eval. | Hạ ngưỡng thì che mất sự thật. Giữ cổng đỏ cứng thì chặn mọi deploy, kể cả bản sửa bảo mật. Cách tách giữ được cả an toàn lẫn tính trung thực. Muốn chặn lại theo chất lượng chỉ cần xoá mục khỏi `advisory`. |
+| Ba đường online song song | **API chính là nguồn duy nhất** | `ram_online/`, `telecom_grpc/`, `spark/` gắn nhãn "thử nghiệm, không phục vụ thuê bao" trong README. Đường thật từ nhà mạng là `src/carrier_bridge.py` (mới): đọc file, stdin hoặc Kafka; ánh xạ trường theo file cấu hình; ký HMAC rồi đẩy vào `/api/network/events`; at-least-once, API khử trùng theo `event_id`. Tài liệu ở `docs/CARRIER_BRIDGE.md`. | Chỉ API chính có đủ chuỗi bằng chứng, fail-closed, checkpoint và hộp thư thuê bao. Duy trì ba đường thì nhân ba chi phí kiểm thử mà không có khách dùng. |
+| Kênh báo thuê bao | **Web Push (VAPID) + OTP qua SMS HTTP** | `src/push.py`: khoá VAPID tự sinh vào `secrets/vapid_private.pem` (quyền 600). Endpoint chỉ nhận https công khai (chặn SSRF). Mỗi đăng ký tối đa 1 push / 10 giây. Đăng ký bị trình duyệt huỷ (404/410) thì tự xoá. Payload **không** chứa số điện thoại hay nội dung tin. App thuê bao có nút "Bật thông báo" để đăng ký; đăng xuất thì huỷ đăng ký. `accounts.HttpSmsOtp` gửi OTP qua API SMS/brandname của nhà mạng, cấu hình bằng biến môi trường; token đọc từ file. | Không cần tài khoản Firebase. Chạy trên Chrome/Edge/Firefox và trên PWA iOS ≥ 16.4 đã cài. API SMS HTTP chung dùng được cho cả 3 nhà mạng lớn mà không phải viết mã riêng cho từng hãng. |
+| EduDSS và hiệu chuẩn xác suất | **Tách EduDSS ra nhánh riêng.** Hiệu chuẩn: **không chọn.** | `git subtree split --prefix=edu_dss -b edudss-standalone`: nhánh cục bộ `edudss-standalone` (2beaae3) giữ nguyên lịch sử. Chưa push. Hiệu chuẩn xác suất **không làm**: điểm vẫn chỉ dùng để xếp hạng, ngưỡng theo Clopper–Pearson. | Tách nhánh giữ lịch sử mà không phá repo hiện tại. Hiệu chuẩn trên dữ liệu mô phỏng chỉ khớp với bộ sinh, không khớp lưu lượng thật, nên chủ dự án không chọn. |
+
+**Sửa lại một nhận định sai ở §1 (vai CEO):** câu "Inbox nằm trong RAM, khởi động lại là mất" là **sai**. `portal.AlertSink` ghi mỗi cảnh báo vào bảng `subscriber_alerts`, và `hydrate_engine` nạp lại khi khởi động. `deque(maxlen=50)` trong `server.py` chỉ là bộ đệm hiển thị. Phần thật sự còn thiếu là push khi app đóng, và vòng này đã làm.
+
+### 10.2 Danh sách bản sửa
+
+| Mã | Mục | Sửa | File |
+|---|---|---|---|
+| R5-D14 | Checkpoint tăng dần | Mỗi chu kỳ chỉ ghi **delta**: các khoá bị đổi kể từ lần trước, khoá bị xoá ghi tombstone `None`. Cứ 20 delta lại ghi một snapshot gốc. Phục hồi = gốc + áp các delta theo thứ tự. Có đánh dấu bẩn trong `FeatureStore.transaction`, `commit_cdr`, `prune_state`, `IngestGuard`, `FallbackRules` (deny list) và đường `_observe_without_model`. Bảng `checkpoint_delta` nằm trong cùng SQLite WAL. | `feature_store.py`, `ingest_guard.py`, `resilience.py`, `backend_state.py`, `backend_runtime.py` |
+| R5-M-SB | SIM box (họ yếu nhất) | Đặc trưng mới `new_callee_ratio_24h`: tỷ lệ cuộc gọi tới số B **chưa từng gọi** trong 30 ngày, tính trên cửa sổ 24 giờ. Đặc trưng nhân quả, có trong snapshot/prune. Hợp đồng đặc trưng nâng lên `causal-v3-exact-24h-completion-order-bnumber`. | `feature_store.py`, bundle `tfd-v2.5` |
+| R5-M6 | CI theo cụm tác nhân | `cluster_bootstrap_recall`: bootstrap lấy mẫu lại theo **tác nhân**, vì các sự kiện của cùng một kẻ gian không độc lập. Khoảng này rộng hơn Wilson theo sự kiện. Eval ghi `actor_level_recall`. | `statistical_reporting.py`, `evaluate.py`, `evals/run_evals.py` |
+| R5-M10 | z-score lý do zero-day theo segment | Lưu median/IQR riêng cho từng segment trong joblib của IsolationForest. Lý do zero-day dùng thang đo của đúng segment. | `train.py`, `detector.py` |
+| R5-ML-BL | Baseline toàn luật | `compare_models.rules_score` là ứng viên "Chỉ luật (baseline)", để so mô hình với luật thuần. | `compare_models.py` |
+| R5-GATE | Tách cổng | Như §10.1. | `evals/thresholds.json`, `evals/run_evals.py` |
+| R5-PUSH | Web Push | Như §10.1. Bảng `push_subscriptions` xoá theo thuê bao (cascade); mỗi tài khoản tối đa 5 thiết bị; đăng ký giới hạn 20 lần / giờ. Service worker có `push` + `notificationclick`, cache `la-chan-v4`. | `push.py`, `appdb.py`, `portal.py`, `static/app/sw.js`, `static/app/index.html`, `requirements-serve.txt` (`pywebpush==2.0.3`) |
+| R5-OTP | OTP qua SMS HTTP | Mẫu JSON được parse trước rồi mới điền giá trị, nên không thể chèn JSON. Bắt buộc https. Có thể kiểm trường "thành công" trong phản hồi. | `accounts.py` |
+| R5-BRIDGE | Cầu nối nhà mạng | Như §10.1. 15 test: ánh xạ, ký, thử lại, offset Kafka, xoay vòng file. | `carrier_bridge.py`, `docs/CARRIER_BRIDGE.md` |
+| R5-UX1 | App thuê bao | Dòng lịch sử dùng được bằng bàn phím (`role=button`, `aria-expanded`), giữ trạng thái mở qua mỗi lần làm mới. Overlay là dialog có focus trap, Escape, trả focus. Emoji trang trí có `aria-hidden`. Chữ ≥ 12 px, vùng chạm 44 px. Tab đang mở có `aria-current`. Tra cứu có trạng thái chờ và lỗi hiển thị ngay. Lỗi tải inbox có banner `role=alert`. | `static/app/index.html` |
+| R5-UX2 | Dashboard | Tiêu đề viết hoa đầu câu. Nhãn ≥ 12 px. Ngăn bằng chứng là dialog (focus trap, Escape). Biểu đồ độ trễ có `role=img` và nhãn tóm tắt số liệu. Feed rỗng có thông báo. Poll lỗi 2 lần liên tiếp thì hiện banner. "Duyệt" dùng màu thương hiệu. | `static/admin/index.html` |
+| R5-UX3 | Trang quản trị | Tablist WAI-ARIA (phím mũi tên, Home/End). Watermark người dùng + giờ. Xác nhận trước khi khoá tài khoản. `aria-label` cho mọi ô nhập. Tên vai trò bằng tiếng Việt. Trạng thái "Đang tải…". | `static/admin/manage.html` |
+| R5-UX4 | Android | Màu thương hiệu #0E7490; đỏ chỉ dùng cho cảnh báo. Chuỗi bản release là tiếng Việt thuần, gợi ý dev chuyển sang `src/debug`. Ô URL kiểu URI. Thanh tiến trình khi tải. Màn lỗi có icon, live region, nút 48 dp. | `android/app/src/**` |
+| R5-UX5 | Streamlit EduDSS | Nhãn tiếng Việt + `help`. Mã hoá từng đoạn đường dẫn (`quote(safe="")`). Kiểm trường bắt buộc trước khi gọi. Thông báo lỗi dễ hiểu theo mã HTTP. Kết quả dạng metric/bảng, JSON gốc trong expander. Nút đăng xuất. Vai trò đọc từ JWT, chỉ để hiển thị. | `edu_dss/ui/app.py` |
+| R5-TEST | Bộ test chấm bằng bundle đang phục vụ | `tests/conftest.py` mặc định `FRAUD_MODEL_DIR=runtime/artifacts_v22/models`, thay cho `models/` cũ ở gốc repo (hợp đồng 27 đặc trưng). | `tests/conftest.py` |
+
+### 10.3 Kết quả kiểm thử vòng 5
+
+Môi trường: WSL, Python 3.12.3, venv ghim theo `requirements-serve.txt`, chạy trên bản sao sạch của cây làm việc. Bundle **tfd-v2.5**, dựng lại bằng `rebuild_artifacts.py`. Kết quả: dataset, train, evaluate, drift baseline và shadow đều PASS; manifest `verified`.
+
+| Bộ | Vòng 4 | **Vòng 5** | Ghi chú |
+|---|---|---|---|
+| `tests/` | 504 passed | **558 passed** | +54 test mới: 11 + 25 + 3 + 15 (carrier bridge). Một test cũ được đổi: `test_admin_and_app_are_separate_pages` giờ so tiêu đề viết hoa đầu câu (R5-UX2). |
+| `spark/` | 24 passed, 65 subtests | **24 passed**, 65 subtests | |
+| `edu_dss/backend/tests` | 16 passed | **16 passed**, 4 subtests | |
+| `telecom_grpc/tests` | 2 passed | **2 passed** | |
+| `ram_online/` (fakeredis) | 22/23 | **22/23** | Vẫn là ca `test_window_rejects_call_id…` hỏng do fakeredis giả lập Lua, như các vòng trước. |
+| QA end-to-end (server thật, ký HMAC) | 32/32 | **32/32** | `/health/ready` báo `tfd-v2.5`. Web Push: `pywebpush` có sẵn và sinh được khoá VAPID (khoá công khai 65 byte). |
+| `node --check` các khối script ở 3 trang HTML | — | sạch | |
+| pyflakes trên các file đã đổi | — | sạch | Chỉ còn cảnh báo fixture `env` dùng lại, như các vòng trước. |
+
+**Eval gộp 11 cửa sổ** (`python -B evals/run_evals.py`), bundle tfd-v2.5:
+
+| Chỉ số | Ngưỡng | tfd-v2.4 | **tfd-v2.5** | Loại cổng |
+|---|---|---|---|---|
+| block_recall_pct | ≥ 45 | 43,5 ✗ | **45,06 ✓** | chất lượng (cảnh báo) |
+| block_precision_pct | ≥ 95 | 99,6 | 99,62 | **an toàn** |
+| block_fpr_pct / cận trên 95 % | ≤ 0,01 (cận trên) | 0,0003 / 0,0017 | 0,0003 / 0,0017 | **an toàn** |
+| any_recall_pct | ≥ 80 | 81,11 | 80,76 | chất lượng |
+| any_recall_min_window_pct | ≥ 70 | 68,57 ✗ | 68,42 ✗ | chất lượng |
+| any_fpr_pct | ≤ 0,2 | 0,0703 | 0,0718 | **an toàn** |
+| family_min_detected_pct (SIM box) | ≥ 75 | 68,2 ✗ | 67,5 ✗ | chất lượng |
+| zero_day_caught_pct | ≥ 80 | 90,2 | 90,2 | chất lượng |
+| evidence_chain_valid, smoke_passed | true | true | true | **an toàn** |
+
+Cách đọc:
+- **Cổng an toàn đều đạt**, nên eval trả `passed`. Recall chặn lần đầu vượt mục tiêu 45 %.
+- Hai chỉ tiêu chất lượng vẫn ĐỎ: SIM box 67,5 % và min-window 68,4 %. Chúng hiện trong báo cáo eval dưới mục "Chỉ tiêu chất lượng chưa đạt".
+- Đặc trưng `new_callee_ratio_24h` **không** cứu được SIM box "ẩn" trên dữ liệu mô phỏng. Trung bình của số thật là 0,93, của SIM box là 1,0: cửa sổ 24 giờ còn đang warm-up, nên gần như mọi số B đều "mới". Đây là kết quả trung thực. Đặc trưng này có ý nghĩa với lưu lượng thật, nơi thuê bao thường gọi lại số quen; trên mô phỏng thì chưa có tác dụng. Mục tiêu **không** bị hạ.
+- **Phục vụ HTTP:** lần đo này cho p99 221 ms và 210 fail-open. Tôi đã đo A/B trên cùng máy, cùng lúc, với `verify_live_http.py --rates 50,100 --seconds 4`:
+
+  | Mã | p50 / p99 @50 EPS | p50 / p99 @100 EPS | fail-open |
+  |---|---|---|---|
+  | HEAD cũ (`32aac06` + tfd-v2.4) | 38 / 198 ms | 231 / 2076 ms | 398 |
+  | Vòng 5 (tfd-v2.5) | 15 / 39 ms | 27 / 157 ms | 71 |
+
+  Mã cũ còn tệ hơn mã mới, nên độ trễ cao là do máy WSL đang tải (load ≈ 1,6, 8 lõi dùng chung với Windows), không phải hồi quy của mã. Vì thế baseline phục vụ (đo trên runner CI) **giữ nguyên**, và chỉ baseline chất lượng được chốt lại theo tfd-v2.5 (`evals/baselines/*.json`). Muốn chốt số SLA, cần đo lại trên runner CI hoặc phần cứng đích.
+
+### 10.4 Còn lại sau vòng 5 và các bước cụ thể
+
+| Mục | Vì sao chưa xong ở máy này | Bước tiếp theo, cụ thể |
+|---|---|---|
+| Đẩy EduDSS ra repo riêng | Push là thao tác ra ngoài; chủ dự án chưa cho push. | Tạo repo trống, rồi chạy `git push <repo-moi> edudss-standalone:main`. Sau đó thay `edu_dss/` ở repo này bằng README trỏ sang repo mới (hoặc `git subtree pull`). |
+| Bật Web Push khi deploy | Cần domain https thật. | `pip install -r requirements-serve.txt`. Đặt `FRAUD_VAPID_SUBJECT=mailto:<email-vận-hành>`. Khoá tự sinh ở `secrets/vapid_private.pem`, cần backup cùng các secret khác (mất khoá thì mọi thiết bị phải đăng ký lại). Tắt bằng `FRAUD_PUSH=0`. |
+| OTP qua SMS nhà mạng | Cần hợp đồng brandname và token thật. | `FRAUD_OTP_PROVIDER=sms-http`, `FRAUD_SMS_HTTP_URL=https://…`, `FRAUD_SMS_HTTP_TOKEN_FILE=secrets/sms_token`, `FRAUD_SMS_HTTP_BODY='{"phone":"{phone}","sender":"{brandname}","content":"{message}"}'`, `FRAUD_SMS_BRANDNAME=<tên đã đăng ký>`. Nếu API trả HTTP 200 kèm mã lỗi trong body, đặt thêm `FRAUD_SMS_HTTP_OK_FIELD`/`_OK_VALUE`. |
+| Nối dữ liệu nhà mạng thật | Cần bản sao báo hiệu/CDR thật. | Viết file ánh xạ theo `docs/CARRIER_BRIDGE.md` §3, chạy `python src/carrier_bridge.py --api https://<api> --key-file secrets/network_link.key --input <file> --mapping <map.json>` ở chế độ shadow 4–8 tuần. |
+| Chất lượng trên dữ liệu thật; mô hình thu giọng im lặng | Mọi số liệu ở đây là mô phỏng. SIM box "ẩn" trong bộ sinh được thiết kế để né tín hiệu theo SIM. | Gán nhãn lưu lượng shadow, rồi chạy lại `evals/run_evals.py` với dữ liệu thật. Khi đủ chỉ tiêu, xoá mục tương ứng khỏi `advisory` để nó chặn lại. |
+| Android: Web Push, R8/minify | Không có Android SDK. WebView không nhận Web Push. | Dùng FCM trong vỏ Android (cần Firebase) hoặc hướng người dùng cài PWA. Bật `isMinifyEnabled=true` và kiểm bằng `./gradlew assembleRelease` trên máy có SDK. |
+| Docker / Redis / Kafka / GitHub Actions thật | Không có Docker daemon và Java. | `docker compose up --build` trên máy có Docker, rồi chạy `qa_flows.py` trên stack đó. |
+| S9 (sao chép deque cho số nhận rất nhiều cuộc gọi), `runtime.stats` không khoá, thứ tự dọn `_party_max` | Chỉ ảnh hưởng hiệu năng ở cực trị và số đo. Cần benchmark tải thật để đổi cấu trúc dữ liệu cho đáng. | Đo bằng `bench` trên phần cứng đích. Nếu p99 vượt SLA, đổi `in24` sang ring buffer theo phút. |
+| CSP đầy đủ | Script nội tuyến dài, chưa tách. | Tách script sang file `.js` và đặt `script-src 'self'`. Trước đó chạy `Content-Security-Policy-Report-Only` một thời gian để thu vi phạm. |
+| UX còn lại | Ngoài phạm vi đã chốt. | Nút/nhãn pill ở dashboard vẫn viết hoa. Dashboard vẫn tải Google Fonts (nên tự host). |

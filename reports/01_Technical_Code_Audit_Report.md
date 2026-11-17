@@ -8,7 +8,7 @@
 Báo cáo đi kèm:
 - [02_Deep_Technical_Explanation_Report.md](02_Deep_Technical_Explanation_Report.md): giải thích luồng xử lý và thuật toán.
 - [he-thong/](he-thong/README.md): một báo cáo cho mỗi hệ thống con.
-- [04_Danh_gia_da_vai_tro_va_thuat_toan.md](04_Danh_gia_da_vai_tro_va_thuat_toan.md): vòng 4, đánh giá đa vai trò (CEO, ML, staff, bảo mật, UX, QA), bảng thuật toán, bản sửa R4-*, bundle tfd-v2.4 và kết quả đo gộp 11 cửa sổ.
+- [04_Danh_gia_da_vai_tro_va_thuat_toan.md](04_Danh_gia_da_vai_tro_va_thuat_toan.md): vòng 4, đánh giá đa vai trò (CEO, ML, staff, bảo mật, UX, QA), bảng thuật toán, bản sửa R4-*, bundle tfd-v2.4 và kết quả đo gộp 11 cửa sổ. §10 của báo cáo đó là vòng 5 (R5-*): D14 checkpoint tăng dần, tách cổng an toàn/chất lượng, Web Push + OTP SMS HTTP, cầu nối nhà mạng, UX, bundle tfd-v2.5.
 
 ---
 

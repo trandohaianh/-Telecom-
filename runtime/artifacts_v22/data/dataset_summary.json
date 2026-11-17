@@ -16,7 +16,7 @@
       "VOICE_HARVEST": 358
     },
     "warmup_events": 98020,
-    "seconds": 48.5
+    "seconds": 82.6
   },
   "val": {
     "events": 163335,
@@ -35,7 +35,7 @@
       "VOICE_HARVEST": 173
     },
     "warmup_events": 100213,
-    "seconds": 45.8
+    "seconds": 44.8
   },
   "cal": {
     "events": 160845,
@@ -54,7 +54,7 @@
       "VOICE_HARVEST": 373
     },
     "warmup_events": 98557,
-    "seconds": 32.1
+    "seconds": 50.0
   },
   "test": {
     "events": 50000,
@@ -73,7 +73,7 @@
       "ZERO_DAY_WANGIRI": 5
     },
     "warmup_events": 158787,
-    "seconds": 18.1
+    "seconds": 37.0
   },
   "ref": {
     "events": 52418,
@@ -91,6 +91,6 @@
       "SMS_PHISH": 6
     },
     "warmup_events": 159869,
-    "seconds": 13.2
+    "seconds": 26.6
   }
 }

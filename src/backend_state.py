@@ -62,6 +62,7 @@ class BackendState:
                 WHERE result IS NOT NULL AND evidence_exported=0;
             CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS suspended (name TEXT PRIMARY KEY);
+            CREATE TABLE IF NOT EXISTS checkpoint_delta (seq INTEGER PRIMARY KEY, value TEXT NOT NULL);
         """)
 
     @contextmanager
@@ -134,6 +135,21 @@ class BackendState:
         with self.lock:
             row = self.db.execute("SELECT value FROM metadata WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
+
+    # D14: incremental checkpoints. A base snapshot lives in metadata["checkpoint"]; every later
+    # periodic checkpoint appends only what changed. Recovery = base + deltas in order + journal.
+    def add_checkpoint_delta(self, seq, value):
+        with self.lock:
+            self.db.execute("INSERT OR REPLACE INTO checkpoint_delta(seq, value) VALUES (?,?)", (int(seq), _json(value)))
+
+    def checkpoint_deltas(self):
+        with self.lock:
+            rows = self.db.execute("SELECT seq, value FROM checkpoint_delta ORDER BY seq").fetchall()
+        return [(seq, json.loads(value)) for seq, value in rows]
+
+    def clear_checkpoint_deltas(self):
+        with self.lock:
+            self.db.execute("DELETE FROM checkpoint_delta")
 
     def set(self, key, value):
         encoded = _json(value)

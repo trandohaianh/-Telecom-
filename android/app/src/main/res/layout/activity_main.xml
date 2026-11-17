@@ -15,6 +15,18 @@
             android:layout_height="match_parent" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <!-- Vòng tiến trình trong lần tải trang đầu tiên (WebView còn trắng). -->
+    <ProgressBar
+        android:id="@+id/progress"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:contentDescription="@string/loading"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/brand"
+        android:visibility="gone" />
+
     <!-- Màn hình khi không kết nối được server: thử lại hoặc đổi địa chỉ. -->
     <LinearLayout
         android:id="@+id/error"
@@ -25,6 +37,15 @@
         android:orientation="vertical"
         android:padding="28dp"
         android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/error_icon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp"
+            android:contentDescription="@string/error_icon_desc"
+            android:src="@android:drawable/stat_notify_error"
+            android:tint="@color/brand" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -38,6 +59,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
+            android:accessibilityLiveRegion="polite"
             android:gravity="center"
             android:textSize="14sp" />
 
@@ -47,14 +69,18 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
             android:backgroundTint="@color/brand"
+            android:contentDescription="@string/retry"
+            android:minHeight="48dp"
             android:text="@string/retry"
-            android:textColor="#FFFFFF" />
+            android:textColor="@color/white" />
 
         <Button
             android:id="@+id/change_server"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:contentDescription="@string/server_title"
+            android:minHeight="48dp"
             android:text="@string/server_title" />
     </LinearLayout>
 </FrameLayout>

@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "created_utc": "2026-11-17T08:43:06.494023+00:00",
-  "model_version": "tfd-v2.4",
+  "created_utc": "2026-11-17T10:44:43.249567+00:00",
+  "model_version": "tfd-v2.5",
   "feature_schema": {
-    "contract": "causal-v2-exact-24h-completion-order",
+    "contract": "causal-v3-exact-24h-completion-order-bnumber",
     "call": [
       "calls_1m",
       "calls_10m",
@@ -31,7 +31,8 @@
       "protected_cli_mismatch",
       "network_2g",
       "hour_of_day",
-      "active_hours_on_network"
+      "active_hours_on_network",
+      "new_callee_ratio_24h"
     ],
     "sms_meta": [
       "route_brand_gw",
@@ -59,16 +60,16 @@
   },
   "dataset_provenance": {
     "status": "verified",
-    "feature_contract": "causal-v2-exact-24h-completion-order",
-    "manifest_sha256": "2efe5359ae75ba9f6b039cac848d79d1fd9877226c83e3722d690d6f8db327ac",
+    "feature_contract": "causal-v3-exact-24h-completion-order-bnumber",
+    "manifest_sha256": "bcc9b813e95dc0684d934802ab6b3a893a28ae6773f57b1e3497c6efff8e95e4",
     "input_sha256": {
-      "train_call_features.parquet": "5949edd27f4ebef3cceb5f22535c272d455891d3e2297e4dcbebfacad2315936",
+      "train_call_features.parquet": "d930eb5f3e39424ccd26b889e9d5ff1e4aa126d78605c0f412b8ff0969113a57",
       "train_sms_features.parquet": "f13b72a11ae7b39ff64376759481c9207f0a94aee893e578582d0916c227fa4d",
       "train_audio_features.parquet": "db9ffcd7479e0c266d12c59481c58c14bfada13bb59ff5cb987955af324132d2",
-      "val_call_features.parquet": "379ba7ebf2ada364958bc9f7ddc960cdcc6a9f75b65da1b050b62f7af504a69c",
+      "val_call_features.parquet": "baf1622637fa68e3df08ef621a62028460d806c819bd70044a60b195e3536985",
       "val_sms_features.parquet": "9a15a281877fb6a2c7d6f1be0ab32203dbd20095b2518eceeaa8acc4b5751c43",
       "val_audio_features.parquet": "7b0c73f9ae348bfdb9301200f7cd2cbd48b98378fe6ece6f51e37e2651b9b9ec",
-      "cal_call_features.parquet": "30f220918a5f4c2c3d56dedcf02b6798d701dee5ad91beeb7f0d56d1b34578b6",
+      "cal_call_features.parquet": "67235e94c25a2b33c5f5d9c1a1c1b54b46e44704c7da0493ed43443973479a9c",
       "cal_sms_features.parquet": "4d0ad99130159d3e8a297017f2a1c2be30913495444a85c2bffd4880a260c7a9",
       "cal_audio_features.parquet": "53c1a2216b7c14b3714245600cbde79040e92cf328fd52bfd7a70bf622c59539"
     },
@@ -78,28 +79,28 @@
   "drift_baseline_requires_rebuild": true,
   "artifacts": {
     "tier1_call_lgbm.txt": {
-      "sha256": "4ad0ab60d699ecc860d462541d3ec9446ba033acf6156fd2074f8c989d5db1e5",
-      "bytes": 426981
+      "sha256": "b4d5b62f66fb1f8188c08c9e390a61113b6ed33697ed94c72acb6bc569dcd1a5",
+      "bytes": 499105
     },
     "tier2_audio_lgbm.txt": {
       "sha256": "bdbc048938c3068b04668e586cdc6a5d3baa9626342f1decd51d7c2ceb4a38c4",
       "bytes": 133869
     },
     "tier1_zero_day_iforest.joblib": {
-      "sha256": "69add8670554d8b5be3c74d9d89b4f59a33773df4e37719c0ecdf41e3f48d1c5",
-      "bytes": 7945045
+      "sha256": "6441357e024f52c43846b1a52473a309398f650708992cc225fea4353a147d38",
+      "bytes": 7946235
     },
     "sms_text_lr.joblib": {
       "sha256": "2d3061a2377c426445e8f60e7fc54c9c81f1367deb70e56774f8c90bf9735dab",
       "bytes": 597889
     },
     "thresholds.json": {
-      "sha256": "18456649c528d644cdab82c978b564c67e92a7b20e8a2831aaff34665400e5a5",
+      "sha256": "5c2f201b465b1138e0650cf461b03242cc8fdfc3e1af91fec581aa6af78a68fa",
       "bytes": 384
     },
     "training_report.json": {
-      "sha256": "53a085dd0cf6f280e0604137beee58046b7f987cacad684d2af82f42c08f60df",
-      "bytes": 6613
+      "sha256": "ac76f1fc855b4566bb485f022c3d6ddc61d673f02adfcd8e92d66c7808c47bd1",
+      "bytes": 6623
     }
   }
 }

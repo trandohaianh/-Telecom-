@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import logging
 import os
 import re
@@ -205,10 +206,72 @@ class TwilioSmsOtp(OtpProvider):
             raise HTTPException(502, "Không gửi được SMS, vui lòng thử lại")
 
 
+class HttpSmsOtp(OtpProvider):
+    """Generic carrier SMS / brandname HTTP API (owner decision 2026-11-17: "SMS HTTP").
+
+    Configured, not coded per vendor:
+      FRAUD_SMS_HTTP_URL       https endpoint of the carrier SMS/brandname API
+      FRAUD_SMS_HTTP_TOKEN_FILE file holding the bearer token (never in env or logs)
+      FRAUD_SMS_HTTP_BODY      JSON template; {phone} {phone_plus} {message} {brandname} are filled in
+      FRAUD_SMS_BRANDNAME      registered sender name (default LACHAN)
+      FRAUD_SMS_HTTP_OK_FIELD / FRAUD_SMS_HTTP_OK_VALUE  optional success marker in the JSON reply
+    """
+    name = "sms-http"
+
+    def __init__(self):
+        url = os.environ["FRAUD_SMS_HTTP_URL"]
+        if not url.startswith("https://"):
+            raise RuntimeError("FRAUD_SMS_HTTP_URL must be https")
+        self.url = url
+        token_file = os.environ.get("FRAUD_SMS_HTTP_TOKEN_FILE")
+        self.token = open(token_file, encoding="utf-8").read().strip() if token_file else ""
+        self.template = os.environ.get("FRAUD_SMS_HTTP_BODY",
+                                       '{"to": "{phone}", "from": "{brandname}", "text": "{message}"}')
+        self.brandname = os.environ.get("FRAUD_SMS_BRANDNAME", "LACHAN")
+        self.ok_field = os.environ.get("FRAUD_SMS_HTTP_OK_FIELD", "")
+        self.ok_value = os.environ.get("FRAUD_SMS_HTTP_OK_VALUE", "")
+        self.cost_usd = float(os.environ.get("SMS_COST_USD", "0.01"))
+
+    def render(self, phone: str, code: str) -> dict:
+        message = f"Ma xac thuc La chan lua dao: {code}. Het han sau 5 phut. Khong chia se ma nay."
+        values = {"phone": phone, "phone_plus": "+" + phone, "message": message, "brandname": self.brandname}
+
+        def fill(node):   # fill placeholders inside a parsed template: values are never JSON-injected
+            if isinstance(node, str):
+                for k, v in values.items():
+                    node = node.replace("{" + k + "}", v)
+                return node
+            if isinstance(node, list):
+                return [fill(x) for x in node]
+            if isinstance(node, dict):
+                return {k: fill(v) for k, v in node.items()}
+            return node
+        return fill(json.loads(self.template))
+
+    def send(self, phone: str, code: str) -> None:
+        import httpx
+
+        headers = {"Authorization": "Bearer " + self.token} if self.token else {}
+        try:
+            resp = httpx.post(self.url, json=self.render(phone, code), headers=headers, timeout=15)
+        except httpx.HTTPError as exc:
+            raise HTTPException(502, "Không gửi được SMS, vui lòng thử lại") from exc
+        ok = resp.status_code < 300
+        if ok and self.ok_field:
+            try:
+                ok = str(resp.json().get(self.ok_field)) == self.ok_value
+            except ValueError:
+                ok = False
+        if not ok:
+            raise HTTPException(502, "Không gửi được SMS, vui lòng thử lại")
+
+
 def otp_provider() -> OtpProvider | None:
     kind = os.environ.get("FRAUD_OTP_PROVIDER", "").strip().lower()
     if kind == "twilio":
         return TwilioSmsOtp()
+    if kind in ("sms-http", "http"):
+        return HttpSmsOtp()
     if kind == "console":
         return ConsoleOtp()
     return None

@@ -72,6 +72,10 @@ def pool_windows(window_metrics: list) -> dict:
         v["detected_pct"] = round(100 * (v["blocked"] + v["flagged"]) / max(v["events"], 1), 1)
     out["by_family"], out["zero_day"] = fam, zd
     out["any_recall_min_window_pct"] = min(m["block_or_flag"]["recall_pct"] for m in window_metrics)
+    from statistical_reporting import cluster_bootstrap_recall
+    actors = [v for i, m in enumerate(window_metrics) for v in (m.get("by_actor") or {}).values()]
+    out["actor_level"] = {"any": cluster_bootstrap_recall(actors, "detected"),
+                          "block": cluster_bootstrap_recall(actors, "blocked")}
     out["windows"] = len(window_metrics)
     return out
 
@@ -118,6 +122,7 @@ def model_quality(windows: int = 10) -> dict:
         "by_family": fam,
         "block": pooled["block"], "block_or_flag": pooled["block_or_flag"], "zero_day": zd,
         "test_window": {"block": m["block"], "block_or_flag": m["block_or_flag"], "by_family": m["by_family"]},
+        "actor_level_recall": pooled.get("actor_level"),
         "call_sessions_pre_ring_block": sess,
     }
 
@@ -182,7 +187,8 @@ def regressions(metrics: dict, baseline: dict, tol: float) -> tuple[list[str], d
 
 def markdown(report: dict, fails: list[str], regs: list[str], deltas: dict) -> str:
     h = report["metrics"]
-    ok = not fails and not regs
+    gates_info = report.get("gates") or {}
+    ok = gates_info.get("passed", not fails and not regs)
     lines = [f"# Telecom Fraud Shield eval — {'✅ ĐẠT' if ok else '❌ KHÔNG ĐẠT'}", "",
              f"- Thời điểm {report['started_at']} · bundle `{report['bundle']}` · {report['duration_s']} s",
              "- Dữ liệu mô phỏng: đo hồi quy đường ống, không chứng nhận hiệu quả trên mạng thật.", "",
@@ -201,7 +207,12 @@ def markdown(report: dict, fails: list[str], regs: list[str], deltas: dict) -> s
             l = r["latency_ms"]
             lines.append(f"| {r['offered_rate_eps']} | {r['completed_eps']} | {l['p50']} | {l['p95']} | {l['p99']} | "
                          f"{r['scored_within_http_30ms_pct']} | {r['fail_open']} | {r['client_shed']} |")
-    if fails:
+    if gates_info.get("advisory_misses"):
+        lines += ["", "## Chỉ tiêu chất lượng chưa đạt (cảnh báo, không chặn)", ""] + [f"- {f}" for f in gates_info["advisory_misses"]]
+    blocking = gates_info.get("blocking_failures")
+    if blocking:
+        lines += ["", "## Cổng AN TOÀN không đạt (chặn)", ""] + [f"- {f}" for f in blocking]
+    elif fails and "blocking_failures" not in gates_info:
         lines += ["", "## Không đạt ngưỡng", ""] + [f"- {f}" for f in fails]
     if regs:
         lines += ["", "## Hồi quy", ""] + [f"- {r}" for r in regs]
@@ -243,8 +254,16 @@ def main(argv=None) -> int:
     regs, deltas = ([], {})
     if base_path.exists() and not args.update_baseline:
         regs, deltas = regressions(metrics, json.loads(base_path.read_text(encoding="utf-8"))["metrics"], args.tolerance)
-    passed = not fails and not regs
-    report["gates"] = {"passed": passed, "threshold_failures": fails, "regressions": regs}
+    # Owner decision 2026-11-17: safety gates block CI/deploy; quality targets stay unchanged but are
+    # advisory (reported red, never silently lowered).
+    advisory = set(thresholds.get("advisory", []))
+    name_of = lambda line: line.replace(" phải là true", "").split("=")[0].split(":")[0].strip()
+    blocking_fails = [f for f in fails if name_of(f) not in advisory]
+    blocking_regs = [r for r in regs if name_of(r) not in advisory]
+    advisory_misses = [x for x in fails + regs if name_of(x) in advisory]
+    passed = not blocking_fails and not blocking_regs
+    report["gates"] = {"passed": passed, "threshold_failures": fails, "regressions": regs,
+                       "blocking_failures": blocking_fails + blocking_regs, "advisory_misses": advisory_misses}
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stem = args.output_dir / f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{mode}"

@@ -257,7 +257,7 @@ def test_costs_pipeline_and_metrics(env, monkeypatch, tmp_path):
 def test_admin_and_app_are_separate_pages(env):
     c, _, _ = env
     assert c.get("/", follow_redirects=False).headers["location"] == "/app/"
-    assert "ĐĂNG NHẬP VẬN HÀNH" in c.get("/admin/").text
+    assert "Đăng nhập vận hành" in c.get("/admin/").text   # vòng 5: tiêu đề viết hoa đầu câu (R5-UX2)
     assert "TÀI KHOẢN NHÂN VIÊN" in c.get("/admin/manage").text
     assert "Tạo tài khoản" in c.get("/app/").text
 

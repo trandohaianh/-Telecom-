@@ -1,3 +1,6 @@
+> **Trạng thái: thử nghiệm, không triển khai** — quyết định 17/11/2026: API chính là nguồn quyết định duy nhất; dùng `src/carrier_bridge.py` để đưa dữ liệu nhà mạng vào.
+> Lý do: Spark chỉ phát lại đặc trưng theo lô/luồng để đối chiếu và huấn luyện; nó không được đưa ra quyết định chặn trực tiếp.
+
 # CALL feature replay: causal contract v2
 
 The default batch engine computes all 27 CALL features on Spark workers.

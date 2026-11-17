@@ -41,7 +41,12 @@ CALL_FEATURES = [
     "imei_gateway_tac", "cell_registered", "cell_unknown_radio", "cell_trunk_or_intl", "velocity_kmh",
     "new_sims_on_cell_1h", "caller_age_days", "caller_foreign", "origin_local", "origin_intl_gw", "origin_bank_trunk",
     "cli_protected", "protected_cli_mismatch", "network_2g", "hour_of_day", "active_hours_on_network",
+    # B-number novelty: share of this caller's calls in the last 24 h that went to someone it had never
+    # called before. People mostly call their contacts again; SIM-box farms dial random subscribers,
+    # which a slow farm (3-6 calls/h) never reveals through the 1-hour dispersion feature.
+    "new_callee_ratio_24h",
 ]
+KNOWN_CALLEE_TTL_S = 30 * 86400.0   # how long a callee stays "known" to a caller
 # Danh sách feature SMS dựa trên route, sender, URL và lưu lượng 1 giờ gần nhất.
 SMS_META_FEATURES = ["route_brand_gw", "route_p2p", "route_unverified_bts", "sender_is_brand", "brand_not_via_gateway",
                      "url_count", "url_unofficial", "cell_registered", "sender_sms_1h"]
@@ -86,6 +91,10 @@ class FeatureStore:
         self.last_radio = {}                       # msisdn -> (ts, cell)
         self.new_sims_cell = defaultdict(dict)     # cell -> {msisdn: last_ts} for SIMs younger than 60 days
         self.sms_by_sender = defaultdict(deque)
+        self.known_callees = defaultdict(dict)     # msisdn -> {callee: last_ts} (30-day memory)
+        # D14: keys changed since the last checkpoint (base or delta). Not part of the state itself.
+        self._dirty = defaultdict(set)
+        self.new24 = defaultdict(deque)            # msisdn -> deque[(ts, 1 if new callee else 0)], last 24 h
         self.age_by_msisdn = {}
         # Lần đầu thấy số hoạt động trên mạng (gọi, được gọi, nhắn tin) - khác với tuổi đăng ký SIM.
         # SIM cũ đi thuê / ngủ đông có tuổi đăng ký lớn nhưng vừa mới xuất hiện hoạt động.
@@ -144,6 +153,13 @@ class FeatureStore:
             ic.popleft()
         _insort_time(self.in_calls[callee], ts)
         out24 = self._count_out_24h(caller, ts)
+        known = self.known_callees[caller]
+        novel = 0 if callee in known else 1
+        known[callee] = max(ts, known.get(callee, ts))
+        nq = self.new24[caller]
+        _prune(nq, ts - D1)
+        nq.append((ts, novel))
+        new_ratio = sum(x[1] for x in nq) / len(nq)
         # Only calls received at or before this event (another party's newer call may already be stored).
         incoming = len(ic) if not ic or ic[-1] <= ts else bisect.bisect_right(ic, ts)
 
@@ -221,6 +237,7 @@ class FeatureStore:
             "network_2g": 1.0 if ev["network"] == "2G" else 0.0,
             "hour_of_day": local_hour(ts),
             "active_hours_on_network": active_h,
+            "new_callee_ratio_24h": new_ratio,
         }
 
     # ------------------------------------------------------------------ scale-out: replicated side state
@@ -275,9 +292,9 @@ class FeatureStore:
     # checkpoint periodically and resume from the last checkpoint instead of re-reading a day of
     # traffic. Everything is JSON-shaped on purpose: it survives a version change of this file.
     CHECKPOINT_VERSION = 2
-    FEATURE_CONTRACT = "causal-v2-exact-24h-completion-order"
-    STATE_DEQUES = ("oc1h", "oc10", "oc1", "in_calls", "done_durations", "sms_by_sender")
-    STATE_DICTS = ("callee_cnt", "imei_by_msisdn", "msisdn_by_imei", "new_sims_cell")
+    FEATURE_CONTRACT = "causal-v3-exact-24h-completion-order-bnumber"
+    STATE_DEQUES = ("oc1h", "oc10", "oc1", "in_calls", "done_durations", "sms_by_sender", "new24")
+    STATE_DICTS = ("callee_cnt", "imei_by_msisdn", "msisdn_by_imei", "new_sims_cell", "known_callees")
     STATE_PLAIN = ("last_radio", "age_by_msisdn", "first_seen", "last_seen")
 
     def state_dict(self) -> dict:
@@ -346,8 +363,15 @@ class FeatureStore:
             raise ValueError("prune timestamp must be finite")
         if metadata_ttl_s is not None and (not math.isfinite(metadata_ttl_s) or metadata_ttl_s < D1):
             raise ValueError("metadata_ttl_s must be at least 24 h")
+        dirty = self._dirty
         for caller, q in list(self.oc1h.items()):
             cc = self.callee_cnt[caller]
+            if q and q[0][0] < ts - H1:
+                dirty["oc1h"].add(caller)
+                dirty["callee_cnt"].add(caller)
+            if not q:
+                dirty["oc1h"].add(caller)
+                dirty["callee_cnt"].add(caller)
             while q and q[0][0] < ts - H1:
                 _, callee = q.popleft()
                 cc[callee] -= 1
@@ -357,22 +381,31 @@ class FeatureStore:
                 self.oc1h.pop(caller, None)
                 self.callee_cnt.pop(caller, None)
         for name, horizon, tuples in (("oc10", M10, False), ("oc1", M1, False),
-                                      ("in_calls", D1, False), ("sms_by_sender", H1, True),
+                                      ("in_calls", D1, False), ("sms_by_sender", H1, True), ("new24", D1, True),
                                       ("out24", D1, False)):
             mapping = getattr(self, name)
             for key, q in list(mapping.items()):
+                if q and (q[0][0] if tuples else q[0]) < ts - horizon:
+                    dirty[name].add(key)
                 while q and (q[0][0] if tuples else q[0]) < ts - horizon:
                     q.popleft()
                 if not q:
+                    dirty[name].add(key)
                     del mapping[key]
-        for name, horizon in (("imei_by_msisdn", D1), ("msisdn_by_imei", D1), ("new_sims_cell", H1)):
+        for name, horizon in (("imei_by_msisdn", D1), ("msisdn_by_imei", D1), ("new_sims_cell", H1),
+                              ("known_callees", KNOWN_CALLEE_TTL_S)):
             mapping = getattr(self, name)
             for key, links in list(mapping.items()):
                 for link in [k for k, last_ts in links.items() if last_ts < ts - horizon]:
                     del links[link]
+                    dirty[name].add(key)
                 if not links:
+                    dirty[name].add(key)
                     del mapping[key]
         for caller, pending in list(self.pending_cdr.items()):
+            if not pending or pending[0][0] <= ts:
+                dirty["pending_cdr"].add(caller)
+                dirty["done_durations"].add(caller)
             while pending and pending[0][0] <= ts:
                 self.done_durations[caller].append(heapq.heappop(pending)[1])
             if not pending:
@@ -383,8 +416,63 @@ class FeatureStore:
                 if last_ts < ts - metadata_ttl_s and party not in self.pending_cdr:
                     for name in ("first_seen", "last_seen", "last_radio", "age_by_msisdn", "done_durations"):
                         getattr(self, name).pop(party, None)
+                        dirty[name].add(party)
                     evicted += 1
         return {**self.state_stats(), "metadata_evicted": evicted}
+
+    # ------------------------------------------------------------------ D14: incremental checkpoints
+    _DELTA_NAMES = STATE_DEQUES + STATE_DICTS + STATE_PLAIN + ("pending_cdr", "out24")
+
+    def take_delta(self) -> dict:
+        """Changed keys since the last checkpoint, in state_dict encoding; None marks a deleted key.
+
+        A periodic checkpoint used to serialise the WHOLE store inside the owner's write transaction.
+        A delta is proportional to what changed in the interval, not to the number of subscribers.
+        """
+        out = {}
+        for name, keys in self._dirty.items():
+            mapping = getattr(self, name)
+            entries = {}
+            for key in keys:
+                if key not in mapping:
+                    entries[key] = None
+                    continue
+                value = mapping[key]
+                if name in self.STATE_DEQUES or name == "out24":
+                    entries[key] = list(value) if value else None
+                elif name in self.STATE_DICTS:
+                    entries[key] = dict(value) if value else None
+                elif name == "pending_cdr":
+                    entries[key] = sorted(value) if value else None
+                else:
+                    entries[key] = list(value) if isinstance(value, tuple) else value
+            if entries:
+                out[name] = entries
+        self._dirty = defaultdict(set)
+        return out
+
+    def apply_delta(self, delta: dict) -> None:
+        for name, entries in delta.items():
+            if name not in self._DELTA_NAMES:
+                raise ValueError(f"unknown feature-store delta section: {name}")
+            mapping = getattr(self, name)
+            for key, value in entries.items():
+                if value is None:
+                    mapping.pop(key, None)
+                elif name in self.STATE_DEQUES:
+                    mapping[key] = deque((tuple(x) if isinstance(x, list) else x for x in value),
+                                         maxlen=20 if name == "done_durations" else None)
+                elif name == "out24":
+                    mapping[key] = deque(float(t) for t in value)
+                elif name in self.STATE_DICTS:
+                    mapping[key] = dict(value)
+                elif name == "pending_cdr":
+                    heap = [(float(a), float(b)) for a, b in value]
+                    heapq.heapify(heap)
+                    mapping[key] = heap
+                else:
+                    mapping[key] = tuple(value) if isinstance(value, list) else value
+        self._dirty = defaultdict(set)
 
     def snapshot_touched(self, events):
         """Shallow copies of exactly the keys a batch can mutate (see transaction())."""
@@ -394,7 +482,8 @@ class FeatureStore:
             caller, callee = ev.get("caller"), ev.get("callee")
             if et == "CALL":
                 for name in ("oc1h", "callee_cnt", "oc10", "oc1", "out24", "pending_cdr",
-                             "done_durations", "imei_by_msisdn", "last_radio", "age_by_msisdn"):
+                             "done_durations", "imei_by_msisdn", "last_radio", "age_by_msisdn",
+                             "known_callees", "new24"):
                     touched[name].add(caller)
                 touched["in_calls"].update((caller, callee))
                 touched["msisdn_by_imei"].add(ev.get("imei"))
@@ -447,6 +536,8 @@ class FeatureStore:
         except BaseException:
             self.restore_touched(before)
             raise
+        for name, values in before.items():     # committed: these keys go into the next delta
+            self._dirty[name].update(values)
 
     def state_stats(self) -> dict:
         """Operational counts without subscriber identifiers."""
@@ -492,6 +583,7 @@ class FeatureStore:
         if not math.isfinite(duration) or duration < 0 or not math.isfinite(end_ts):
             raise ValueError("CDR duration must be finite and non-negative; end_ts must be finite")
         heapq.heappush(self.pending_cdr[ev["caller"]], (end_ts, duration))
+        self._dirty["pending_cdr"].add(ev["caller"])
 
     # ------------------------------------------------------------------ SMS
 # Tính feature SMS dựa trên route, sender, URL và lưu lượng gần đây của sender đó.

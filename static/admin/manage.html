@@ -31,6 +31,10 @@ input,select{font:13px var(--display);background:var(--term);color:var(--ink);bo
 .kpi{border:1px solid var(--line);padding:10px}.kpi b{display:block;font-size:22px;font-family:var(--mono)}.kpi span{font-size:12px;color:var(--mut)}
 .err{color:var(--red);min-height:18px;font-size:12.5px}.hide{display:none!important}
 svg text{fill:var(--mut);font:10px var(--mono)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.loading{color:var(--mut);font-style:italic}
+/* Watermark tên người xem + thời gian phủ toàn trang (giống bảng giám sát): ảnh chụp màn hình rò rỉ sẽ lộ ra ai đã chụp. */
+#wm{position:fixed;inset:0;pointer-events:none;z-index:30;opacity:.07}
 </style>
 </head>
 <body>
@@ -39,47 +43,48 @@ svg text{fill:var(--mut);font:10px var(--mono)}
   <div class="logo">!</div><h1>QUẢN TRỊ · TELECOM FRAUD SHIELD</h1><div class="sp"></div>
   <span class="tag mono" id="who">–</span><button type="button" onclick="location.href='/admin/'">← BẢNG GIÁM SÁT</button>
 </header>
-<nav id="tabs">
-  <button data-t="reports" class="on">BÁO CÁO SỐ</button>
-  <button data-t="pipeline">PIPELINE &amp; KPI</button>
-  <button data-t="costs" class="adm">CHI PHÍ</button>
-  <button data-t="operators" class="adm">TÀI KHOẢN NHÂN VIÊN</button>
+<nav id="tabs" role="tablist" aria-label="Mục quản trị">
+  <button data-t="reports" class="on" role="tab" id="tab-reports" aria-controls="reports" aria-selected="true" tabindex="0">BÁO CÁO SỐ</button>
+  <button data-t="pipeline" role="tab" id="tab-pipeline" aria-controls="pipeline" aria-selected="false" tabindex="-1">PIPELINE &amp; KPI</button>
+  <button data-t="costs" class="adm" role="tab" id="tab-costs" aria-controls="costs" aria-selected="false" tabindex="-1">CHI PHÍ</button>
+  <button data-t="operators" class="adm" role="tab" id="tab-operators" aria-controls="operators" aria-selected="false" tabindex="-1">TÀI KHOẢN NHÂN VIÊN</button>
 </nav>
-<div class="err" id="err"></div>
+<div class="err" id="err" role="alert"></div>
 
-<section id="reports" class="tab">
+<section id="reports" class="tab" role="tabpanel" aria-labelledby="tab-reports">
   <div class="panel"><h2>SỐ BỊ THUÊ BAO BÁO CÁO</h2>
-    <div class="row" style="margin-bottom:8px"><select id="rstatus"><option value="pending">Chờ duyệt</option><option value="confirmed">Đã xác nhận (đang chặn)</option><option value="dismissed">Đã bác bỏ</option></select>
+    <div class="row" style="margin-bottom:8px"><select id="rstatus" aria-label="Lọc theo trạng thái báo cáo"><option value="pending">Chờ duyệt</option><option value="confirmed">Đã xác nhận (đang chặn)</option><option value="dismissed">Đã bác bỏ</option></select>
       <span class="mut">Báo cáo của người dùng không tự chặn số. Xác nhận ⇒ luật dự phòng chặn số đó; mọi quyết định được ký vào nhật ký.</span></div>
     <table><thead><tr><th>Số (đã che)</th><th class="n">Người báo</th><th class="n">Mô hình chặn / gắn cờ</th><th>Lý do người dùng ghi</th><th>Gần nhất</th><th></th></tr></thead><tbody id="rbody"></tbody></table>
   </div>
 </section>
 
-<section id="pipeline" class="tab hide">
+<section id="pipeline" class="tab hide" role="tabpanel" aria-labelledby="tab-pipeline">
   <div class="panel"><h2>LẦN CHẠY GẦN NHẤT</h2><table><thead><tr><th>Job</th><th>Trạng thái</th><th>Lúc</th><th>Chi tiết</th><th></th></tr></thead><tbody id="pbody"></tbody></table></div>
   <div class="panel"><h2>KPI THEO GIỜ (48 ẢNH CHỤP GẦN NHẤT)</h2><div class="kpis" id="kpis"></div><div id="kchart" style="margin-top:12px"></div></div>
 </section>
 
-<section id="costs" class="tab hide">
+<section id="costs" class="tab hide" role="tabpanel" aria-labelledby="tab-costs">
   <div class="panel"><h2>TỔNG QUAN CHI PHÍ</h2><div class="kpis" id="ckpis"></div><p class="mut" id="cnote"></p></div>
   <div class="panel"><h2>DỊCH VỤ TÍNH TIỀN THEO LƯỢT (30 NGÀY)</h2><table><thead><tr><th>Loại</th><th>Nhà cung cấp</th><th class="n">Lượt</th><th class="n">USD</th></tr></thead><tbody id="ubody"></tbody></table></div>
   <div class="panel"><h2>HẠ TẦNG THÁNG NÀY (NHẬP TAY)</h2>
     <table><thead><tr><th>Nhà cung cấp</th><th>Khoản mục</th><th class="n">USD</th><th></th></tr></thead><tbody id="ibody"></tbody></table>
-    <div class="row" style="margin-top:10px"><input id="iprov" placeholder="Nhà cung cấp (VD Oracle Cloud)"><input id="iitem" placeholder="Khoản mục"><input id="iamt" type="number" step="0.01" min="0" value="0" style="width:100px"><button class="pri" id="iadd">THÊM</button></div>
+    <div class="row" style="margin-top:10px"><input id="iprov" aria-label="Nhà cung cấp" placeholder="Nhà cung cấp (VD Oracle Cloud)"><input id="iitem" aria-label="Khoản mục" placeholder="Khoản mục"><input id="iamt" aria-label="Số tiền (USD)" type="number" step="0.01" min="0" value="0" style="width:100px"><button class="pri" id="iadd">THÊM</button></div>
   </div>
 </section>
 
-<section id="operators" class="tab hide">
+<section id="operators" class="tab hide" role="tabpanel" aria-labelledby="tab-operators">
   <div class="panel"><h2>TÀI KHOẢN NHÂN VIÊN</h2>
     <table><thead><tr><th>Tên</th><th>Vai trò</th><th>Email (Google)</th><th>Mật khẩu</th><th>Trạng thái</th><th></th></tr></thead><tbody id="obody"></tbody></table>
   </div>
   <div class="panel"><h2>THÊM / CẬP NHẬT</h2>
-    <div class="row"><input id="oname" placeholder="tên đăng nhập"><select id="orole"><option value="viewer">viewer — chỉ xem</option><option value="analyst">analyst — chuyên viên</option><option value="admin">admin — quản trị</option></select>
-      <input id="oemail" placeholder="email Google (tuỳ chọn)"><input id="opass" type="password" placeholder="mật khẩu mới (≥10 ký tự)"><button class="pri" id="osave">LƯU</button></div>
+    <div class="row"><input id="oname" aria-label="Tên đăng nhập" placeholder="tên đăng nhập"><select id="orole" aria-label="Vai trò"><option value="viewer">Nhân viên (chỉ xem)</option><option value="analyst">Chuyên viên</option><option value="admin">Quản trị</option></select>
+      <input id="oemail" type="email" aria-label="Email Google (tuỳ chọn)" placeholder="email Google (tuỳ chọn)"><input id="opass" type="password" autocomplete="new-password" aria-label="Mật khẩu mới (tối thiểu 10 ký tự)" placeholder="mật khẩu mới (≥10 ký tự)"><button class="pri" id="osave">LƯU</button></div>
     <p class="mut">Nhân viên đăng nhập bằng tên + mật khẩu, hoặc nút Google nếu email Google trùng email ở đây. Để trống mật khẩu khi chỉ đổi vai trò/email.</p>
   </div>
 </section>
 </div>
+<div id="wm" aria-hidden="true"></div>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -96,16 +101,34 @@ async function api(url, opts = {}){
   return j;
 }
 function fail(e){ $('#err').textContent = e.message || e; }
+// Dòng "Đang tải…" trong bảng trong lúc chờ API.
+function loading(sel, cols){ $(sel).innerHTML = `<tr><td colspan="${cols}" class="loading" role="status">Đang tải…</td></tr>`; }
 function show(t){
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('hide', s.id !== t));
-  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('#tabs button').forEach(b => {
+    const on = b.dataset.t === t; b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
+  });
   $('#err').textContent = ''; ({ reports: loadReports, pipeline: loadPipeline, costs: loadCosts, operators: loadOperators })[t]();
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => show(b.dataset.t));
+// Mũi tên trái/phải, Home/End chuyển giữa các tab đang hiện (mẫu WAI-ARIA tablist).
+$('#tabs').addEventListener('keydown', ev => {
+  const tabs = [...document.querySelectorAll('#tabs [role="tab"]')].filter(b => !b.classList.contains('hide'));
+  const i = tabs.indexOf(document.activeElement); if (i < 0) return;
+  let j = null;
+  if (ev.key === 'ArrowRight') j = (i + 1) % tabs.length;
+  else if (ev.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
+  else if (ev.key === 'Home') j = 0;
+  else if (ev.key === 'End') j = tabs.length - 1;
+  if (j === null) return;
+  ev.preventDefault(); tabs[j].focus(); show(tabs[j].dataset.t);
+});
 
 // ---------------------------------------------------------------- báo cáo số
 $('#rstatus').onchange = loadReports;
 async function loadReports(){
+  loading('#rbody', 6);
   try {
     const rows = await api('/api/admin/reports?status=' + $('#rstatus').value);
     const pending = $('#rstatus').value === 'pending';
@@ -125,6 +148,7 @@ async function loadReports(){
 
 // ---------------------------------------------------------------- pipeline & KPI
 async function loadPipeline(){
+  loading('#pbody', 5);
   try {
     const p = await api('/api/admin/pipeline');
     $('#pbody').innerHTML = Object.entries(p.last_runs).map(([job, r]) => `<tr><td class="mono">${esc(job)}</td>
@@ -154,6 +178,7 @@ function chart(pts, label){
 
 // ---------------------------------------------------------------- chi phí
 async function loadCosts(){
+  loading('#ubody', 4); loading('#ibody', 4);
   try {
     const c = await api('/api/admin/costs');
     const cm = c.compute;
@@ -177,12 +202,14 @@ async function loadCosts(){
 
 // ---------------------------------------------------------------- tài khoản nhân viên
 async function loadOperators(){
+  loading('#obody', 6);
   try {
     const rows = await api('/api/admin/operators');
     $('#obody').innerHTML = rows.map(o => `<tr><td class="mono">${esc(o.name)}</td><td>${esc(o.role_label)}</td><td>${esc(o.email || '—')}</td>
       <td>${o.has_password ? 'đã đặt' : '<span class="st-warn">chưa có</span>'}</td><td class="${o.disabled || o.suspended ? 'st-fail' : 'st-ok'}">${o.disabled ? 'đã khoá' : o.suspended ? 'tạm khoá (agent)' : 'hoạt động'}</td>
       <td>${o.name === ME.name ? '' : `<button data-n="${esc(o.name)}" data-r="${o.role}" data-d="${o.disabled ? '0' : '1'}">${o.disabled ? 'MỞ KHOÁ' : 'KHOÁ'}</button>`}</td></tr>`).join('');
     document.querySelectorAll('#obody button').forEach(b => b.onclick = async () => {
+      if (b.dataset.d === '1' && !confirm(`Khoá tài khoản "${b.dataset.n}"? Người này sẽ không đăng nhập được cho tới khi được mở khoá.`)) return;
       try { await api('/api/admin/operators', { method: 'POST', body: JSON.stringify({ name: b.dataset.n, role: b.dataset.r, disabled: b.dataset.d === '1' }) }); loadOperators(); } catch(e){ fail(e); }
     });
   } catch(e){ fail(e); }
@@ -193,13 +220,21 @@ $('#osave').onclick = async () => {
   try { await api('/api/admin/operators', { method: 'POST', body: JSON.stringify(body) }); $('#opass').value = ''; loadOperators(); } catch(e){ fail(e); }
 };
 
+// Watermark: tên tài khoản + thời điểm, lặp chéo toàn màn hình (cập nhật mỗi phút), giống /admin/.
+function watermark(){
+  if (!ME) return;
+  const txt = `${ME.name} · ${new Date().toLocaleString('vi-VN')}`.replace(/[<&>'"]/g, '');
+  const col = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#888';
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='420' height='220'><text x='10' y='120' transform='rotate(-22 210 110)' font-family='monospace' font-size='15' fill='${col}'>${txt}</text></svg>`;
+  $('#wm').style.backgroundImage = `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+}
 function applyRole(){ document.querySelectorAll('.adm').forEach(e => e.classList.toggle('hide', ME?.role !== 'admin')); }
 (async () => {
   if (!TOKEN){ location.href = '/admin/'; return; }
   try { ME = await api('/api/whoami'); } catch(e){ return; }
-  if (ME.role === 'viewer'){ document.body.innerHTML = '<div class="wrap"><p>Vai trò viewer không có quyền quản trị. <a href="/admin/">Quay lại</a></p></div>'; return; }
+  if (ME.role === 'viewer'){ document.body.innerHTML = '<div class="wrap"><p>Vai trò Nhân viên (chỉ xem) không có quyền quản trị. <a href="/admin/">Quay lại</a></p></div>'; return; }
   $('#who').textContent = `${ME.name} · ${(ME.role_label || ME.role).toUpperCase()}`;
-  applyRole(); show('reports');
+  applyRole(); watermark(); setInterval(watermark, 60000); show('reports');
 })();
 </script>
 </body>

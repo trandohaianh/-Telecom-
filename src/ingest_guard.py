@@ -89,6 +89,7 @@ class IngestGuard:
         # party -> highest admitted ts; least recently updated first, pruned below the global floor
         self._party_max: "OrderedDict[str, float]" = OrderedDict()
         self._legacy_frontier = float("-inf")   # set only when restoring a v1 (global-frontier) checkpoint
+        self._appended: list = []               # dedup keys inserted since the last checkpoint
         self.stats = {ADMITTED: 0, DUPLICATE: 0, LATE: 0}
 
     # ------------------------------------------------------------------ watermark
@@ -147,6 +148,7 @@ class IngestGuard:
         self._prune_parties()
         # Insertion frontiers are monotonic, including rejected events, so TTL pruning is safe.
         self._seen[key] = self.max_ts
+        self._appended.append((key, self.max_ts))   # D14: goes into the next checkpoint delta
         self._prune()
 
         status = LATE if late else ADMITTED
@@ -178,6 +180,35 @@ class IngestGuard:
                 "max_ts": self.max_ts if math.isfinite(self.max_ts) else None,
                 "dedup_ttl_s": self.dedup_ttl_s, "allowed_lateness_s": self.allowed_lateness_s,
                 "stats": dict(self.stats)}
+
+    def take_delta(self) -> dict:
+        """D14: only the dedup keys added since the last checkpoint (the index holds ~22M keys at
+        25k eps); frontiers and counters are small and travel whole."""
+        out = {"seen_new": self._appended, "max_ts": self.max_ts if math.isfinite(self.max_ts) else None,
+               "party_max": list(self._party_max.items()),
+               "legacy_frontier": self._legacy_frontier if math.isfinite(self._legacy_frontier) else None,
+               "stats": dict(self.stats)}
+        self._appended = []
+        return out
+
+    def apply_delta(self, delta: dict) -> None:
+        max_ts = delta.get("max_ts")
+        if max_ts is not None:
+            if not math.isfinite(float(max_ts)) or float(max_ts) < self.max_ts:
+                raise ValueError("ingestion delta frontier must not move backwards")
+            self.max_ts = float(max_ts)
+        for key, ts in delta.get("seen_new", []):
+            ts = float(ts)
+            if not isinstance(key, str) or not math.isfinite(ts) or ts > self.max_ts:
+                raise ValueError("invalid ingestion delta key")
+            self._seen[key] = ts
+            self._seen.move_to_end(key)
+        self._party_max = OrderedDict((str(p), float(t)) for p, t in delta.get("party_max", []))
+        if delta.get("legacy_frontier") is not None:
+            self._legacy_frontier = float(delta["legacy_frontier"])
+        self.stats = {k: int(delta.get("stats", {}).get(k, self.stats.get(k, 0))) for k in (ADMITTED, DUPLICATE, LATE)}
+        self._prune()
+        self._appended = []
 
     def load_state_dict(self, state: dict) -> None:
         legacy = state.get("version") == 1 and state.get("policy") == "strict_event_time_frontier"

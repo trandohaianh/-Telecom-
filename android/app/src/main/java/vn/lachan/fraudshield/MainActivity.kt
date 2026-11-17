@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -14,6 +15,7 @@ import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -32,6 +34,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var swipe: SwipeRefreshLayout
     private lateinit var errorView: LinearLayout
     private lateinit var errorText: TextView
+    private lateinit var progress: ProgressBar
+    // true sau khi trang đầu tiên tải xong: vòng tiến trình chỉ hiện ở lần tải đầu (và khi bấm Thử lại / đổi máy chủ).
+    private var firstLoadDone = false
     private val prefs by lazy { getSharedPreferences("lachan", MODE_PRIVATE) }
 
     private fun serverUrl(): String = prefs.getString("server", BuildConfig.DEFAULT_SERVER) ?: BuildConfig.DEFAULT_SERVER
@@ -44,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         swipe = findViewById(R.id.swipe)
         errorView = findViewById(R.id.error)
         errorText = findViewById(R.id.error_text)
+        progress = findViewById(R.id.progress)
 
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true          // phiên đăng nhập của app lưu trong localStorage
@@ -51,10 +57,13 @@ class MainActivity : AppCompatActivity() {
         web.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                 errorView.visibility = View.GONE
+                if (!firstLoadDone && !swipe.isRefreshing) progress.visibility = View.VISIBLE
             }
 
             override fun onPageFinished(view: WebView, url: String) {
                 swipe.isRefreshing = false
+                progress.visibility = View.GONE
+                firstLoadDone = true
             }
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -81,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         swipe.setOnChildScrollUpCallback { _, _ -> web.scrollY > 0 }
         swipe.setOnRefreshListener { web.reload() }
 
-        findViewById<Button>(R.id.retry).setOnClickListener { web.loadUrl(serverUrl()) }
+        findViewById<Button>(R.id.retry).setOnClickListener { firstLoadDone = false; web.loadUrl(serverUrl()) }
         findViewById<Button>(R.id.change_server).setOnClickListener { askServer() }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -100,12 +109,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun showError(why: String) {
         swipe.isRefreshing = false
+        progress.visibility = View.GONE
         errorText.text = getString(R.string.error_body, serverUrl(), why)
         errorView.visibility = View.VISIBLE
     }
 
     private fun askServer() {
-        val input = EditText(this).apply { setText(serverUrl()); setSingleLine() }
+        val input = EditText(this).apply {
+            setSingleLine()
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            setHint(R.string.server_input_hint)
+            contentDescription = getString(R.string.server_input_desc)
+            setText(serverUrl())
+        }
         AlertDialog.Builder(this)
             .setTitle(R.string.server_title)
             .setMessage(R.string.server_hint)
@@ -118,10 +134,12 @@ class MainActivity : AppCompatActivity() {
                 if (!url.endsWith("/")) url += "/"
                 if (!url.endsWith("/app/")) url += "app/"
                 prefs.edit().putString("server", url).apply()
+                firstLoadDone = false
                 web.loadUrl(url)
             }
             .setNeutralButton(R.string.reset) { _, _ ->
                 prefs.edit().remove("server").apply()
+                firstLoadDone = false
                 web.loadUrl(serverUrl())
             }
             .setNegativeButton(android.R.string.cancel, null)

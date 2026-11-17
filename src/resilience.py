@@ -85,6 +85,7 @@ class FallbackRules:
         self.protected, self.brands = set(PROTECTED_CLI), set(BRAND_SENDERS)
         self.ttl_s, self.max_entries = ttl_s, max_entries
         self.deny: dict[str, float] = {}     # number or IMEI -> event time it was blocked by the model
+        self._deny_dirty: set[str] = set()   # D14: deny keys changed since the last checkpoint
         # Human decisions (approved agent proposals). They override the model, in both directions.
         self.manual: dict[str, str] = {}     # number or IMEI -> proposal id that approved the group block
         self.allow: set[str] = set()         # numbers an analyst confirmed as legitimate
@@ -132,11 +133,26 @@ class FallbackRules:
                 if after != before:
                     self.deny[key] = after
                     updates[key] = after
+                    self._deny_dirty.add(key)
         if len(self.deny) > self.max_entries:
             # nsmallest: O(n log k) cho k mục cần bỏ (thường 1), thay vì sắp xếp lại 200k mục mỗi lần BLOCK.
             for key, _ in heapq.nsmallest(len(self.deny) - self.max_entries, self.deny.items(), key=lambda kv: kv[1]):
                 del self.deny[key]
                 evicted.append(key)
+                self._deny_dirty.add(key)
+
+    def take_deny_delta(self) -> dict:
+        out = {k: self.deny.get(k) for k in self._deny_dirty}
+        self._deny_dirty = set()
+        return out
+
+    def apply_deny_delta(self, delta: dict) -> None:
+        for key, ts in delta.items():
+            if ts is None:
+                self.deny.pop(key, None)
+            else:
+                self.deny[key] = float(ts)
+        self._deny_dirty = set()
 
     def _denied(self, key, ts):
         t = self.deny.get(str(key)) if key else None

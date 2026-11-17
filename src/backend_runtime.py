@@ -150,6 +150,9 @@ class InferenceRuntime:
         self._last_owner_progress = time.perf_counter()
         self._last_maintenance = time.perf_counter()
         self.busy_maintenance_interval_s = 1.0
+        # D14: periodic checkpoints are deltas; a full base snapshot every N deltas bounds recovery.
+        self.base_every_deltas = 20
+        self._deltas_since_base = 0
         self.batch_size, self.batch_wait_ms = batch_size, batch_wait_ms
         self.cache_capacity = cache_capacity
         self._completed = collections.OrderedDict()
@@ -206,9 +209,37 @@ class InferenceRuntime:
             self.g.det.fs.prune_state(horizon)
             self.stats["state_compactions"] += 1
 
+    def _take_deltas(self):
+        """Discard pending dirty sets: a base snapshot already contains everything."""
+        fs = self.g.det.fs
+        for owner, method in ((fs, "take_delta"), (self.guard, "take_delta"), (self.g.fallback, "take_deny_delta")):
+            if hasattr(owner, method):
+                getattr(owner, method)()
+
+    def _write_base(self, snapshot):
+        self.state.set("checkpoint", snapshot)
+        if hasattr(self.state, "clear_checkpoint_deltas"):
+            self.state.clear_checkpoint_deltas()
+        self._take_deltas()
+        self._deltas_since_base = 0
+
+    def _delta_snapshot(self, seq):
+        """D14: what changed since the previous checkpoint. Small bounded parts travel whole."""
+        det = self.g.det
+        return {"seq": seq, "model_identity": self.model_identity,
+                "feature_store": det.fs.take_delta(), "ingest": self.guard.take_delta(),
+                "fallback_deny": self.g.fallback.take_deny_delta(),
+                "harvest_hits": copy.deepcopy(getattr(det, "harvest_hits", {})),
+                "rescore": list(self.g.rescore_queue), "retro": list(self.g.retro),
+                "retro_alerts": self.g.stats["retro_alerts"], "published_retro": self._published_retro}
+
+    def _incremental_supported(self):
+        return (hasattr(self.state, "add_checkpoint_delta") and hasattr(self.g.det.fs, "take_delta")
+                and hasattr(self.guard, "take_delta") and hasattr(self.g.fallback, "take_deny_delta"))
+
     def checkpoint(self):
         with self.execution_lock:
-            self.state.set("checkpoint", self._snapshot())
+            self._write_base(self._snapshot())
             self._since_checkpoint = 0
             self._checkpoint_at = time.perf_counter()
 
@@ -259,6 +290,25 @@ class InferenceRuntime:
                 restored_refs.add(ref)
         if snapshot:
             for raw in snapshot.get("unconfirmed_delivery", []):
+                restore_notifications(raw)
+        # D14: apply incremental checkpoints written after the base, in order.
+        deltas = self.state.checkpoint_deltas() if snapshot and hasattr(self.state, "checkpoint_deltas") else []
+        for seq, delta in deltas:
+            if delta.get("model_identity") != self.model_identity:
+                raise RuntimeError("checkpoint delta model identity mismatch; refusing to replay under another bundle")
+            self.g.det.fs.apply_delta(delta["feature_store"])
+            self.guard.apply_delta(delta["ingest"])
+            self.g.fallback.apply_deny_delta(delta.get("fallback_deny", {}))
+            self.g.det.harvest_hits = delta.get("harvest_hits", {})
+            self.g.rescore_queue.clear()
+            self.g.rescore_queue.extend(delta.get("rescore", []))
+            self.g.retro.clear()
+            self.g.retro.extend(delta.get("retro", []))
+            self.g.stats["retro_alerts"] = delta.get("retro_alerts", len(self.g.retro))
+            self._published_retro = delta.get("published_retro", self.g.stats["retro_alerts"])
+            self.last_seq = max(self.last_seq, int(seq))
+            restored_refs = {r.get("journal_ref") for r in self.g.retro if r.get("journal_ref")}
+            for raw in delta.get("unconfirmed_delivery", []):
                 restore_notifications(raw)
         # Rebuild changes since the checkpoint in journal order. Historical decisions are not
         # enforced again. The durable result ledger is the authority for previously returned RPCs.
@@ -455,6 +505,10 @@ class InferenceRuntime:
         # remain. Keep counting admitted traffic even while the model/breaker is unavailable.
         fs = self.g.det.fs
         method = {"CALL": fs.call_features, "SMS": fs.sms_features, "AUDIO": fs.audio_features}[event["event_type"]]
+        if hasattr(fs, "snapshot_touched"):
+            # D14: this path bypasses fs.transaction(), so record the touched keys for the next delta.
+            for name, values in fs.snapshot_touched([event]).items():
+                fs._dirty[name].update(values)
         features = method(event)
         result["observed_without_model"] = True
         if getattr(self.g.det, "keep_features", False):
@@ -547,12 +601,21 @@ class InferenceRuntime:
                 if new_count and (self._since_checkpoint + new_count >= self.checkpoint_every or
                                   time.perf_counter() - self._checkpoint_at >= self.checkpoint_interval_s):
                     self._compact_state()
-                    snapshot = self._snapshot()
-                    snapshot["seq"] = next_seq
-                    snapshot["unconfirmed_delivery"] = [raw for _, raw, duplicate in completed
+                    unconfirmed = [raw for _, raw, duplicate in completed
                         if not duplicate and raw.get("scored") and not raw.get("fail_open")
                         and raw.get("decision") in ("BLOCK", "FLAG")]
-                    self.state.set("checkpoint", snapshot)
+                    if self._incremental_supported() and self._deltas_since_base < self.base_every_deltas:
+                        delta = self._delta_snapshot(next_seq)
+                        delta["unconfirmed_delivery"] = unconfirmed
+                        self.state.add_checkpoint_delta(next_seq, delta)
+                        self._deltas_since_base += 1
+                        self.stats["checkpoint_deltas"] += 1
+                    else:
+                        snapshot = self._snapshot()
+                        snapshot["seq"] = next_seq
+                        snapshot["unconfirmed_delivery"] = unconfirmed
+                        self._write_base(snapshot)
+                        self.stats["checkpoint_bases"] += 1
                     checkpointed = True
                 before_commit = time.perf_counter()
             commit_ms = (time.perf_counter() - before_commit) * 1000

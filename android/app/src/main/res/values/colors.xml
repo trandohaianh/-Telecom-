@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand">#E11D48</color>
-    <color name="brand_dark">#BE123C</color>
+    <!-- Màu thương hiệu xanh lơ, trùng với app web (PWA, theme-color #0e7490). -->
+    <color name="brand">#0E7490</color>
+    <color name="brand_dark">#155E75</color>
+    <!-- Đỏ chỉ dành cho cảnh báo lừa đảo, không dùng làm màu chủ đạo. -->
+    <color name="alert">#E11D48</color>
     <color name="white">#FFFFFF</color>
 </resources>

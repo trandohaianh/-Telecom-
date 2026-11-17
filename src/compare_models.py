@@ -173,7 +173,28 @@ def compare_call(tr, va, te):
     for name, fit, score in tabular_candidates(params, 600):
         out[name] = run_supervised(name, fit, score, X(tr), y(tr), X(va), y(va), Xte, y(te),
                                    TARGET_BLOCK_FPR, CALL_FLAG_FPR, one)
+    # Rules-only baseline (no learning): without it the lift of the ML model over the hand-written
+    # behavioural rules was unknown. Score = 2 if a behavioural-evidence rule fires, 1 if a weaker
+    # signal does (spoofed protected CLI already counts as evidence), else 0.
+    out["Chỉ luật (baseline)"] = run_supervised("Chỉ luật (baseline)", lambda *a: None, rules_score,
+                                                 X(tr), y(tr), X(va), y(va), Xte, y(te),
+                                                 TARGET_BLOCK_FPR, CALL_FLAG_FPR, one)
     return out
+
+
+def rules_score(_model, X):
+    """Rules-only baseline on the CALL feature matrix (columns in CALL_FEATURES order)."""
+    from detector import has_behavioural_evidence
+    rows = [dict(zip(CALL_FEATURES, r)) for r in np.atleast_2d(X)]
+    out = []
+    for f in rows:
+        if has_behavioural_evidence(f):
+            out.append(2.0)
+        elif f["incoming_24h"] == 0 and 0 <= f["active_hours_on_network"] < 6 and f["calls_1h"] >= 3:
+            out.append(1.0)
+        else:
+            out.append(0.0)
+    return np.array(out)
 
 
 def compare_zero_day(tr, va, te, lgb_rep_scores):

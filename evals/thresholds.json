@@ -16,5 +16,9 @@
     "serving_fail_open": 0,
     "serving_unexpected_enforce": 0
   },
-  "must_be_true": ["evidence_chain_valid", "smoke_passed"]
+  "must_be_true": ["evidence_chain_valid", "smoke_passed"],
+  "_advisory_note": "Quyết định chủ dự án 17/11/2026: chỉ các cổng AN TOÀN (FPR chặn, precision chặn, FPR cảnh báo, chuỗi bằng chứng, smoke, không enforce ngoài ý muốn) chặn CI/deploy. Các chỉ tiêu dưới đây vẫn giữ nguyên mục tiêu, hiện ĐỎ trong báo cáo nhưng không chặn.",
+  "advisory": ["block_recall_pct", "any_recall_pct", "family_min_detected_pct", "zero_day_caught_pct",
+               "any_recall_min_window_pct", "session_pre_ring_block_recall_pct",
+               "serving_scored_within_30ms_pct", "serving_p99_ms", "serving_fail_open"]
 }

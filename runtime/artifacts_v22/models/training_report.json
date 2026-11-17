@@ -1,11 +1,11 @@
 {
   "tier1_call": {
-    "val_pr_auc": 0.9820700076750648,
-    "val_roc_auc": 0.9998353917512497,
-    "best_iteration": 143,
+    "val_pr_auc": 0.9826084897271538,
+    "val_roc_auc": 0.9998489373779211,
+    "best_iteration": 164,
     "thresholds": {
-      "block": 0.8417723159156493,
-      "flag": 0.28945275841307927,
+      "block": 0.8158905661683605,
+      "flag": 0.22773202649900856,
       "anomaly_flag": {
         "domestic": 0.6596104927977631,
         "foreign": 0.639912813907175,
@@ -91,16 +91,16 @@
     },
     "threshold_window_reused_for_early_stopping": false,
     "feature_importance_gain": {
-      "active_hours_on_network": 1334272.2,
-      "incoming_24h": 187988.6,
-      "calls_1h": 78671.7,
-      "protected_cli_mismatch": 66557.3,
-      "msisdn_per_imei_24h": 29736.4,
-      "imei_per_msisdn_24h": 18376.5,
-      "caller_age_days": 11342.4,
-      "hour_of_day": 5811.7,
-      "mean_log_duration": 5160.1,
-      "short_call_ratio": 4988.2
+      "active_hours_on_network": 1331068.2,
+      "incoming_24h": 191896.5,
+      "in_out_ratio_24h": 76581.6,
+      "protected_cli_mismatch": 58801.4,
+      "msisdn_per_imei_24h": 46286.2,
+      "imei_per_msisdn_24h": 21116.7,
+      "caller_age_days": 9801.4,
+      "hour_of_day": 5933.3,
+      "new_sims_on_cell_1h": 3840.5,
+      "mean_log_duration": 3312.6
     }
   },
   "sms": {

@@ -173,10 +173,19 @@ def train_call():
     clean = clean_tr[ANOMALY_FEATURES]
     med = clean.median()
     iqr = (clean.quantile(0.75) - clean.quantile(0.25)).replace(0, 1.0)
+    # M10: the zero-day explanation ranks features by |z| inside the event's OWN peer group; global
+    # (mostly domestic) scale mislabelled the reason for foreign and trunk traffic.
+    seg_scale = {}
+    for seg in ["domestic", "foreign", "trunk"]:
+        part = clean_tr[seg_tr == seg][ANOMALY_FEATURES]
+        if len(part) >= 30:
+            seg_scale[seg] = {"median": part.median().to_dict(),
+                              "iqr": (part.quantile(0.75) - part.quantile(0.25)).replace(0, 1.0).to_dict()}
 
     # Ghi mô hình có giám sát và gói Isolation Forest cùng thống kê chuẩn hóa ra thư mục mô hình.
     model.save_model(str(MODEL_DIR / "tier1_call_lgbm.txt"))
-    joblib.dump({"iso": isos, "median": med.to_dict(), "iqr": iqr.to_dict(), "features": ANOMALY_FEATURES},
+    joblib.dump({"iso": isos, "median": med.to_dict(), "iqr": iqr.to_dict(), "features": ANOMALY_FEATURES,
+                 "segment_scale": seg_scale},
                 MODEL_DIR / "tier1_zero_day_iforest.joblib")
     # Tổng hợp chất lượng kiểm định, vòng lặp tốt nhất, ngưỡng và 10 đặc trưng quan trọng nhất.
     rep = {"val_pr_auc": average_precision_score(yva, p), "val_roc_auc": roc_auc_score(yva, p),

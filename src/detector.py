@@ -94,6 +94,10 @@ class Detector:
         self.iso_feats = z["features"]
         self.iso_med = np.array([z["median"][f] for f in self.iso_feats])
         self.iso_iqr = np.array([z["iqr"][f] for f in self.iso_feats])
+        # M10: per-segment scale for zero-day explanations (falls back to the global scale).
+        self.iso_seg_scale = {seg: (np.array([v["median"][f] for f in self.iso_feats]),
+                                    np.array([v["iqr"][f] for f in self.iso_feats]))
+                              for seg, v in (z.get("segment_scale") or {}).items()}
         s = joblib.load(model_dir / "sms_text_lr.joblib")
         self.vec, self.sms_clf = s["vec"], s["clf"]
         self.sms_coef = self.sms_clf.coef_.ravel()
@@ -285,7 +289,8 @@ class Detector:
                     if p[j] >= th["flag"]:
                         reasons = rc.render(rc.CALL_REASONS, contrib[j])
                     if a[j] >= a_th[j]:
-                        z = np.abs((A[j] - self.iso_med) / self.iso_iqr)
+                        med, iqr = getattr(self, "iso_seg_scale", {}).get(str(seg[j]), (self.iso_med, self.iso_iqr))
+                        z = np.abs((A[j] - med) / iqr)
                         top = [self.iso_feats[k] for k in np.argsort(-z)[:2]]
                         code, vi, en = rc.ZERO_DAY
                         reasons.append({"code": code, "vi": vi, "en": en, "feature": "isolation_forest"})

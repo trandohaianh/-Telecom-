@@ -2,10 +2,16 @@
 <resources>
     <string name="app_name">Lá chắn</string>
     <string name="error_title">Không kết nối được máy chủ</string>
-    <string name="error_body">Đang thử: %1$s\n(%2$s)\n\nHãy chắc chắn máy tính đang chạy python run_demo.py.</string>
+    <!-- Bản phát hành: lời nhắn cho người dùng, không có hướng dẫn dành cho lập trình viên.
+         Bản debug ghi đè chuỗi này trong src/debug/res/values/strings.xml. -->
+    <string name="error_body">Không mở được Lá chắn lúc này.\n(%2$s)\n\nHãy kiểm tra kết nối mạng (Wi-Fi hoặc dữ liệu di động) rồi bấm Thử lại.\nMáy chủ: %1$s</string>
     <string name="retry">Thử lại</string>
     <string name="server_title">Máy chủ</string>
-    <string name="server_hint">Trình giả lập: http://10.0.2.2:8080\nĐiện thoại thật: http://&lt;IP Wi-Fi của máy tính&gt;:8080</string>
+    <string name="server_hint">Nhập địa chỉ máy chủ do nhà mạng cung cấp, ví dụ https://ten-mien/app/</string>
+    <string name="server_input_hint">https://ten-mien/app/</string>
+    <string name="server_input_desc">Địa chỉ máy chủ</string>
+    <string name="loading">Đang tải Lá chắn…</string>
+    <string name="error_icon_desc">Biểu tượng mất kết nối</string>
     <string name="save">Lưu</string>
     <string name="reset">Mặc định</string>
 </resources>

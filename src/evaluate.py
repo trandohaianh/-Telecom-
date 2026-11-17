@@ -112,10 +112,20 @@ def metrics(events, results):
                for k, v in sorted(numbers.items())}
     # Đếm hợp lệ bị gắn cờ bởi mô hình không giám sát và trả toàn bộ báo cáo chỉ số.
     legit_zero_day_flags = sum(1 for e, r in zip(events, results) if e["label"] == 0 and r.get("zero_day"))
+    # M6: fraud events are clustered by actor (one farm = dozens of events). Per-actor counts let
+    # reports bootstrap over ACTORS instead of treating every event as independent.
+    actors = defaultdict(lambda: [0, 0, 0])
+    for e, d in zip(events, final):
+        if e["label"]:
+            a = actors[f'{e["fraud_type"]}|{e.get("actor") or e.get("caller") or e.get("sender")}']
+            a[0] += 1
+            a[1] += d != "ALLOW"
+            a[2] += d == "BLOCK"
     return {"unscored_exclusions": dict(excluded), "scored_events": len(events),
             "block": cm(blk), "block_or_flag": cm(any_), "by_family": family, "by_tier": tiers,
             "zero_day": zero_day, "legit_events_flagged_by_unsupervised": legit_zero_day_flags,
             "by_number": numbers,
+            "by_actor": {k: {"events": v[0], "detected": v[1], "blocked": v[2]} for k, v in actors.items()},
             "call_sessions": call_session_metrics(events, results),
             "evaluation_contract": {"version": 2, "headline_unit": "event",
                                     "pre_ring_and_final_separated": True,

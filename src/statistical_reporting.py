@@ -4,6 +4,25 @@ from __future__ import annotations
 import math
 
 
+def cluster_bootstrap_recall(clusters, key="detected", n_boot=2000, seed=7, level=0.95):
+    """Recall with a percentile CI that resamples whole clusters (actors), not events (M6).
+
+    ``clusters`` is a list of {"events": n, key: k}. Events of one fraud actor are not independent,
+    so a Wilson interval over events is far too narrow when 60 events come from 15 actors.
+    """
+    import numpy as np
+    n = np.array([c["events"] for c in clusters], dtype=float)
+    k = np.array([c[key] for c in clusters], dtype=float)
+    if not len(n) or n.sum() == 0:
+        return {"recall_pct": None, "ci_pct": [None, None], "clusters": 0}
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(n), size=(n_boot, len(n)))
+    boots = k[idx].sum(axis=1) / np.maximum(n[idx].sum(axis=1), 1)
+    lo, hi = np.percentile(boots, [100 * (1 - level) / 2, 100 * (1 + level) / 2])
+    return {"recall_pct": round(100 * k.sum() / n.sum(), 2), "ci_pct": [round(100 * lo, 1), round(100 * hi, 1)],
+            "clusters": int(len(n)), "unit": "fraud actor", "method": "percentile cluster bootstrap"}
+
+
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     """Two-sided binomial interval; no observations means complete uncertainty."""
     if n < 0 or k < 0 or k > n:

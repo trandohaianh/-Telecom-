@@ -41,19 +41,19 @@ button{font:700 12px var(--display);letter-spacing:.05em;background:var(--panel2
 button:hover{border-color:var(--brand)}button.red{background:var(--red);border-color:var(--red);color:var(--on-red)}button.pri{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}button.on{background:var(--ink);color:var(--on-ink)}
 .kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin:16px 0}
 .k{background:var(--panel);border:1px solid var(--line);padding:12px 12px 10px;min-width:0}
-.k .l{font-size:10.5px;color:var(--mut);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.k .v{font:600 24px var(--mono);margin-top:6px;white-space:nowrap}.k .s{font-size:11px;color:var(--mut);margin-top:2px}
+.k .l{font-size:12px;color:var(--mut);font-weight:700;letter-spacing:0}
+.k .v{font:600 24px var(--mono);margin-top:6px;white-space:nowrap}.k .s{font-size:12px;color:var(--mut);margin-top:2px}
 .k.red .v{color:var(--red2)}.k.amber .v{color:var(--amber)}.k.green .v{color:var(--green)}
 .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:12px}
 .panel{background:var(--panel);border:1px solid var(--line);padding:14px;min-width:0}
 .ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
-.ph h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0;font-weight:800}.ph h2 b{color:var(--red)}
-.ph span{font-size:11px;color:var(--mut)}
+.ph h2{font-size:14px;letter-spacing:0;margin:0;font-weight:800}.ph h2 b{color:var(--red)}
+.ph span{font-size:12px;color:var(--mut)}
 #feed{height:520px;overflow:auto;display:flex;flex-direction:column;gap:8px}
 .al{border:1px solid var(--line);border-left:4px solid var(--amber);background:var(--panel2);padding:10px 12px;cursor:pointer}
 .al.BLOCK{border-left-color:var(--red)}.al.FAIL{border-left-color:var(--blue)}
 .al .top{display:flex;justify-content:space-between;gap:8px;font-size:12px}
-.tag{font:700 10.5px var(--display);letter-spacing:.06em;padding:2px 6px;background:var(--term);border:1px solid var(--line)}
+.tag{font:700 12px var(--display);letter-spacing:.06em;padding:2px 6px;background:var(--term);border:1px solid var(--line)}
 .tag.BLOCK{background:var(--red);border-color:var(--red);color:var(--on-red)}.tag.FLAG{background:var(--amber);color:#000;border-color:var(--amber)}.tag.FAIL{background:var(--blue);color:#000}
 .tag.z{background:#7c3aed;border-color:#7c3aed}.tag.inj{background:#fff;color:#000}
 .al .act{font-size:12px;color:var(--mut);margin:4px 0}.al ul{margin:4px 0 0 0;padding-left:16px;font-size:12.5px}
@@ -62,14 +62,18 @@ button:hover{border-color:var(--brand)}button.red{background:var(--red);border-c
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .res{font:12px var(--mono);background:var(--term);border:1px solid var(--line);padding:10px;min-height:92px;white-space:pre-wrap;margin-top:10px;max-height:190px;overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:left}
-th{color:var(--mut);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}td.n{text-align:right;font-family:var(--mono)}
+th{color:var(--mut);font-size:12px;letter-spacing:0}td.n{text-align:right;font-family:var(--mono)}
 .bar{height:6px;background:var(--track);position:relative}.bar i{position:absolute;inset:0 auto 0 0;background:var(--red)}
 canvas{width:100%;height:110px;display:block}
 .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
-.note{font-size:11.5px;color:var(--mut);margin-top:8px}
+.note{font-size:12px;color:var(--mut);margin-top:8px}
 .big{font:600 30px var(--mono)}
 .drawer{position:fixed;inset:0 0 0 auto;width:min(460px,100%);background:var(--drawer);border-left:2px solid var(--red);padding:18px;transform:translateX(100%);transition:.2s;overflow:auto;z-index:9}
-.drawer.open{transform:none}.drawer pre{font:12px var(--mono);white-space:pre-wrap}
+.drawer{visibility:hidden}.drawer.open{transform:none;visibility:visible}.drawer:focus{outline:none}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* Thanh báo lỗi khi không lấy được /api/state: hiện rõ thay vì im lặng. */
+.errbar{border:1px solid var(--red);border-left:4px solid var(--red);background:var(--panel2);color:var(--ink);padding:10px 12px;margin-top:12px;font-size:13px}
+.empty{color:var(--mut);font-size:13px;padding:18px 4px;text-align:center}.drawer pre{font:12px var(--mono);white-space:pre-wrap}
 /* Màn đăng nhập bằng token vai trò và các thẻ trạng thái dự phòng / hồi tố. */
 .login{position:fixed;inset:0;background:var(--scrim);display:none;place-items:center;z-index:20;padding:16px}
 .login.show{display:grid}.login form{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--brand);border-radius:18px;padding:22px;width:min(420px,100%);display:grid;gap:10px}
@@ -111,6 +115,7 @@ a.pill{color:var(--ink);text-decoration:none}
     <button id="lang">EN</button>
   </div>
 </header>
+<div class="errbar hide" id="pollErr" role="alert"></div>
 
 <!-- Tám thẻ KPI được JavaScript cập nhật từ endpoint trạng thái. -->
 <section class="kpis">
@@ -137,7 +142,7 @@ a.pill{color:var(--ink);text-decoration:none}
   <div class="panel">
     <!-- Feed sẽ được render động bởi hàm render() khi API trả cảnh báo mới. -->
     <div class="ph"><h2><b>●</b> <span data-vi="Cảnh báo trực tiếp" data-en="Live decisions">Cảnh báo trực tiếp</span></h2><span data-vi="Bấm vào thẻ để xem đặc trưng làm bằng chứng" data-en="Click a card to see the evidence features">Bấm thẻ để xem bằng chứng</span></div>
-    <div id="feed"></div>
+    <div id="feed" aria-live="off"><div class="empty" data-vi="Chưa có cảnh báo" data-en="No alerts yet">Chưa có cảnh báo</div></div>
   </div>
   <!-- Nhóm công cụ thao tác thử nghiệm: giả lập tấn công, chaos và xác minh log. -->
   <div style="display:grid;gap:12px;align-content:start">
@@ -199,7 +204,7 @@ a.pill{color:var(--ink);text-decoration:none}
   <div class="panel">
     <div class="ph"><h2 id="lt_title" data-vi="Tải streaming" data-en="Streaming load">Tải streaming</h2><span data-vi="p99 Tier 1 theo tải" data-en="Tier-1 p99 vs load">p99 theo tải</span></div>
     <!-- Canvas vẽ đường latency theo throughput từ dữ liệu load test đã lưu. -->
-    <canvas id="lt" width="600" height="220"></canvas>
+    <canvas id="lt" width="600" height="220" role="img" aria-label="Biểu đồ độ trễ p99 của Tier 1 theo tải (sự kiện/giây), so với ngân sách 30 ms"></canvas>
     <div class="note" id="ltnote"></div>
   </div>
 </div>
@@ -208,7 +213,7 @@ a.pill{color:var(--ink);text-decoration:none}
 <!-- Drawer mở khi chọn một cảnh báo, để xem JSON bằng chứng đầy đủ của nó. -->
 <!-- Đăng nhập nhân viên: tên đăng nhập + mật khẩu, Google (email đã gắn với tài khoản), hoặc token cá nhân (tự động hoá). -->
 <div class="login" id="login"><form id="lform">
-  <h2 style="margin:0;font-size:15px;letter-spacing:.08em" data-vi="ĐĂNG NHẬP VẬN HÀNH" data-en="OPERATOR SIGN-IN">ĐĂNG NHẬP VẬN HÀNH</h2>
+  <h2 style="margin:0;font-size:16px" data-vi="Đăng nhập vận hành" data-en="Operator sign-in">Đăng nhập vận hành</h2>
   <div id="ogbtn"></div>
   <input id="user" autocomplete="username" aria-label="Tên đăng nhập" placeholder="tên đăng nhập / username">
   <input id="pass" type="password" autocomplete="current-password" aria-label="Mật khẩu" placeholder="mật khẩu / password">
@@ -219,7 +224,7 @@ a.pill{color:var(--ink);text-decoration:none}
   <a href="/app/" class="note" style="margin:0" data-vi="Bạn là thuê bao? Mở app Lá chắn lừa đảo →" data-en="Subscriber? Open the protection app →">Bạn là thuê bao? Mở app →</a>
 </form></div>
 
-<aside class="drawer" id="drawer"><button id="dclose" style="float:right" aria-label="Đóng bằng chứng">✕</button><h2 style="font-size:14px;letter-spacing:.1em" data-vi="BẰNG CHỨNG" data-en="EVIDENCE">BẰNG CHỨNG</h2>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dtitle" tabindex="-1" aria-hidden="true"><button id="dclose" style="float:right" aria-label="Đóng bằng chứng"><span aria-hidden="true">✕</span></button><h2 id="dtitle" style="font-size:16px" data-vi="Bằng chứng" data-en="Evidence">Bằng chứng</h2>
   <!-- Số luôn bị che; chuyên viên mở số đầy đủ phải ghi lý do, mỗi lần mở đều vào nhật ký. -->
   <div class="analystonly"><button id="reveal" data-vi="XEM SỐ ĐẦY ĐỦ (GHI NHẬT KÝ)" data-en="REVEAL NUMBER (LOGGED)">XEM SỐ ĐẦY ĐỦ (GHI NHẬT KÝ)</button><div class="res" id="rvres" style="min-height:0;margin-top:8px">—</div></div>
   <pre id="dbody"></pre></aside>
@@ -340,7 +345,7 @@ async function pollAgent(){
       <div class="t"><span>${esc(p.title)}</span><span class="mono" style="color:var(--mut)">${esc(p.id)}</span></div>
       <ul>${p.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
       ${p.subjects.length ? `<div class="subj">${p.subjects.map(esc).join(' · ')}</div>` : ''}
-      ${p.status === 'pending' && a.can_decide ? `<div class="acts"><button class="red" data-ok="${esc(p.id)}">${vi ? 'DUYỆT' : 'APPROVE'}: ${esc(p.action.label)}</button><button data-no="${esc(p.id)}">${vi ? 'TỪ CHỐI' : 'REJECT'}</button></div>` : ''}
+      ${p.status === 'pending' && a.can_decide ? `<div class="acts"><button class="pri" data-ok="${esc(p.id)}">${vi ? 'DUYỆT' : 'APPROVE'}: ${esc(p.action.label)}</button><button data-no="${esc(p.id)}">${vi ? 'TỪ CHỐI' : 'REJECT'}</button></div>` : ''}
       <div class="st">${ST[p.status] ? ST[p.status][vi ? 0 : 1] : esc(p.status)}${p.decided_by ? ' · ' + esc(p.decided_by) : ''}${p.note ? ' · “' + esc(p.note) + '”' : ''}${p.result ? ' · ' + esc(p.result) : ''}</div>
     </div>`).join('') : `<div class="note">${vi ? 'Chưa có đề xuất. Agent đang giám sát: sự cố mô hình, nhóm SIM box, nguy cơ chặn nhầm, báo cáo người dùng, sự kiện lọt lúc sự cố, rò rỉ dữ liệu nội bộ.' : 'No proposals yet.'}</div>`;
     document.querySelectorAll('[data-ok],[data-no]').forEach(b => b.onclick = async () => {
@@ -391,10 +396,44 @@ function render(s){
     ? `Dự phòng: chặn ${fmt(R.fallback_block)} · cờ ${fmt(R.fallback_flag)} · danh sách chặn ${fmt(R.denylist_size)}\nChờ chấm lại ${fmt(R.rescore_pending)}/${fmt(R.rescore_capacity)} · đã chấm lại ${fmt(R.rescored)} · bỏ do đầy ${fmt(R.rescore_dropped)}\nCảnh báo hồi tố ${fmt(R.retro_alerts)} · kết luận đến muộn ${fmt(R.late_verdicts)}`
     : `Fallback: blocked ${fmt(R.fallback_block)} · flagged ${fmt(R.fallback_flag)} · deny-list ${fmt(R.denylist_size)}\nRe-score pending ${fmt(R.rescore_pending)}/${fmt(R.rescore_capacity)} · re-scored ${fmt(R.rescored)} · dropped (full) ${fmt(R.rescore_dropped)}\nRetro alerts ${fmt(R.retro_alerts)} · late verdicts ${fmt(R.late_verdicts)}`;
   // Tạo lại feed và gắn sự kiện click để mở JSON chứng cứ của thẻ tương ứng.
-  if (!holding('#feed')) $('#feed').innerHTML = s.alerts.map(card).join('');
-  document.querySelectorAll('.al').forEach(el => el.onclick = () => { const a = s.alerts.find(x => x.event_id === el.dataset.id); OPEN_ID = a.event_id; $('#rvres').textContent = '—'; $('#dbody').textContent = JSON.stringify(a, null, 2); $('#drawer').classList.add('open'); });
+  if (!holding('#feed')) $('#feed').innerHTML = s.alerts.length ? s.alerts.map(card).join('')
+    : `<div class="empty">${vi ? 'Chưa có cảnh báo' : 'No alerts yet'}</div>`;
+  document.querySelectorAll('.al').forEach(el => {
+    el.tabIndex = 0; el.setAttribute('role', 'button');
+    const open = () => { const a = s.alerts.find(x => x.event_id === el.dataset.id); if (!a) return; OPEN_ID = a.event_id; $('#rvres').textContent = '—'; $('#dbody').textContent = JSON.stringify(a, null, 2); openDrawer(el); };
+    el.onclick = open;
+    el.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } };
+  });
 }
-$('#dclose').onclick = () => $('#drawer').classList.remove('open');
+// Ngăn bằng chứng là hộp thoại: focus vào trong khi mở, Tab không thoát ra ngoài, Escape đóng, focus trả về thẻ đã mở.
+let DRAWER_OPENER = null;
+const drawerFocusables = () => [...$('#drawer').querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent !== null);
+function openDrawer(opener){
+  const d = $('#drawer');
+  if (!d.classList.contains('open')) DRAWER_OPENER = opener || document.activeElement;
+  d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
+  setTimeout(() => $('#dclose').focus(), 30);
+}
+function closeDrawer(){
+  const d = $('#drawer'); if (!d.classList.contains('open')) return;
+  d.classList.remove('open'); d.setAttribute('aria-hidden', 'true');
+  const o = DRAWER_OPENER; DRAWER_OPENER = null;
+  // Feed có thể đã vẽ lại: tìm lại thẻ cùng event_id để trả focus.
+  const again = o && o.dataset && o.dataset.id ? [...document.querySelectorAll('#feed .al')].find(x => x.dataset.id === o.dataset.id) : null;
+  const target = (o && document.contains(o)) ? o : again;
+  if (target && target.focus) target.focus();
+}
+$('#dclose').onclick = closeDrawer;
+document.addEventListener('keydown', ev => {
+  if (!$('#drawer').classList.contains('open')) return;
+  if (ev.key === 'Escape') { ev.preventDefault(); closeDrawer(); return; }
+  if (ev.key === 'Tab') {
+    const f = drawerFocusables(); if (!f.length) return;
+    const first = f[0], lastEl = f[f.length - 1], inside = $('#drawer').contains(document.activeElement);
+    if (ev.shiftKey && (document.activeElement === first || !inside)) { ev.preventDefault(); lastEl.focus(); }
+    else if (!ev.shiftKey && (document.activeElement === lastEl || !inside)) { ev.preventDefault(); first.focus(); }
+  }
+});
 // Mở số đầy đủ của cảnh báo đang xem: bắt buộc nhập lý do; server ghi nhật ký và AI agent đếm số lần mở.
 let OPEN_ID = null;
 $('#reveal').onclick = async () => {
@@ -405,7 +444,18 @@ $('#reveal').onclick = async () => {
   catch(e){ $('#rvres').textContent = '✘ ' + e.message; }
 };
 // Thăm dò API trạng thái mỗi 700 ms; nếu một request lỗi, lịch thăm dò tiếp tục chạy.
-async function poll(){ if (ME) { try { render(await api('/api/state')); } catch(e){} } setTimeout(poll, 700); }
+// Lỗi không còn bị nuốt im lặng: hiện thanh báo lỗi, tự ẩn khi lần thăm dò sau thành công.
+let POLL_FAILS = 0;
+function pollError(e){
+  POLL_FAILS++;
+  if (POLL_FAILS < 2 || String(e && e.message) === '401') return;   // bỏ qua một lần chập chờn; 401 đã mở màn đăng nhập
+  const vi = L === 'vi', bar = $('#pollErr');
+  bar.textContent = vi ? `Mất kết nối tới máy chủ (/api/state): ${e && e.message ? e.message : 'lỗi mạng'}. Số liệu trên màn hình có thể đã cũ, đang thử lại…`
+                       : `Lost connection to the server (/api/state): ${e && e.message ? e.message : 'network error'}. Figures may be stale, retrying…`;
+  bar.classList.remove('hide');
+}
+function pollOk(){ POLL_FAILS = 0; $('#pollErr').classList.add('hide'); }
+async function poll(){ if (ME) { try { render(await api('/api/state')); pollOk(); } catch(e){ pollError(e); } } setTimeout(poll, 700); }
 // Gửi yêu cầu tiêm kiểu tấn công đang chọn, rồi tổng hợp quyết định để hiển thị kết quả.
 document.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
   // Báo hiệu đang xử lý, gửi POST tới API và đọc kết quả JSON của loại tấn công đã chọn.
@@ -480,6 +530,11 @@ function renderMetrics(){
   // Giải thích màu hai cấu hình và đường ngưỡng trong phần ghi chú dưới biểu đồ.
   // Mốc tốt nhất còn nằm trong ngân sách, lấy thẳng từ dữ liệu thay vì viết tay.
   const best = (lt.partitioned_4?.runs || []).filter(x => x.call_p99_ms <= 30).pop();
+  // Mô tả biểu đồ cho trình đọc màn hình (canvas không có nội dung văn bản).
+  const worst = Math.max(0, ...[...s1, ...s2, ...s4].map(p => p[1]));
+  c.setAttribute('aria-label', vi
+    ? `Biểu đồ đường: độ trễ p99 của Tier 1 (ms) theo tải tới ${fmt(Math.round(xmax))} sự kiện/giây, ba cấu hình (1 tiến trình, 2 và 4 phân vùng), ngưỡng 30 ms. p99 cao nhất ${worst.toFixed(1)} ms.` + (best ? ` Tốt nhất trong ngân sách: ${fmt(best.offered_rate_eps)} sự kiện/giây ở 4 phân vùng.` : '')
+    : `Line chart: Tier-1 p99 latency (ms) vs load up to ${fmt(Math.round(xmax))} events/s for 1 process, 2 and 4 partitions, 30 ms budget line. Highest p99 ${worst.toFixed(1)} ms.` + (best ? ` Best within budget: ${fmt(best.offered_rate_eps)} events/s on 4 partitions.` : ''));
   const bestTxt = best ? (vi ? `Tốt nhất trong ngân sách: ${fmt(best.offered_rate_eps)} sự kiện/giây ở 4 phân vùng (p99 ${best.call_p99_ms} ms).`
                              : `Best within budget: ${fmt(best.offered_rate_eps)} events/s on 4 partitions (p99 ${best.call_p99_ms} ms).`) : '';
   $('#ltnote').innerHTML = (vi ? 'Xám: 1 tiến trình · Trắng: 2 phân vùng · Đỏ: 4 phân vùng. Đường đỏ đứt nét: ngân sách 30 ms. '

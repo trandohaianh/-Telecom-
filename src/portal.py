@@ -92,6 +92,8 @@ class AlertSink:
             self.q.put_nowait((msisdn, item, now()))
         except Exception:
             self.dropped += 1
+        if push_sender is not None:
+            push_sender.notify(msisdn, item)   # Web Push to the subscriber's installed app (no number in payload)
 
     def _run(self) -> None:
         import json
@@ -119,6 +121,7 @@ class AlertSink:
 
 
 alert_sink: AlertSink | None = None
+push_sender = None
 
 
 def hydrate_engine(eng) -> None:
@@ -152,6 +155,10 @@ def hydrate_engine(eng) -> None:
             eng.g.fallback.block_manual(confirmed, "REPORT-CONFIRMED")
     if alert_sink is None:
         alert_sink = AlertSink()
+    global push_sender
+    import push as _push
+    if push_sender is None and _push.available():
+        push_sender = _push.PushSender(db)
     eng.inbox_hook = alert_sink
 
 
@@ -270,6 +277,42 @@ class PhoneIn(BaseModel):
 
 class OtpIn(PhoneIn):
     code: str = Field(..., min_length=4, max_length=8)
+
+
+# ---- Web Push (quyết định 17/11/2026: Web Push chuẩn VAPID, không cần Firebase)
+@router.get("/api/app/push/key")
+def push_key():
+    import push as _push
+    key = _push.public_key()
+    if key is None:
+        raise HTTPException(503, "Máy chủ chưa bật Web Push")
+    return {"public_key": key}
+
+
+@router.post("/api/app/push/subscribe")
+def push_subscribe(body: dict, request: Request, me: dict = Depends(subscriber_session)):
+    import push as _push
+    accounts.limiter.hit("push_subscribe", str(me["id"]), 20, 3600)
+    try:
+        sub = _push.validate_subscription(body)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    with db().tx() as c:
+        c.execute("INSERT INTO push_subscriptions(subscriber_id, endpoint, p256dh, auth, created_at) VALUES (?,?,?,?,?) "
+                  "ON CONFLICT(endpoint) DO UPDATE SET subscriber_id=excluded.subscriber_id, p256dh=excluded.p256dh, "
+                  "auth=excluded.auth", (me["id"], sub["endpoint"], sub["p256dh"], sub["auth"], now()))
+        # mỗi tài khoản tối đa 5 thiết bị nhận push
+        c.execute("DELETE FROM push_subscriptions WHERE subscriber_id=? AND id NOT IN (SELECT id FROM push_subscriptions "
+                  "WHERE subscriber_id=? ORDER BY created_at DESC LIMIT 5)", (me["id"], me["id"]))
+    return {"subscribed": True}
+
+
+@router.post("/api/app/push/unsubscribe")
+def push_unsubscribe(body: dict, me: dict = Depends(subscriber_session)):
+    endpoint = (body or {}).get("endpoint")
+    with db().tx() as c:
+        c.execute("DELETE FROM push_subscriptions WHERE subscriber_id=? AND endpoint=?", (me["id"], str(endpoint or "")))
+    return {"subscribed": False}
 
 
 @router.post("/api/app/phone/otp/start")

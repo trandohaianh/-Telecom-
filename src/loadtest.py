@@ -45,9 +45,10 @@ def run_rate(events, warm, rate, max_batch=MAX_BATCH, log_path=None):
     det.warm_up()
     # Low-latency Python: move the (large, long-lived) feature-store state out of the cyclic GC's
     # reach and collect young objects less often, otherwise full collections cause 100+ ms stalls.
+    from gc_tuning import THRESHOLDS
     gc.collect()
     gc.freeze()
-    gc.set_threshold(50_000, 50, 1000)
+    gc.set_threshold(*THRESHOLDS)
     # Bọc detector bằng guard SLA và mở log bằng chứng cho lượt đo.
     g = GuardedDetector(det, budget_ms=SLA_TIER1_MS)
     # Bằng chứng vẫn được ghi (chi phí ghi nằm trong phép đo) nhưng vào thư mục tạm, xóa ngay sau lượt đo:

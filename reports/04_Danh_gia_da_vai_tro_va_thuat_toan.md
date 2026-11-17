@@ -403,3 +403,30 @@ Cách đọc:
 | S9 (sao chép deque cho số nhận rất nhiều cuộc gọi), `runtime.stats` không khoá, thứ tự dọn `_party_max` | Chỉ ảnh hưởng hiệu năng ở cực trị và số đo. Cần benchmark tải thật để đổi cấu trúc dữ liệu cho đáng. | Đo bằng `bench` trên phần cứng đích. Nếu p99 vượt SLA, đổi `in24` sang ring buffer theo phút. |
 | CSP đầy đủ | Script nội tuyến dài, chưa tách. | Tách script sang file `.js` và đặt `script-src 'self'`. Trước đó chạy `Content-Security-Policy-Report-Only` một thời gian để thu vi phạm. |
 | UX còn lại | Ngoài phạm vi đã chốt. | Nút/nhãn pill ở dashboard vẫn viết hoa. Dashboard vẫn tải Google Fonts (nên tự host). |
+
+---
+
+## 11. Vòng 6: sửa các chỉ tiêu còn đỏ (bundle tfd-v2.6)
+
+Chi tiết thuật toán, công thức và lý do chọn: [05_Thuat_toan_ly_do_va_cong_thuc.md](05_Thuat_toan_ly_do_va_cong_thuc.md), §1.3, §1.16 và §5.
+
+| Mã | Sửa | Kết quả đo |
+|---|---|---|
+| R6-SB | Đặc trưng `farm_cell_sims_1h` (nhiều SIM tươi, chỉ gọi đi, cùng một cell) + luật sàn FLAG ≥ 2 SIM + bằng chứng hành vi ≥ 3 SIM. Ngưỡng chọn trên `cal`/`val`. Có trong `FeatureStore`, scale-out và Spark | SIM box 67,5 → **87,6 %**; họ thấp nhất 67,5 → **87,1 %**; min-window 68,4 → **83,3 %**; FPR chặn không đổi; FLAG nhầm 0,072 → 0,084 % |
+| R6-RC | Mã lý do riêng cho `new_callee_ratio_24h` (R110, vòng 5 bỏ sót) và farm (R307/R308); test chống trùng mã | — |
+| R6-PERF | `FarmCellWindow`: đếm tăng dần O(1) thay vì duyệt cả cửa sổ cell | Thời gian mỗi cuộc gọi không tăng khi cửa sổ lớn ×16 |
+| R6-WAL | Checkpoint WAL ở thread nền (PASSIVE); kết nối ghi không tự checkpoint; vẫn `synchronous=FULL` | COMMIT tối đa 22 → 12 ms |
+| R6-EV | Kiểm chuỗi bằng chứng trong tiến trình con (agent + `/api/evidence/verify`) | Bỏ được cú dừng 54–71 ms trên owner thread |
+| R6-GC | Server dùng cùng cấu hình GC với load test (`gc_tuning.py`) | Bỏ được cú dừng ~85 ms |
+
+**Kiểm thử:**
+- Bộ chính 574 passed; Spark + gRPC 26; EduDSS 16; RAM 22/23 (ca fakeredis đã biết); QA 32/32.
+- 16 test mới (`test_round6_simfarm.py`, `test_round6_serving.py`) đều hỏng trên `4c0fddc`.
+- Một sửa nhỏ không có test riêng: `detector.py` lùi về thang chung khi bundle cũ chưa có thang theo segment.
+
+**Còn đỏ, có lý do:** p99 phục vụ 33,4 ms và 4 fail-open ở 100 EPS (50 EPS: 17 ms, 0 fail-open). Lý do là độ trễ fsync của đĩa ảo WSL dao động 4–25 ms; tám lần A/B cùng mã chênh nhau từ 0 tới 132 fail-open. Bước tiếp theo:
+1. Đo lại trên runner CI hoặc phần cứng đích.
+2. Nếu vẫn đỏ, làm group commit.
+3. `synchronous=NORMAL` đổi độ bền khi mất điện, nên cần chủ dự án quyết.
+
+**Nâng cấp:** bundle tfd-v2.6 có hợp đồng đặc trưng mới (`causal-v4-…-farmcell`), nên cần thư mục `FRAUD_STATE_DB` mới và 24 giờ warm-up. Checkpoint Spark cũ cũng phải tạo lại vì `source.json` ràng buộc hợp đồng đặc trưng.

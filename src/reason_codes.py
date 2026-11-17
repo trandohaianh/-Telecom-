@@ -24,6 +24,10 @@ CALL_REASONS = {
                             "Many new SIMs (newly activated or newly seen) active on one cell"),
     "active_hours_on_network": ("R306", "Số mới bắt đầu hoạt động trên mạng dù đăng ký đã lâu (nghi SIM ngủ đông / đi thuê)",
                                 "Number only just started being active despite an old registration (dormant / rented SIM)"),
+    "new_callee_ratio_24h": ("R110", "Gần như mọi cuộc gọi trong 24 giờ đều tới số chưa từng gọi",
+                             "Almost every call in 24 h went to a number never called before"),
+    "farm_cell_sims_1h": ("R307", "Nhiều SIM mới cùng một trạm, chỉ gọi đi tới số lạ, không có cuộc gọi đến (nghi farm SIM box)",
+                          "Several new SIMs on one cell, only calling strangers, no incoming calls (suspected SIM-box farm)"),
     "caller_age_days": ("R401", "Thuê bao mới kích hoạt", "Newly activated subscription"),
     "caller_foreign": ("R402", "Số nước ngoài", "Foreign number"),
     "origin_local": ("R403", "Tuyến gốc bất thường", "Unusual origin route"),
@@ -68,6 +72,9 @@ NEED_EVIDENCE = ("P001", "Chưa đủ bằng chứng hành vi để chặn cứn
 # HARVEST_MEMORY: số đã bị bắt im lặng thu giọng ở nhiều người khác nhau -> chặn các cuộc tiếp theo trước khi đổ chuông.
 HARVEST_MEMORY = ("A108", "Số này đã im lặng thu giọng ở ít nhất 2 người khác nhau trong 1 giờ: chặn / ngắt cuộc gọi",
                   "This number silently recorded 2+ different people within an hour: call blocked / cut")
+# SIM_FARM: luật sàn - >= 2 SIM cùng hồ sơ farm trên một cell thì ít nhất phải FLAG (không tự chặn).
+SIM_FARM = ("R308", "Ít nhất 2 SIM mới cùng trạm có cùng kiểu gọi của farm SIM box: cảnh báo, chuyển chuyên viên",
+            "At least 2 new SIMs on the same cell share a SIM-box farm calling pattern: flagged for review")
 # ZERO_DAY cảnh báo khi phát hiện hành vi rất lạ nhưng không thuộc mẫu đã biết.
 ZERO_DAY = ("Z001", "Mô hình không giám sát: hành vi lệch xa lưu lượng bình thường (nghi tấn công mới)",
             "Unsupervised model: behaviour far from normal traffic (possible new attack)")

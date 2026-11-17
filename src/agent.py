@@ -313,7 +313,7 @@ class OpsAgent:
             return
         self._last_chain_check = now
         ok, n, bad = self.e.verify_evidence()
-        if not ok:
+        if ok is False:
             self.propose(f"chain:{bad}", "investigate", "high", "Nhật ký bằng chứng bị sửa đổi",
                          [f"Chuỗi hash gãy ở dòng {bad} (đã kiểm {n} bản ghi hợp lệ trước đó)",
                           "Có người đã sửa hoặc xóa bằng chứng sau khi ghi; cần điều tra"],

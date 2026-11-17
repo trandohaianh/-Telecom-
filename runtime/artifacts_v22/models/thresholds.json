@@ -1,8 +1,8 @@
 {
-  "model_version": "tfd-v2.5",
+  "model_version": "tfd-v2.6",
   "call": {
-    "block": 0.8158905661683605,
-    "flag": 0.22773202649900856,
+    "block": 0.7854867751360117,
+    "flag": 0.27286814161036715,
     "anomaly_flag": {
       "domestic": 0.6596104927977631,
       "foreign": 0.639912813907175,

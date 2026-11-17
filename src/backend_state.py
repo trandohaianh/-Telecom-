@@ -25,7 +25,21 @@ def _json(value):
 
 
 class BackendState:
-    def __init__(self, path=None, *, wal_autocheckpoint_pages=None):
+    # Background WAL checkpointing (round 6). With SQLite's automatic checkpoint, the COMMIT that pushes
+    # the WAL past the threshold copies the WAL into the database file and fsyncs it on the inference
+    # owner thread: about 20 ms on the measured disk, every ~136 verdicts at 50 EPS, which produced the
+    # periodic deadline fail-opens of the serving SLA run. Raising the threshold (tried 8 192 pages on
+    # 2026-10-25) only makes the stall rarer and longer. Here the writer connection never checkpoints;
+    # a separate connection runs wal_checkpoint(PASSIVE), which never blocks the writer. Every COMMIT
+    # is still fsynced with synchronous=FULL, so durability is unchanged.
+    BACKGROUND_CHECKPOINT_INTERVAL_S = 0.25
+
+    def __init__(self, path=None, *, wal_autocheckpoint_pages=None, background_checkpoint=None):
+        explicit_threshold = (wal_autocheckpoint_pages is not None
+                              or "FRAUD_SQLITE_WAL_AUTOCHECKPOINT_PAGES" in os.environ)
+        if background_checkpoint is None:
+            background_checkpoint = (path is not None and not explicit_threshold
+                                     and os.environ.get("FRAUD_SQLITE_BACKGROUND_CHECKPOINT", "1") != "0")
         if wal_autocheckpoint_pages is None:
             try:
                 wal_autocheckpoint_pages = int(os.environ.get("FRAUD_SQLITE_WAL_AUTOCHECKPOINT_PAGES", "1000"))
@@ -49,8 +63,16 @@ class BackendState:
         # Allow measured checkpoint tuning without changing FULL durability.
         # Preserve SQLite's usual 1000-page default. Readers can pin older
         # frames, so this threshold is not a hard WAL size cap.
-        self.db.execute(f"PRAGMA wal_autocheckpoint={wal_autocheckpoint_pages}")
+        self.background_checkpoint = bool(background_checkpoint and self.path is not None)
+        self.db.execute(f"PRAGMA wal_autocheckpoint={0 if self.background_checkpoint else wal_autocheckpoint_pages}")
         self.wal_autocheckpoint_pages = self.db.execute("PRAGMA wal_autocheckpoint").fetchone()[0]
+        self.checkpoint_stats = {"passes": 0, "frames_checkpointed": 0, "busy": 0, "errors": 0, "max_wal_frames": 0}
+        self._checkpoint_stop = threading.Event()
+        self._checkpoint_thread = None
+        if self.background_checkpoint:
+            self._checkpoint_thread = threading.Thread(target=self._checkpoint_loop, name="sqlite-wal-checkpoint",
+                                                       daemon=True)
+            self._checkpoint_thread.start()
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS events (
@@ -322,7 +344,34 @@ class BackendState:
         with self.lock:
             return {row[0] for row in self.db.execute("SELECT name FROM suspended")}
 
+    def _checkpoint_loop(self):
+        conn = sqlite3.connect(str(self.path), timeout=5.0, check_same_thread=False, isolation_level=None)
+        try:
+            conn.execute("PRAGMA wal_autocheckpoint=0")
+            while not self._checkpoint_stop.wait(self.BACKGROUND_CHECKPOINT_INTERVAL_S):
+                self.checkpoint_wal(conn)
+            self.checkpoint_wal(conn)
+        finally:
+            conn.close()
+
+    def checkpoint_wal(self, conn=None):
+        """One PASSIVE checkpoint pass: copies committed frames, never waits for or blocks the writer."""
+        try:
+            busy, frames, done = (conn or self.db).execute("PRAGMA wal_checkpoint(PASSIVE)").fetchone()
+        except sqlite3.Error:
+            self.checkpoint_stats["errors"] += 1
+            return None
+        self.checkpoint_stats["passes"] += 1
+        self.checkpoint_stats["busy"] += int(bool(busy))
+        self.checkpoint_stats["frames_checkpointed"] += max(0, done)
+        self.checkpoint_stats["max_wal_frames"] = max(self.checkpoint_stats["max_wal_frames"], frames)
+        return busy, frames, done
+
     def close(self):
+        if self._checkpoint_thread is not None:
+            self._checkpoint_stop.set()
+            self._checkpoint_thread.join(timeout=10)
+            self._checkpoint_thread = None
         with self.lock:
             self.db.close()
         if self._owner_file:

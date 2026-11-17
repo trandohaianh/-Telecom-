@@ -18,32 +18,32 @@
   "late": 0
  },
  "would_have": {
-  "ALLOW": 49911,
-  "FLAG": 49,
+  "ALLOW": 49902,
+  "FLAG": 58,
   "BLOCK": 40
  },
  "would_have_pct": {
-  "ALLOW": 99.822,
-  "FLAG": 0.098,
+  "ALLOW": 99.804,
+  "FLAG": 0.116,
   "BLOCK": 0.08
  },
  "would_have_denominator": "scored events only",
  "agreement_with_labels": {
-  "true_negative": 49899,
-  "false_negative": 12,
-  "false_positive": 30,
-  "true_positive": 59
+  "true_negative": 49895,
+  "false_negative": 7,
+  "false_positive": 34,
+  "true_positive": 64
  },
  "if_enforced": {
   "legitimate_events": 49929,
-  "legitimate_actioned_pct": 0.060085,
+  "legitimate_actioned_pct": 0.068097,
   "fraud_events": 71,
-  "fraud_caught_pct": 83.0986
+  "fraud_caught_pct": 90.1408
  },
  "by_family": {
   "CLEAN": {
-   "ALLOW": 49899,
-   "FLAG": 30
+   "ALLOW": 49895,
+   "FLAG": 34
   },
   "CLI_SPOOF": {
    "BLOCK": 3
@@ -53,9 +53,9 @@
    "FLAG": 6
   },
   "SIM_BOX": {
-   "ALLOW": 8,
-   "BLOCK": 32,
-   "FLAG": 9
+   "ALLOW": 3,
+   "FLAG": 14,
+   "BLOCK": 32
   },
   "SMS_PHISH": {
    "BLOCK": 5
@@ -174,13 +174,13 @@
    "nonfinite_rate": 0.0
   },
   "band_shares": {
-   "BLOCK": 0.00111,
-   "FLAG": 0.000228,
-   "ALLOW": 0.998662
+   "BLOCK": 0.001138,
+   "FLAG": 0.000171,
+   "ALLOW": 0.998691
   },
   "band_share_ratio": {
-   "BLOCK": 1.646,
-   "FLAG": 0.767,
+   "BLOCK": 1.563,
+   "FLAG": 0.576,
    "ALLOW": 1.0
   },
   "block_band_moved": false,
@@ -300,13 +300,13 @@
      "nonfinite_rate": 0.0
     },
     "band_shares": {
-     "BLOCK": 0.001062,
-     "FLAG": 0.000236,
-     "ALLOW": 0.998701
+     "BLOCK": 0.001092,
+     "FLAG": 0.000177,
+     "ALLOW": 0.998731
     },
     "band_share_ratio": {
-     "BLOCK": 1.807,
-     "FLAG": 0.767,
+     "BLOCK": 1.695,
+     "FLAG": 0.575,
      "ALLOW": 1.0
     },
     "block_band_moved": false,

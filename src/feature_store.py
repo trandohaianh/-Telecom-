@@ -45,6 +45,11 @@ CALL_FEATURES = [
     # called before. People mostly call their contacts again; SIM-box farms dial random subscribers,
     # which a slow farm (3-6 calls/h) never reveals through the 1-hour dispersion feature.
     "new_callee_ratio_24h",
+    # SIM-farm co-location: when THIS caller looks like a farm SIM (fresh, no incoming call in 24 h,
+    # every call to a distinct never-called number), how many fresh SIMs on the same radio cell made
+    # >= 2 calls to >= 2 different numbers in the last hour (itself included). A lone new subscriber
+    # gives 1; a farm of n co-located SIMs gives n. 0 when the caller does not match the profile.
+    "farm_cell_sims_1h",
 ]
 KNOWN_CALLEE_TTL_S = 30 * 86400.0   # how long a callee stays "known" to a caller
 # Danh sách feature SMS dựa trên route, sender, URL và lưu lượng 1 giờ gần nhất.
@@ -74,6 +79,69 @@ def _prune(dq: deque, horizon: float):
         dq.popleft()
 
 
+class FarmCellWindow:
+    """Incremental counts over one cell's (ts, sim, callee) deque for farm_cell_sims_1h.
+
+    Keeps, per SIM, its number of calls and distinct callees in the window, and how many SIMs are
+    "bursty" (>= 2 calls to >= 2 numbers). Every add/expire is O(1), so a busy cell (or the first 6 h
+    after a fresh deployment, when every SIM is "newly active") does not make each call O(window).
+    The deque is the serialised state; these counts are derived and rebuilt from it when needed.
+    """
+    __slots__ = ("q", "calls", "dialled", "bursty")
+
+    def __init__(self, q):
+        self.q, self.calls, self.dialled, self.bursty = q, {}, {}, 0
+        for _, sim, callee in q:
+            self._count(sim, callee, 1)
+
+    def _is_bursty(self, sim):
+        return self.calls.get(sim, 0) >= 2 and len(self.dialled.get(sim, ())) >= 2
+
+    def _count(self, sim, callee, sign):
+        before = self._is_bursty(sim)
+        n = self.calls.get(sim, 0) + sign
+        d = self.dialled.setdefault(sim, {})
+        c = d.get(callee, 0) + sign
+        if c:
+            d[callee] = c
+        else:
+            d.pop(callee, None)
+        if n:
+            self.calls[sim] = n
+        else:
+            self.calls.pop(sim, None)
+            self.dialled.pop(sim, None)
+        self.bursty += int(self._is_bursty(sim)) - int(before)
+
+    def add(self, item):
+        q = self.q
+        if not q or q[-1] <= item:
+            q.append(item)
+        else:
+            bisect.insort(q, item)
+        self._count(item[1], item[2], 1)
+
+    def expire(self, horizon):
+        q = self.q
+        while q and q[0][0] < horizon:
+            _, sim, callee = q.popleft()
+            self._count(sim, callee, -1)
+
+    def count_for(self, caller, ts):
+        """|bursty SIMs| if ``caller`` is one of them, counting only entries with t <= ts, else 0."""
+        future = []
+        for item in reversed(self.q):        # other parties' slightly newer calls (<= allowed lateness)
+            if item[0] <= ts:
+                break
+            future.append(item)
+        for _, sim, callee in future:
+            self._count(sim, callee, -1)
+        value = self.bursty if self._is_bursty(caller) else 0
+        for _, sim, callee in future:
+            self._count(sim, callee, 1)
+        return value
+
+
 # FeatureStore lưu toàn bộ state lịch sử để tính feature causally trên luồng event.
 class FeatureStore:
 # Khởi tạo deque, dict và trạng thái theo thuê bao, IMEI, cell để tính feature nhanh O(1).
@@ -95,6 +163,8 @@ class FeatureStore:
         # D14: keys changed since the last checkpoint (base or delta). Not part of the state itself.
         self._dirty = defaultdict(set)
         self.new24 = defaultdict(deque)            # msisdn -> deque[(ts, 1 if new callee else 0)], last 24 h
+        self.fresh_cell_calls = defaultdict(deque)  # radio cell -> deque[(ts, msisdn, callee)] of fresh SIMs, 1 h
+        self._farm_agg = {}                        # derived FarmCellWindow per cell (not state; rebuilt lazily)
         self.age_by_msisdn = {}
         # Lần đầu thấy số hoạt động trên mạng (gọi, được gọi, nhắn tin) - khác với tuổi đăng ký SIM.
         # SIM cũ đi thuê / ngủ đông có tuổi đăng ký lớn nhưng vừa mới xuất hiện hoạt động.
@@ -204,11 +274,15 @@ class FeatureStore:
             self.last_radio[caller] = (ts, cell)
 
         new_sims = 0
+        farm_sims = 0
         if registered or unknown_radio:
             nsc = self.new_sims_cell[cell]
             # SIM mới đăng ký HOẶC mới xuất hiện hoạt động (SIM cũ đi thuê không còn lọt qua đặc trưng này)
-            if 0 <= age < 60 or (age >= 0 and active_h < FRESH_ACTIVE_H):
+            fresh = 0 <= age < 60 or (age >= 0 and active_h < FRESH_ACTIVE_H)
+            if fresh:
                 nsc[caller] = max(ts, nsc.get(caller, ts))
+            farm_sims = self._farm_cell(cell, ts, caller, callee, fresh,
+                                        fresh and incoming == 0 and len(cc) == n1h and new_ratio == 1.0)
             if nsc:
                 stale = [k for k, v in nsc.items() if v < h]
                 for k in stale:
@@ -238,7 +312,28 @@ class FeatureStore:
             "hour_of_day": local_hour(ts),
             "active_hours_on_network": active_h,
             "new_callee_ratio_24h": new_ratio,
+            "farm_cell_sims_1h": farm_sims,
         }
+
+    def _farm_cell(self, cell, ts, caller, callee, fresh, profile):
+        """Co-located farm SIMs (see CALL_FEATURES). Only raw-event facts of OTHER SIMs are used, so a
+        scale-out shard that sees the other SIMs through side updates computes the same value."""
+        w = self._farm_window(cell)
+        if fresh:
+            w.add((ts, caller, callee))
+        w.expire(ts - H1)
+        if not w.q:
+            del self.fresh_cell_calls[cell]
+            self._farm_agg.pop(cell, None)
+            return 0
+        return w.count_for(caller, ts) if profile else 0
+
+    def _farm_window(self, cell):
+        q = self.fresh_cell_calls[cell]
+        w = self._farm_agg.get(cell)
+        if w is None or w.q is not q:     # restored / rolled back / delta-applied deque: rebuild counts
+            w = self._farm_agg[cell] = FarmCellWindow(q)
+        return w
 
     # ------------------------------------------------------------------ scale-out: replicated side state
     # Khi chia tải theo số chủ gọi (mỗi shard sở hữu một phần thuê bao), đa số đặc trưng chỉ
@@ -276,6 +371,8 @@ class FeatureStore:
                 if 0 <= age < 60 or (age >= 0 and min((ts - first) / 3600.0, ACTIVE_CAP_H) < FRESH_ACTIVE_H):
                     cells = self.new_sims_cell[cell]
                     cells[caller] = max(ts, cells.get(caller, ts))
+                    # pruned by the owner's call_features / prune_state
+                    self._farm_window(cell).add((ts, caller, ev["callee"]))
         elif et == "SMS":
             sender, recipient = ev["sender"], ev.get("recipient")
             self._touch(sender, ts)
@@ -292,8 +389,8 @@ class FeatureStore:
     # checkpoint periodically and resume from the last checkpoint instead of re-reading a day of
     # traffic. Everything is JSON-shaped on purpose: it survives a version change of this file.
     CHECKPOINT_VERSION = 2
-    FEATURE_CONTRACT = "causal-v3-exact-24h-completion-order-bnumber"
-    STATE_DEQUES = ("oc1h", "oc10", "oc1", "in_calls", "done_durations", "sms_by_sender", "new24")
+    FEATURE_CONTRACT = "causal-v4-exact-24h-completion-order-bnumber-farmcell"
+    STATE_DEQUES = ("oc1h", "oc10", "oc1", "in_calls", "done_durations", "sms_by_sender", "new24", "fresh_cell_calls")
     STATE_DICTS = ("callee_cnt", "imei_by_msisdn", "msisdn_by_imei", "new_sims_cell", "known_callees")
     STATE_PLAIN = ("last_radio", "age_by_msisdn", "first_seen", "last_seen")
 
@@ -382,6 +479,7 @@ class FeatureStore:
                 self.callee_cnt.pop(caller, None)
         for name, horizon, tuples in (("oc10", M10, False), ("oc1", M1, False),
                                       ("in_calls", D1, False), ("sms_by_sender", H1, True), ("new24", D1, True),
+                                      ("fresh_cell_calls", H1, True),
                                       ("out24", D1, False)):
             mapping = getattr(self, name)
             for key, q in list(mapping.items()):
@@ -392,6 +490,7 @@ class FeatureStore:
                 if not q:
                     dirty[name].add(key)
                     del mapping[key]
+        self._farm_agg.clear()   # fresh_cell_calls deques were trimmed in place: derived counts are stale
         for name, horizon in (("imei_by_msisdn", D1), ("msisdn_by_imei", D1), ("new_sims_cell", H1),
                               ("known_callees", KNOWN_CALLEE_TTL_S)):
             mapping = getattr(self, name)
@@ -488,6 +587,7 @@ class FeatureStore:
                 touched["in_calls"].update((caller, callee))
                 touched["msisdn_by_imei"].add(ev.get("imei"))
                 touched["new_sims_cell"].add(ev.get("cell_id"))
+                touched["fresh_cell_calls"].add(ev.get("cell_id"))
                 for name in ("first_seen", "last_seen"):
                     touched[name].update((caller, callee))
             elif et == "SMS":

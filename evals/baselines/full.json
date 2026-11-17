@@ -2,13 +2,13 @@
  "created_at": "2026-11-16T02:16:41+00:00",
  "bundle": "runtime/artifacts_v22",
  "metrics": {
-  "block_recall_pct": 45.06,
+  "block_recall_pct": 45.58,
   "block_precision_pct": 99.62,
   "block_fpr_pct": 0.0003,
   "block_fpr_ci_hi_pct": 0.0017,
-  "any_recall_pct": 80.76,
-  "any_fpr_pct": 0.0718,
-  "family_min_detected_pct": 67.5,
+  "any_recall_pct": 90.29,
+  "any_fpr_pct": 0.0839,
+  "family_min_detected_pct": 87.1,
   "zero_day_caught_pct": 90.2,
   "session_pre_ring_block_recall_pct": 58.33,
   "scored_events": 50000,
@@ -19,8 +19,8 @@
   "serving_unexpected_enforce": 0,
   "evidence_chain_valid": true,
   "smoke_passed": true,
-  "any_recall_min_window_pct": 68.42,
+  "any_recall_min_window_pct": 83.33,
   "pooled_windows": 11
  },
- "quality_note": "quality metrics re-baselined 2026-11-17 (round 5): pooled test + 10 replicate windows, bundle tfd-v2.5 (new_callee_ratio_24h); serving and throughput keys unchanged (measured on CI runner; this WSL host was loaded: old code measured worse than new code in a same-time A/B)"
+ "quality_note": "quality metrics re-baselined 2026-11-17 (round 6): pooled test + 10 replicate windows, bundle tfd-v2.6 (farm_cell_sims_1h + SIM-farm FLAG floor); serving and throughput keys unchanged (CI runner)"
 }

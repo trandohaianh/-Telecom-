@@ -52,7 +52,7 @@ from detector import Detector
 # Hàm load_events đọc các tệp sự kiện đã tạo trước.
 from events_io import load_events
 # verify kiểm tra tính toàn vẹn của chuỗi bằng chứng (ghi qua DurableEvidenceLog).
-from evidence import verify, verify_incremental
+from evidence import verify_in_subprocess
 # GuardedDetector bọc detector để áp dụng timeout, luật dự phòng, fail-open và circuit breaker.
 from resilience import GuardedDetector
 # Phân quyền theo vai trò, che số điện thoại cho người xem và nhật ký thao tác có chữ ký.
@@ -401,13 +401,18 @@ class LiveEngine:
         if not self.evidence_path.exists():
             return True, 0, None
         now = time.time()
-        if now - getattr(self, "_ev_full_at", 0.0) > 1800:
-            self._ev_full_at, self._ev_state = now, {}
-            ok, n, bad = verify(self.evidence_path)
-            if ok:
-                verify_incremental(self.evidence_path, self._ev_state)    # remember where the full check ended
-            return ok, n, bad
-        return verify_incremental(self.evidence_path, self._ev_state)
+        full = now - getattr(self, "_ev_full_at", 0.0) > 1800
+        state = {} if full else dict(getattr(self, "_ev_state", {}))
+        # Child process: the hash-chain re-check must not compete with the inference owner for the GIL.
+        ok, n, bad, state = verify_in_subprocess(self.evidence_path, state)
+        if ok is None:
+            self.evidence_verify_errors = getattr(self, "evidence_verify_errors", 0) + 1
+            return True, n, None          # could not check: never report tampering without evidence
+        if full and ok:
+            self._ev_full_at = now
+        if ok:
+            self._ev_state = state
+        return ok, n, bad
 
     # --------------------------------------------------------------- attack injection
     # Tạo một kiểu tấn công tổng hợp, gửi qua cùng detector rồi trả quyết định cho dashboard.
@@ -522,6 +527,8 @@ async def lifespan(_app):
     global engine
     engine = await asyncio.to_thread(LiveEngine)
     portal.startup(lambda: engine)
+    from gc_tuning import tune_gc_for_latency
+    engine.gc_tuned = tune_gc_for_latency()   # same GC settings the in-process SLA benchmark always used
     try:
         yield
     finally:
@@ -752,14 +759,13 @@ def api_verify(u=Depends(require("analyst"))):
     audit.record(u["name"], "verify_evidence_chain")
     # Chờ một nhịp để logger flush các bản ghi đang đợi.
     time.sleep(0.2)
-    # Nhận trạng thái hợp lệ, số bản ghi và dòng đầu tiên sai (nếu có).
-    ok, n, bad = verify(engine.evidence_path)
-    # Mặc định hash cuối rỗng nếu file chưa có bản ghi.
-    last = ""
-    # Nếu log đã có dòng, trích hash của bản ghi cuối cùng để giao diện hiển thị.
-    lines = engine.evidence_path.read_text(encoding="utf-8").splitlines()
-    if lines:
-        last = json.loads(lines[-1])["hash"]
+    # Kiểm trong tiến trình con (vòng 6): băm lại cả chuỗi không được tranh GIL với owner chấm điểm.
+    if not engine.evidence_path.exists():
+        return {"chain_valid": True, "records": 0, "first_bad_line": None, "last_hash": ""}
+    ok, n, bad, state = verify_in_subprocess(engine.evidence_path, {})
+    if ok is None:
+        raise HTTPException(503, "Không chạy được bước kiểm chuỗi bằng chứng, thử lại sau")
+    last = state.get("prev", "") if ok and n else ""
     return {"chain_valid": ok, "records": n, "first_bad_line": bad, "last_hash": last}
 
 

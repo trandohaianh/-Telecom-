@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "created_utc": "2026-11-17T10:44:09.876845+00:00",
+  "created_utc": "2026-11-17T13:58:30.836419+00:00",
   "dataset_kind": "synthetic_simulator",
   "feature_schema": {
-    "contract": "causal-v3-exact-24h-completion-order-bnumber",
+    "contract": "causal-v4-exact-24h-completion-order-bnumber-farmcell",
     "call": [
       "calls_1m",
       "calls_10m",
@@ -32,7 +32,8 @@
       "network_2g",
       "hour_of_day",
       "active_hours_on_network",
-      "new_callee_ratio_24h"
+      "new_callee_ratio_24h",
+      "farm_cell_sims_1h"
     ],
     "sms_meta": [
       "route_brand_gw",
@@ -97,12 +98,12 @@
   },
   "files": {
     "train_events.csv.gz": {
-      "sha256": "e519b80ed1fd81c42c50046411f897b1d7217b5eed10f08f42499b10aaf660fe",
+      "sha256": "e1475d1610f00e78f0aea28fb8267481702e423c234332ad3dc8044460f14446",
       "bytes": 12312200
     },
     "train_call_features.parquet": {
-      "sha256": "d930eb5f3e39424ccd26b889e9d5ff1e4aa126d78605c0f412b8ff0969113a57",
-      "bytes": 10253795
+      "sha256": "08753e5efdbebc0a87303a04e25e6a08601d2b728ccfbfcf22f58b83b1b005ad",
+      "bytes": 10261740
     },
     "train_sms_features.parquet": {
       "sha256": "f13b72a11ae7b39ff64376759481c9207f0a94aee893e578582d0916c227fa4d",
@@ -113,12 +114,12 @@
       "bytes": 228144
     },
     "val_events.csv.gz": {
-      "sha256": "9398e2d7f8fd33c368a51cb12190fa3f5d49a8501218d3e700838fb107e02e3c",
+      "sha256": "ddee777e1b4da5c5aee124cd25d977aa70c286f8bc4d6c1aca0e2682fe521fdc",
       "bytes": 6213628
     },
     "val_call_features.parquet": {
-      "sha256": "baf1622637fa68e3df08ef621a62028460d806c819bd70044a60b195e3536985",
-      "bytes": 5530745
+      "sha256": "e7cf553136dfa83fe06f5de59e0649b17d0b38a86746377b05e0c2b901114923",
+      "bytes": 5533971
     },
     "val_sms_features.parquet": {
       "sha256": "9a15a281877fb6a2c7d6f1be0ab32203dbd20095b2518eceeaa8acc4b5751c43",
@@ -129,12 +130,12 @@
       "bytes": 140804
     },
     "cal_events.csv.gz": {
-      "sha256": "27771c5ea2010460395555a44db9d7ae06ff4f164cbe614f63924ac882179303",
+      "sha256": "d89a3a7f76096b7d70096a680f16513cbf909e61a3b6fa3df67e781d5e5b9c64",
       "bytes": 6114199
     },
     "cal_call_features.parquet": {
-      "sha256": "67235e94c25a2b33c5f5d9c1a1c1b54b46e44704c7da0493ed43443973479a9c",
-      "bytes": 5382318
+      "sha256": "1f2b74e136634f410edbfc0fb385ccc2c324ea10a42966495d2bfdf888612d58",
+      "bytes": 5386498
     },
     "cal_sms_features.parquet": {
       "sha256": "4d0ad99130159d3e8a297017f2a1c2be30913495444a85c2bffd4880a260c7a9",
@@ -149,12 +150,12 @@
       "bytes": 7707192
     },
     "test_warmup_24h_events.csv.gz": {
-      "sha256": "9652cdb8d43e70a67624547cb95b49d57452e9eb4c0a71bea23f0d830cebd6b9",
+      "sha256": "aa867b3b4f4d653519c843963bfcf2b8343fb13badde65d50dc2aa858098f520",
       "bytes": 6098842
     },
     "test_call_features.parquet": {
-      "sha256": "81c15f8f0cea7c884ddce8e382ff8d1917d4b46016645575267338aec7929284",
-      "bytes": 1810477
+      "sha256": "dabbcd7b961d5b455e4aec338781776832291aa701c98d74ba6d67b05998bf59",
+      "bytes": 1811715
     },
     "test_sms_features.parquet": {
       "sha256": "567236980c4243653d4b69cf500237b10a0af7f8d0dac19f424868093a90fe72",
@@ -165,12 +166,12 @@
       "bytes": 49638
     },
     "ref_events.csv.gz": {
-      "sha256": "68d7e1a785c24bfb860ffd31f63d12c4714115fa3c8ea5ff6b783ea873c189e7",
+      "sha256": "d8e40fa1b53be9fb841e85b46f2c14f962c8b5032797a4e491a23a59d0747aeb",
       "bytes": 1974278
     },
     "ref_call_features.parquet": {
-      "sha256": "7c514168647cb61d45fdd47f088c85b4d6bc29578ab8fdacc6e6c63c182db70b",
-      "bytes": 1905955
+      "sha256": "f0fc17f09a9fe5876bce940f3633c4d2bc23c41c24b717f43874f27adeeb4f65",
+      "bytes": 1907156
     },
     "ref_sms_features.parquet": {
       "sha256": "e9d27461de0ce964c221db131408405edcf1a5da18e2b981b6a9a2bbf25655c8",
@@ -181,12 +182,12 @@
       "bytes": 53510
     },
     "dataset_summary.json": {
-      "sha256": "1c5a334f89fd1dea833a8d9dc0454d5a7bfc1f96b775e1e9e36a6a667541beea",
+      "sha256": "bef9e7a5b8bca8d8acf8b8ff547f07ffce0f52b050622b686846897d44de853c",
       "bytes": 1883
     }
   },
   "source_sha256": {
-    "feature_store.py": "d699a0a6ccabd84fac65bdd1eeaa9a3cd73a6418739e23bca781a8f68aeaf31b",
+    "feature_store.py": "b0dd35aa9da96f1e4586aed6ceb93e9f1f8a03b657f3e5c086bb149d2400dc67",
     "data_generator.py": "1e3639d10d74135df706a9dfb63994ec13988b2ce9a5373b156ff7e258a231e4",
     "build_dataset.py": "852c48935f89dfe7c3ae26eaadb8b458b471c33e1f7b9db3f4ade4d9aacaeb45"
   }

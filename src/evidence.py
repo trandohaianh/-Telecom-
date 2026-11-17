@@ -129,6 +129,37 @@ def verify_incremental(path: Path, state: dict):
     return True, n, None
 
 
+_CHILD_CODE = (
+    "import json, os, sys\n"
+    "sys.path.insert(0, sys.argv[1])\n"
+    "from evidence import verify_incremental\n"
+    "state = json.loads(sys.argv[3])\n"
+    "ok, n, bad = verify_incremental(sys.argv[2], state)\n"
+    "print(json.dumps({'ok': ok, 'n': n, 'bad': bad, 'state': state, 'pid': os.getpid()}))\n"
+)
+
+
+def verify_in_subprocess(path, state: dict, timeout_s: float = 600.0):
+    """Run verify_incremental in a child interpreter (round 6).
+
+    Parsing and re-hashing every JSONL line is pure Python. Run inside the API process it competed for
+    the GIL with the inference owner: 54 ms for only ~300 records at start-up, and a full pass every
+    30 minutes over a production-size log would stall verdicts for seconds. A child process has its own
+    interpreter, so the owner thread is not delayed. An empty ``state`` verifies the whole file in one
+    pass. Returns (ok, n, bad, new_state); ok is None when the check could not run (never "tampered").
+    """
+    import subprocess
+    import sys
+    try:
+        out = subprocess.run([sys.executable, "-I", "-c", _CHILD_CODE, str(Path(__file__).resolve().parent),
+                              str(path), json.dumps(state)], capture_output=True, text=True, timeout=timeout_s,
+                             check=True)
+        res = json.loads(out.stdout.strip().splitlines()[-1])
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        return None, state.get("n", 0), None, state
+    return res["ok"], res["n"], res["bad"], (res["state"] if res["ok"] else state)
+
+
 # verify kiểm tra tính toàn vẹn của hash chain và trả về dòng sai đầu tiên nếu phát hiện.
 def verify(path: Path):
     """Returns (ok, n_records, first_bad_line)."""

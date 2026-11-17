@@ -6,6 +6,7 @@ filesystem; this is distributed full-snapshot state, not an incremental state AP
 """
 from __future__ import annotations
 
+from collections import deque
 from functools import partial
 from itertools import groupby
 import json
@@ -53,16 +54,21 @@ def event_records(record, entity):
 
 
 def entity_partition(records, *, entity, watermark, metadata_ttl_s):
-    from feature_store import FeatureStore
+    from feature_store import FarmCellWindow, FeatureStore
     from data_generator import REGISTERED_CELLS
     for key, group in groupby(records, key=lambda record: record[0][0]):
         store = FeatureStore() if entity == "subscriber" else None
         links = {}
+        farm = deque()      # cell: (ts, caller, callee) of fresh SIMs in the last hour (farm_cell_sims_1h)
+        window = None
         for _, (kind, payload) in group:
             if kind == "state":
                 restored = json.loads(payload)
                 if store is not None:
                     store.load_state_dict(restored)
+                elif entity == "cell" and set(restored) == {"links", "farm"}:
+                    links = restored["links"]
+                    farm = deque(tuple(x) for x in restored["farm"])
                 else:
                     links = restored
                 continue
@@ -90,10 +96,17 @@ def entity_partition(records, *, entity, watermark, metadata_ttl_s):
                 enabled = key in REGISTERED_CELLS or key.startswith("X-")
                 links = {party: seen for party, seen in links.items() if seen >= ts - 3600.}
                 age = row["caller_age_days"]
-                if enabled and (0 <= age < 60 or (age >= 0 and row["active_hours_on_network"] < 6.)):
+                fresh = enabled and (0 <= age < 60 or (age >= 0 and row["active_hours_on_network"] < 6.))
+                if window is None or window.q is not farm:
+                    window = FarmCellWindow(farm)
+                if fresh:
                     links[row["caller"]] = ts
+                    window.add((ts, row["caller"], row["callee"]))
+                window.expire(ts - 3600.)
                 yield (key, "feature", row["event_id"], json.dumps(
-                    {"new_sims_on_cell_1h": float(len(links)) if enabled else 0.}))
+                    {"new_sims_on_cell_1h": float(len(links)) if enabled else 0.,
+                     # the caller's own profile (no incoming, all-new callees) is applied at the join
+                     "farm_cell_candidates": float(window.count_for(row["caller"], ts)) if enabled else 0.}))
         if store is not None:
             # Foreign-recipient state belongs to its own subscriber partition.
             for name in ("first_seen", "last_seen", "in_calls"):
@@ -111,7 +124,11 @@ def entity_partition(records, *, entity, watermark, metadata_ttl_s):
             horizon = 86400. if entity == "imei" else 3600.
             if watermark is not None:
                 links = {party: seen for party, seen in links.items() if seen >= watermark - horizon}
-            if links:
+                while farm and farm[0][0] < watermark - 3600.:
+                    farm.popleft()
+            if entity == "cell" and (links or farm):
+                yield (key, "state", None, json.dumps({"links": links, "farm": list(farm)}, allow_nan=False))
+            elif links:
                 yield (key, "state", None, json.dumps(links, allow_nan=False))
 
 
@@ -315,14 +332,19 @@ class DistributedCallStream:
                 enriched = emit.join(core.select("event_id", "active_hours_on_network"), "event_id")
                 cell_rows = cache(self._entity(self._prior("state/cell", state_schema), enriched, "cell", watermark))
                 cell = cell_rows.filter("kind = 'feature'").select("event_id",
-                    F.get_json_object("payload", "$.new_sims_on_cell_1h").cast("double").alias("shared_cell"))
+                    F.get_json_object("payload", "$.new_sims_on_cell_1h").cast("double").alias("shared_cell"),
+                    F.get_json_object("payload", "$.farm_cell_candidates").cast("double").alias("shared_farm"))
                 for entity, rows in (("subscriber", core_rows), ("imei", imei_rows), ("cell", cell_rows)):
                     rows.filter("kind = 'state'").select("key", "payload").write.parquet(
                         str(temporary / "state" / entity))
-                features = (core.drop("msisdn_per_imei_24h", "new_sims_on_cell_1h")
+                features = (core.withColumn("farm_cell_sims_1h_self", F.col("farm_cell_sims_1h"))
+                    .drop("msisdn_per_imei_24h", "new_sims_on_cell_1h", "farm_cell_sims_1h")
                     .join(imei, "event_id").join(cell, "event_id")
                     .withColumnRenamed("shared_imei", "msisdn_per_imei_24h")
                     .withColumnRenamed("shared_cell", "new_sims_on_cell_1h")
+                    # subscriber partition sees only its own calls on the cell: > 0 means "profile matches"
+                    .withColumn("farm_cell_sims_1h", F.when(F.col("farm_cell_sims_1h_self") > 0,
+                                                            F.col("shared_farm")).otherwise(F.lit(0.)))
                     .join(emit.select("event_id", "caller", "ts"), "event_id")
                     .select("event_id", "caller", "ts", *CALL_FEATURES))
             else:

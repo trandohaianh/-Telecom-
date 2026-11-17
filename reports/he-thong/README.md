@@ -5,7 +5,8 @@ Ngày: 17/11/2026.
 Thư mục `v2` gồm bảy hệ thống. Chúng có entry point, môi trường phụ thuộc và vòng đời riêng.
 - Các bản sửa (F1–F18 ở vòng 1, G1–G27 ở vòng 2, H1–H12 ở vòng 3) và các quyết định cho chủ dự án (D1–D14) dùng cùng mã số với [../01_Technical_Code_Audit_Report.md](../01_Technical_Code_Audit_Report.md).
 - Vòng 4 (đánh giá đa vai trò, R4-*): [../04_Danh_gia_da_vai_tro_va_thuat_toan.md](../04_Danh_gia_da_vai_tro_va_thuat_toan.md).
-- Vòng 5 (R5-*, quyết định của chủ dự án và các bước còn lại): §10 của cùng báo cáo đó.
+- Vòng 5 (R5-*, quyết định của chủ dự án và các bước còn lại): §10 của cùng báo cáo đó. Vòng 6 (R6-*): §11.
+- Thuật toán của cả 3 dự án, lý do chọn và công thức: [../05_Thuat_toan_ly_do_va_cong_thuc.md](../05_Thuat_toan_ly_do_va_cong_thuc.md).
 - Công thức chi tiết nằm trong [../02_Deep_Technical_Explanation_Report.md](../02_Deep_Technical_Explanation_Report.md).
 
 | # | Báo cáo | Mã nguồn | Bản sửa | Test (trước → sau) |

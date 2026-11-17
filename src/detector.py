@@ -69,7 +69,15 @@ def has_behavioural_evidence(f) -> bool:
         # cụm SIM mới cùng một trạm: ở trạm đông người, 3-5 SIM mới trong 1 giờ là bình thường -> cần cụm lớn VÀ số này gọi liền
         or (f["new_sims_on_cell_1h"] >= 6 and f["calls_10m"] >= 2)
         or f["velocity_kmh"] >= 300                                            # di chuyển phi lý
+        # >= 3 SIM mới cùng trạm cùng hồ sơ farm: 0 sự kiện sạch trên 430 nghìn sự kiện train/val/cal
+        or f.get("farm_cell_sims_1h", 0) >= FARM_EVIDENCE_SIMS
     )
+
+
+# Luật sàn farm SIM box (chọn trên cal/val, không nhìn cửa sổ test): >= 2 SIM -> ít nhất FLAG.
+# Trên cal + val: 18 sự kiện sạch / 214 nghìn (0,008 %) so với 775 / 1 027 sự kiện SIM box.
+FARM_FLAG_SIMS = 2
+FARM_EVIDENCE_SIMS = 3
 
 
 # Detector là entry point chính: đọc feature store, chạy mô hình và sinh quyết định + lý do giải thích.
@@ -273,10 +281,14 @@ class Detector:
             a_th = np.array([th["anomaly_flag"][s_] for s_ in seg])
             dec = []
             need_evidence = set()
+            farm_floor = set()
             for j in range(len(calls)):
                 d = self._decide(p[j], th)
                 zero_day = d == "ALLOW" and a[j] >= a_th[j]
                 d = "FLAG" if zero_day else d
+                if d == "ALLOW" and calls[j][1].get("farm_cell_sims_1h", 0) >= FARM_FLAG_SIMS:
+                    d = "FLAG"
+                    farm_floor.add(j)
                 if d == "BLOCK" and not has_behavioural_evidence(calls[j][1]):
                     d = "FLAG"
                     need_evidence.add(j)
@@ -298,8 +310,12 @@ class Detector:
                     if j in need_evidence:
                         code, vi, en = rc.NEED_EVIDENCE
                         reasons.append({"code": code, "vi": vi, "en": en, "feature": "block_policy"})
+                    if j in farm_floor:
+                        code, vi, en = rc.SIM_FARM
+                        reasons.append({"code": code, "vi": vi, "en": en, "feature": "farm_cell_sims_1h"})
                 results[i] = self._result(events[i], "CALL", dec[j], float(p[j]), reasons, f,
-                                          anomaly=float(a[j] - a_th[j]), zero_day=bool(dec[j] == "FLAG" and p[j] < th["flag"]))
+                                          anomaly=float(a[j] - a_th[j]),
+                                          zero_day=bool(dec[j] == "FLAG" and p[j] < th["flag"] and a[j] >= a_th[j]))
         if smss:
             idx = [i for i, _ in smss]
             # TF-IDF và hồi quy logistic viết tường minh (cùng con số với vectorizer + predict_proba của sklearn), không

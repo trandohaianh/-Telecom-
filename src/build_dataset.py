@@ -18,6 +18,9 @@ WINDOWS = {
     "val": (22, 24, 0, "val", 12),
     "cal": (33, 24, 0, "val", 12),  # independent threshold calibration, never early stopping
     "test": (101, 4.3, 8, "test", 24),  # the independent 50,000-event evaluation set (after a 24 h warm-up)
+    # drift reference (D7): realistic prevalence, known families only; never trains or calibrates.
+    # Same local hours and warm-up as the monitored window, so history features are comparable.
+    "ref": (55, 4.3, 8, "reference", 24),
 }
 
 

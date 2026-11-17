@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "created_utc": "2026-10-20T15:06:48.874350+00:00",
-  "model_version": "tfd-v2.2",
+  "created_utc": "2026-11-17T06:07:25.235397+00:00",
+  "model_version": "tfd-v2.3",
   "feature_schema": {
     "contract": "causal-v2-exact-24h-completion-order",
     "call": [
@@ -60,15 +60,15 @@
   "dataset_provenance": {
     "status": "verified",
     "feature_contract": "causal-v2-exact-24h-completion-order",
-    "manifest_sha256": "ea9e062ebb185efd9e0350f22971c30d4131e08973be25c4e937c33b02fe36de",
+    "manifest_sha256": "c78f8ba7757d8e56eba4121c4b7cbe10916d51ca4afb7b1d85914d4aec6cb6d4",
     "input_sha256": {
-      "train_call_features.parquet": "51aa3d174b2ef9d19393db2bf3e425e2f9cf4b0d94038a44fa4c175b742ff481",
+      "train_call_features.parquet": "ac1fa698510198891064f6a20a79da029472167f31c1c9c66f357d98f05adbf1",
       "train_sms_features.parquet": "924cf462a3fddecbede3875cba25df0ff5eda2926669cb83868ff25cab47ac5f",
       "train_audio_features.parquet": "9dbb71e53872bb27589c115ccf8748394d46cd5ee67b65862e3d405d04c8ff08",
-      "val_call_features.parquet": "d5940e5f4bdd61e6160e9ced3d3c4ba565742bcb4753b6068d48f5481851b413",
+      "val_call_features.parquet": "b77f0737b992f7cda31b5475d8dc808862f08bd12844d439ebf800af265c70bb",
       "val_sms_features.parquet": "eb247fdb7f2632b6cbbaebc50410e9765248961a459c8bac7b9026fbd0e138e8",
       "val_audio_features.parquet": "aa2c73df3b1521a9e73e8a41536d3f8d2e2f048a1ee4dbf82dd797cd42bc7686",
-      "cal_call_features.parquet": "dfaf0affa1963b739e8aa7ff21a95c5b5cb447f37e062e1078a1fcfe26da65b3",
+      "cal_call_features.parquet": "50ed3fae138686843b25feab84500fa7b81bf548ce3ee6e8c0788c64b647cae4",
       "cal_sms_features.parquet": "03d3f76fdb70be62a0688f402dc0b1acb1234ee2382219171e23e69007f2d98c",
       "cal_audio_features.parquet": "9642078b37a8080a99f4d2a55ca9e4aeffa67e4d0251f9b43036b5e7b282222e"
     },
@@ -78,28 +78,28 @@
   "drift_baseline_requires_rebuild": true,
   "artifacts": {
     "tier1_call_lgbm.txt": {
-      "sha256": "922fef78513ab241e866875a0a47dc791b6c5ec3db2668467bee58a817b3e30e",
-      "bytes": 571499
+      "sha256": "65d31fd869e1f3c95f4be8555cf1987aedfbd81f396c84f128c01a30225629f4",
+      "bytes": 571423
     },
     "tier2_audio_lgbm.txt": {
-      "sha256": "027c4bb49774bd8912f2a3fef3520849ccc381aa5713bc9367c7ffe655dfc326",
-      "bytes": 100893
+      "sha256": "84ebb9f0e1764073ba013aa32a5c1e97763a60f51667fd43b3e0569984742dab",
+      "bytes": 100891
     },
     "tier1_zero_day_iforest.joblib": {
-      "sha256": "6a1d34dfba39384d30880604c0f5ccdd51642ab4e236c179c21c0adce2bef1eb",
-      "bytes": 7936293
+      "sha256": "d6d394ef839ec113844bccf01faabe0904b7326cc9f5ee0d4a8bf5f8d057195a",
+      "bytes": 7937493
     },
     "sms_text_lr.joblib": {
-      "sha256": "7f3c402513b2163e92b94a8463487de84fe524451af386d5d7fa400f71b86157",
+      "sha256": "04eed17c4c8a1e6ba6dee0ca43e9def9bab06c7b92ddd5c98f293576ca45d76e",
       "bytes": 597985
     },
     "thresholds.json": {
-      "sha256": "f05a0fd446795d90297be1b9b48171477f4bfc4c044a70931ab1265056c46c0f",
-      "bytes": 403
+      "sha256": "0c31f999c0e35933829e141bea6d5e7c39733b2a3d8352e4af097e3d6ba0c915",
+      "bytes": 384
     },
     "training_report.json": {
-      "sha256": "9f7bfe7e28eeec0be332ce34b448cd40a2be0d771b518574ca30e837431b0c79",
-      "bytes": 6793
+      "sha256": "d8f877c740700038ac0a3332f2a069dd3db7c2d4696e86bc7dd3f01b67ee34bf",
+      "bytes": 6598
     }
   }
 }

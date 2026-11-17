@@ -241,16 +241,38 @@ def create_voice_router(*, submit_event=None, mode=lambda: "shadow", record_obse
 
     router = APIRouter(lifespan=lifespan)
 
+    # HMAC cần cả body nên không kiểm được trước khi đọc. Giới hạn số upload đang đọc đồng thời và
+    # loại sớm yêu cầu rõ ràng không hợp lệ (Content-Length quá lớn, mốc thời gian hết hạn) để một loạt
+    # request chưa xác thực không giữ hàng trăm MB bộ nhớ (~16,8 MB mỗi request, nhân 3-4 bản sao).
+    uploads = asyncio.Semaphore(int(os.environ.get("FRAUD_AUDIO_MAX_UPLOADS", "8")))
+
     @router.post("/api/v1/audio")
     async def receive_audio(request: Request):
-        raw = bytearray()
-        async for chunk in request.stream():
-            raw.extend(chunk)
-            if len(raw) > MAX_BODY_BYTES:
-                raise HTTPException(413, "audio request too large")
-        body = bytes(raw)
-        why = security.verify_network(body, request.headers.get("x-timestamp", ""),
-                                      request.headers.get("x-signature", ""))
+        declared = request.headers.get("content-length")
+        if declared is not None:
+            try:
+                if int(declared) > MAX_BODY_BYTES:
+                    raise HTTPException(413, "audio request too large")
+            except ValueError as exc:
+                raise HTTPException(400, "invalid Content-Length") from exc
+        stamp = request.headers.get("x-timestamp", "")
+        try:
+            fresh = math.isfinite(float(stamp)) and abs(time.time() - float(stamp)) <= security.NETWORK_MAX_SKEW_S
+        except ValueError:
+            fresh = False
+        if not fresh:
+            raise HTTPException(401, "network link refused: stale timestamp")
+        if uploads.locked():
+            raise HTTPException(503, "too many audio uploads in progress", headers={"Retry-After": "1"})
+        async with uploads:
+            raw = bytearray()
+            async for chunk in request.stream():
+                raw.extend(chunk)
+                if len(raw) > MAX_BODY_BYTES:
+                    raise HTTPException(413, "audio request too large")
+            body = bytes(raw)
+            del raw
+        why = security.verify_network(body, stamp, request.headers.get("x-signature", ""))
         if why:
             raise HTTPException(401, "network link refused: " + why)
         try:

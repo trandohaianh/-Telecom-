@@ -9,7 +9,8 @@ services:
     secrets: [policy_redis_acl, policy_redis_password]
     networks: [policy]
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli --user default --pass \"$$(cat /run/secrets/policy_redis_password)\" ping | grep -q PONG"]
+      # REDISCLI_AUTH keeps the password out of redis-cli argv (visible in ps).
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(cat /run/secrets/policy_redis_password)\" redis-cli --user default ping | grep -q PONG"]
       interval: 5s
       timeout: 2s
       retries: 10
@@ -39,6 +40,11 @@ services:
     secrets: [policy_redis_password]
     depends_on: { redis-policy: { condition: service_healthy } }
     expose: ["50051"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50051), 2).close()"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
     networks: [policy, telecom-client]
     read_only: true
     tmpfs: [/tmp]

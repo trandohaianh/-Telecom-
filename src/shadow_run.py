@@ -44,7 +44,8 @@ def main(batch=256):
 
     # Xác nhận shadow chỉ mô phỏng hành động, tuyệt đối không thi hành enforcement.
     enforced = [r for r in results if r.get("enforced")]
-    assert not enforced, f"shadow mode executed {len(enforced)} actions — that must never happen"
+    if enforced:  # not an assert: the safety check must survive python -O
+        raise RuntimeError(f"shadow mode executed {len(enforced)} actions — that must never happen")
 
     # Khởi tạo bộ đếm quyết định/đồng thuận và vùng lưu đặc trưng, score để báo cáo.
     scored_pairs = [(ev, r) for ev, r in zip(events, results) if r.get("scored", True)]

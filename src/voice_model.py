@@ -153,6 +153,9 @@ class RealVoiceModel:
         if warnings & {"near_silence", "clipping", "insufficient_speech"}:
             return {"decision": "OBSERVE", "score": None, "reason": "audio_quality_abstention",
                     "recommended_action": "NONE"}
+        if "caller_channel_required" in warnings:
+            return {"decision": "OBSERVE", "score": None, "reason": "party_attribution_abstention",
+                    "recommended_action": "NONE"}
         probabilities = np.asarray(self.bundle["estimator"].predict_proba(np.asarray([vector])))
         if (probabilities.shape != (1, 2) or not np.issubdtype(probabilities.dtype, np.number)
                 or not np.isrealobj(probabilities) or not np.isfinite(probabilities).all()

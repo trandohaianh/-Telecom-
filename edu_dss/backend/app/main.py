@@ -14,8 +14,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from redis.asyncio import Redis
 
 from . import services
+from .cache_keys import explanation_key, leaderboard_key
 from .celery_app import celery
-from .config import MAX_BODY_BYTES, REDIS_URL
+from .config import MAX_BODY_BYTES, REDIS_URL, jwt_secret
 from .course_access import course_is_authorized
 from .request_limits import RequestBodyLimitMiddleware
 from .security import Role, require_roles
@@ -27,6 +28,7 @@ class StrictModel(BaseModel):
 
 
 class TrainingRequest(StrictModel):
+    course_id: str = Field(min_length=1, max_length=128)    # dataset scope: caller must teach it
     dataset_ref: str = Field(min_length=1, max_length=256)
     target: str = Field(min_length=1, max_length=128)
     metric: str = Field(default="f1", max_length=32)
@@ -65,6 +67,7 @@ class GradePredictionRequest(StrictModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    jwt_secret()  # fail closed at startup when the signing secret is missing
     app.state.cache = Redis.from_url(REDIS_URL, decode_responses=True,
         socket_connect_timeout=.05, socket_timeout=.05, max_connections=128)
     yield
@@ -102,6 +105,9 @@ async def ready(request: Request):
 
 @app.post("/api/instructor/automl", status_code=202)
 async def start_training(body: TrainingRequest, user=Depends(require_roles(Role.INSTRUCTOR, Role.ADMIN))):
+    # Before: any instructor could queue training on any dataset_ref. The course is now checked here
+    # and sent to the adapter, which must resolve dataset_ref inside that course only.
+    require_course_access(user, body.course_id)
     task_id = await enqueue_owned(train_model, {**body.model_dump(), "requested_by": user["sub"]}, user["sub"])
     return {"task_id": task_id, "status": "queued"}
 
@@ -109,7 +115,7 @@ async def start_training(body: TrainingRequest, user=Depends(require_roles(Role.
 @app.get("/api/instructor/leaderboard/{model_ref}")
 async def leaderboard(model_ref: str, user=Depends(require_roles(Role.INSTRUCTOR, Role.ADMIN))):
     # Adapter stores leaderboard JSON under this tenant-scoped key.
-    key = f"edu:leaderboard:{user['sub']}:{model_ref}"
+    key = leaderboard_key(user["sub"], model_ref)
     value = await app.state.cache.get(key)
     if value is None:
         raise HTTPException(404, "Leaderboard not found")
@@ -127,7 +133,7 @@ async def cms_precompute(body: CmsRequest, user=Depends(require_roles(Role.INSTR
 @app.get("/api/student/explanations/{course_id}/{lecture_id}")
 async def read_explanations(course_id: str, lecture_id: str, user=Depends(require_roles(Role.STUDENT, Role.ADMIN))):
     require_course_access(user, course_id)
-    key = f"edu:explanation:{course_id}:{lecture_id}"
+    key = explanation_key(course_id, lecture_id)
     value = await app.state.cache.get(key)
     if value is None:
         raise HTTPException(404, "Explanation not prepared")

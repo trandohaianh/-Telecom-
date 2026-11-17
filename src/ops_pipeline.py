@@ -41,6 +41,30 @@ def _decision_psi(current: dict, baseline: dict) -> float | None:
     return round(psi, 4)
 
 
+_LAST_CALL_DECISIONS: dict = {}
+
+
+def _call_decision_window(st: dict) -> dict:
+    """CALL decisions since the previous snapshot (D7).
+
+    Before: cumulative counts since start-up for CALL+SMS+AUDIO were compared with CALL-only reference
+    rates, so the PSI mixed domains and a recent shift was diluted by all earlier traffic.
+    """
+    global _LAST_CALL_DECISIONS
+    totals = st.get("call_decisions")
+    if totals is None:   # older engine without per-type counters: keep the previous behaviour
+        d = st.get("decisions", {})
+        return {"ALLOW": d.get("ALLOW", 0) + d.get("FAIL_OPEN", 0), "FLAG": d.get("FLAG", 0), "BLOCK": d.get("BLOCK", 0)}
+    totals = {k: int(totals.get(k, 0)) for k in ("ALLOW", "FLAG", "BLOCK")}
+    previous = _LAST_CALL_DECISIONS
+    if any(totals[k] < previous.get(k, 0) for k in totals):
+        previous = {}    # engine restarted: counters began again from zero
+    window = {k: totals[k] - previous.get(k, 0) for k in totals}
+    if sum(window.values()) >= 500:
+        _LAST_CALL_DECISIONS = totals   # too few calls: keep accumulating into the next snapshot
+    return window
+
+
 def _baseline_rates() -> dict:
     from config import MODEL_DIR
 
@@ -58,8 +82,7 @@ def kpi_snapshot(db: AppDB, engine) -> tuple[str, dict]:
         return "warn", {"reason": "engine not running"}
     st = engine.state(mask=True)
     d = st.get("decisions", {})
-    current = {"ALLOW": d.get("ALLOW", 0) + d.get("FAIL_OPEN", 0), "FLAG": d.get("FLAG", 0), "BLOCK": d.get("BLOCK", 0)}
-    psi = _decision_psi(current, _baseline_rates())
+    psi = _decision_psi(_call_decision_window(st), _baseline_rates())
     drift_status = None if psi is None else ("alert" if psi >= 0.25 else "watch" if psi >= 0.1 else "stable")
     res = st.get("resilience") or {}
     row = {

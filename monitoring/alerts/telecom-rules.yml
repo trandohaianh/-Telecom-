@@ -3,7 +3,8 @@ groups:
   - name: telecom-detection
     rules:
       - alert: TfsDown
-        expr: up{job=~".*telecom.*|.*tfs.*"} == 0
+        # Không phụ thuộc tên job scrape: metric của chính app biến mất cũng là "down".
+        expr: (up{job=~".*telecom.*|.*tfs.*"} == 0) or absent_over_time(tfs_uptime_seconds[5m])
         for: 5m
         labels: {severity: critical}
         annotations: {summary: "Telecom Fraud Shield không scrape được 5 phút"}
@@ -13,6 +14,12 @@ groups:
         annotations:
           summary: "Hơn 20 quyết định fail-open trong 10 phút"
           description: "Mô hình không kịp chấm: cuộc gọi đi qua không được bảo vệ. Kiểm tra CPU, hàng đợi, breaker."
+      - alert: TfsLateEventsUnscored
+        expr: sum(increase(tfs_ingest_unscored{status="LATE"}[10m])) > 20
+        labels: {severity: warning}
+        annotations:
+          summary: "Hơn 20 sự kiện LATE trong 10 phút được cho qua mà không chấm điểm"
+          description: "Sự kiện đến sau watermark toàn cục (lệch thứ tự giữa các trung kế hoặc đồng hồ sai). Kiểm tra nguồn ts."
       - alert: TfsSlowDecisions
         expr: max(tfs_decision_latency_ms{quantile="p99"}) > 30
         for: 10m
@@ -39,12 +46,12 @@ groups:
   - name: telecom-ops
     rules:
       - alert: TfsBackupStale
-        expr: time() - max(tfs_pipeline_last_success_timestamp_seconds{task="backup"}) > 26 * 3600
+        expr: (time() - max(tfs_pipeline_last_success_timestamp_seconds{task="backup"}) > 26 * 3600) or absent(tfs_pipeline_last_success_timestamp_seconds{task="backup"})
         for: 30m
         labels: {severity: critical}
         annotations: {summary: "Không có backup Telecom mới hơn 26 giờ"}
       - alert: TfsKpiStale
-        expr: time() - max(tfs_pipeline_last_success_timestamp_seconds{task="kpi_snapshot"}) > 3 * 3600
+        expr: (time() - max(tfs_pipeline_last_success_timestamp_seconds{task="kpi_snapshot"}) > 3 * 3600) or absent(tfs_pipeline_last_success_timestamp_seconds{task="kpi_snapshot"})
         for: 30m
         labels: {severity: warning}
         annotations: {summary: "Pipeline KPI không chạy hơn 3 giờ"}

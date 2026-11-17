@@ -43,6 +43,7 @@ class EngineCollector:
         network = g("tfs_network_verdicts", "Khuyến nghị gửi nhà mạng theo kết quả", ["decision"])
         latency = g("tfs_decision_latency_ms", "Độ trễ quyết định (cửa sổ gần nhất)", ["quantile"])
         uptime = g("tfs_uptime_seconds", "Thời gian chạy")
+        unscored = g("tfs_ingest_unscored", "Sự kiện bị guard loại (LATE/DUPLICATE): trả ALLOW, không chấm", ["status"])
         if engine is not None:
             try:
                 st = engine.state(mask=True)
@@ -67,9 +68,12 @@ class EngineCollector:
                 for q, v in (st.get("latency_ms") or {}).items():
                     latency.add_metric([q], float(v))
                 uptime.add_metric([], float(st.get("uptime_s", 0)))
+                for k, v in (st.get("ingest_unscored") or {}).items():
+                    unscored.add_metric([k], float(v))
             except Exception:
                 pass
-        yield from (decisions, by_type, processed, resilience, inference, queue, breaker, mode, network, latency, uptime)
+        yield from (decisions, by_type, processed, resilience, inference, queue, breaker, mode, network, latency, uptime,
+                   unscored)
 
         subs = g("tfs_subscribers", "Tài khoản thuê bao")
         reports = g("tfs_number_reports", "Báo cáo số theo trạng thái", ["status"])
@@ -112,7 +116,9 @@ def metrics_authorized(authorization: str, demo_mode: bool) -> bool:
     """METRICS_TOKEN đặt → bắt buộc Bearer/Basic; chưa đặt → chỉ mở khi chạy demo cục bộ."""
     expected = os.environ.get("METRICS_TOKEN", "").strip()
     if not expected:
-        return os.environ.get("FRAUD_PUBLIC", "0") != "1"
+        # Đúng như docstring: không có token thì chỉ mở cho demo cục bộ. Trước đây tham số demo_mode bị bỏ qua,
+        # nên run_live.py (chế độ thật, không đặt FRAUD_PUBLIC) để /metrics mở cho bất kỳ ai.
+        return bool(demo_mode) and os.environ.get("FRAUD_PUBLIC", "0") != "1"
     scheme, _, value = (authorization or "").partition(" ")
     if scheme.lower() == "bearer":
         return hmac.compare_digest(value.strip(), expected)

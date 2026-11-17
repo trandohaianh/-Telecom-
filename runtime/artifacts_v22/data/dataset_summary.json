@@ -16,7 +16,7 @@
       "VOICE_HARVEST": 619
     },
     "warmup_events": 98025,
-    "seconds": 32.3
+    "seconds": 31.4
   },
   "val": {
     "events": 164681,
@@ -35,7 +35,7 @@
       "VOICE_HARVEST": 279
     },
     "warmup_events": 100213,
-    "seconds": 15.6
+    "seconds": 18.6
   },
   "cal": {
     "events": 161316,
@@ -54,7 +54,7 @@
       "VOICE_HARVEST": 215
     },
     "warmup_events": 98567,
-    "seconds": 14.7
+    "seconds": 22.7
   },
   "test": {
     "events": 50000,
@@ -73,6 +73,24 @@
       "ZERO_DAY_WANGIRI": 12
     },
     "warmup_events": 158787,
-    "seconds": 13.6
+    "seconds": 19.8
+  },
+  "ref": {
+    "events": 52407,
+    "fraud_events": 31,
+    "fraud_rate_pct": 0.0592,
+    "by_type": {
+      "AUDIO": 854,
+      "CALL": 37063,
+      "SMS": 14490
+    },
+    "fraud_by_family": {
+      "CLI_SPOOF": 4,
+      "DEEPFAKE_VOICE": 11,
+      "SIM_BOX": 10,
+      "SMS_PHISH": 6
+    },
+    "warmup_events": 159869,
+    "seconds": 12.1
   }
 }

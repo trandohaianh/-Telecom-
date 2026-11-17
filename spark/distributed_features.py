@@ -38,6 +38,11 @@ def subscriber_partition(records):
             yield (row["event_id"], *[float(features[name]) for name in CALL_FEATURES])
 
 
+def imei_entity(row):
+    """Partition key for the shared-IMEI feature; rows without IMEI each get their own key."""
+    return row.get("imei") or "~no-imei~" + str(row["event_id"])
+
+
 def imei_partition(records):
     for _, group in groupby(records, key=lambda item: item[0][0]):
         last_seen = {}
@@ -88,8 +93,10 @@ def add_distributed_features(frame, partitions: int = 8):
         sorted_by_entity(rows.flatMap(subscriber_records)).mapPartitions(subscriber_partition), schema)
     imei_schema = "event_id string, shared_imei_count double"
     imei = frame.sparkSession.createDataFrame(
+        # Rows without IMEI never share a device (their feature is 0), so key each one by its own
+        # event_id: one "" key used to send every such row to a single hot partition.
         sorted_by_entity(rows.map(lambda row: (
-            (row.get("imei") or "", *event_order(row)), row))).mapPartitions(imei_partition),
+            (imei_entity(row), *event_order(row)), row))).mapPartitions(imei_partition),
         imei_schema)
     enriched = frame.join(core.select("event_id", "active_hours_on_network"), "event_id")
     cell_rows = enriched.rdd.map(lambda row: row.asDict(recursive=True))

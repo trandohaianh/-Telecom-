@@ -92,12 +92,13 @@ st.caption("Vai trò thật được xác thực từ JWT phía API; lựa chọ
 if role == "Instructor":
     st.header("Giảng viên")
     with st.form("automl"):
+        train_course = st.text_input("Course ID (dataset thuộc khoá học này)")
         dataset = st.text_input("Dataset reference")
         target = st.text_input("Target")
         metric = st.selectbox("Metric", ["f1", "roc_auc", "accuracy"])
         train = st.form_submit_button("Xếp hàng AutoML")
     if train:
-        submit_task("/api/instructor/automl", {"dataset_ref": dataset, "target": target, "metric": metric}, token)
+        submit_task("/api/instructor/automl", {"course_id": train_course, "dataset_ref": dataset, "target": target, "metric": metric}, token)
     with st.form("cms"):
         course = st.text_input("Course ID")
         lecture = st.text_input("Lecture ID")

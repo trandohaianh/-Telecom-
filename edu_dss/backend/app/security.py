@@ -1,12 +1,13 @@
 """JWT role authorization. User provisioning and signing belong to the IdP."""
 from datetime import datetime, timezone
+import os
 from enum import StrEnum
 
 import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from .config import JWT_ISSUER, JWT_SECRET
+from .config import JWT_AUDIENCE, JWT_ISSUER, jwt_secret
 
 
 class Role(StrEnum):
@@ -29,8 +30,13 @@ async def current_user(credentials: HTTPAuthorizationCredentials = Depends(beare
     if credentials is None:
         raise HTTPException(401, "Bearer token required", headers={"WWW-Authenticate": "Bearer"})
     try:
-        claims = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"],
-                            issuer=JWT_ISSUER, options={"require": ["sub", "exp", "iss", "role"]})
+        required = ["sub", "exp", "iss", "role"] + (["aud"] if JWT_AUDIENCE else [])
+        claims = jwt.decode(credentials.credentials, jwt_secret(), algorithms=["HS256"],
+                            issuer=JWT_ISSUER, audience=JWT_AUDIENCE,
+                            options={"require": required, "verify_aud": JWT_AUDIENCE is not None})
+        if claims.get("demo") and os.getenv("EDU_DEMO_MODE", "0").strip() != "1":
+            # Demo tokens are signed with the real secret; they must stop working once demo mode is off.
+            raise ValueError("demo token outside demo mode")
         role = Role(claims["role"])
         if "iat" in claims and claims["iat"] > int(datetime.now(timezone.utc).timestamp()) + 30:
             raise ValueError("iat in the future")

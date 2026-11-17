@@ -45,6 +45,9 @@ class OpsAgent:
             self.proposals.update((p["id"], p) for p in saved.get("proposals", []))
             self._open.update(saved.get("open", {}))
             self._done_keys.update(saved.get("done_keys", []))
+            # Bộ đếm retro_alerts được khôi phục từ checkpoint: không đề xuất lại các cảnh báo hồi tố cũ.
+            restored = getattr(getattr(engine, "g", None), "stats", {}).get("retro_alerts", 0)
+            self._retro_seen = max(int(saved.get("retro_seen", 0)), int(restored))
 
     # ------------------------------------------------------------------ lifecycle
     def start(self):
@@ -59,7 +62,8 @@ class OpsAgent:
     def _persist(self):
         if self.state_store is not None and self._persist_depth == 0:
             self.state_store.set("agent_state", {"proposals": list(self.proposals.values()),
-                                                "open": self._open, "done_keys": sorted(self._done_keys)})
+                                                "open": self._open, "done_keys": sorted(self._done_keys),
+                                                "retro_seen": self._retro_seen})
 
     def _loop(self):
         while not self._stop.wait(self.interval_s):
@@ -263,7 +267,9 @@ class OpsAgent:
         new = g.stats["retro_alerts"] - self._retro_seen
         if new <= 0:
             return
-        items = list(g.retro)[-new:]
+        lock = getattr(self.e, "det_lock", None)
+        with lock if lock is not None else contextlib.nullcontext():
+            items = list(g.retro)[-new:]
         self._retro_seen = g.stats["retro_alerts"]
         review = [r for r in items if r.get("requires_review")]
         if review:

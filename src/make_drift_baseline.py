@@ -31,7 +31,9 @@ WATCHED = ["calls_1m", "calls_10m", "calls_1h", "callee_dispersion_1h", "in_out_
 
 def main():
     # Đọc đặc trưng validation, mô hình call đã huấn luyện và ngưỡng vận hành.
-    reference_name = "cal" if (DATA_DIR / "cal_call_features.parquet").is_file() else "val"
+    # D7: the reference must look like production traffic. "ref" has realistic prevalence; the older
+    # cal/val windows are fraud-enriched (BLOCK band ~16x too wide) and made every report INVESTIGATE.
+    reference_name = next(name for name in ("ref", "cal", "val") if (DATA_DIR / f"{name}_call_features.parquet").is_file())
     provenance = validate_dataset_manifest(DATA_DIR)
     artifact = validate_model_manifest(MODEL_DIR)
     va = pd.read_parquet(DATA_DIR / f"{reference_name}_call_features.parquet")
@@ -55,7 +57,9 @@ def main():
     baseline["window"] = reference_name
     baseline["dataset_provenance_status"] = provenance["status"]
     baseline["model_artifact_status"] = artifact["status"]
-    baseline["reference_scope"] = "synthetic threshold-calibration window, enriched fraud prevalence; compare matched time/peer groups"
+    baseline["reference_scope"] = ("synthetic reference window, realistic prevalence, known families only; compare matched time/peer groups"
+                                   if reference_name == "ref" else
+                                   "synthetic threshold-calibration window, enriched fraud prevalence; compare matched time/peer groups")
     baseline["top_feature_coverage"] = "includes active_hours_on_network"
     baseline["n_events"] = int(len(va))
     drift.save(baseline, MODEL_DIR / "drift_baseline.json")

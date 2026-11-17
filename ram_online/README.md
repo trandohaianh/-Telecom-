@@ -53,8 +53,10 @@ python -m ram_online.streaming --bootstrap localhost:29092 --policy-redis redis:
 Provision/restore policy first. Offsets commit after successful Redis operations,
 with auto commit/store disabled. This is at-least-once with idempotent updates,
 not a Kafka+Redis exactly-once transaction. Recovery/rebalance fencing is still
-required in production. Invalid records stop without commit; durable DLQ is a
-production extension. A high rate emits FLAG. Automatic blocking is off by
+required in production. Invalid records stop without commit unless a DLQ topic
+is set (--dlq-topic / KAFKA_DLQ_TOPIC): then data errors are produced to the DLQ
+(acks=all, flushed) before the offset is committed; infrastructure errors never
+go to the DLQ. A high rate emits FLAG. Automatic blocking is off by
 default; --activate-demo-blocks is an illustrative policy, not a validated fraud
 classifier. Blocks remain until explicitly removed; window expiry does not
 unblock. Unknown first-time fraud cannot be identified by deny lookup alone.

@@ -53,6 +53,17 @@ def verify_password(password: str, stored: str | None) -> bool:
         return False
 
 
+_DUMMY_HASH = None
+
+
+def burn_password_check(password: str) -> None:
+    """Chạy một lần scrypt giả khi không có tài khoản, để thời gian phản hồi không lộ email/tên nào tồn tại."""
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = hash_password("timing-equaliser-not-a-password")
+    verify_password(password or "", _DUMMY_HASH)
+
+
 def normalize_email(email: str) -> str:
     email = (email or "").strip().lower()
     if not _EMAIL_RE.match(email):
@@ -87,7 +98,8 @@ class RateLimiter:
             return
         t = time.monotonic()
         with self._lock:
-            q = self._hits.setdefault((scope, key.lower()), deque())
+            # Cùng chuẩn hoá với phần tra tài khoản (strip + lower): " admin" không được có ngăn đếm riêng.
+            q = self._hits.setdefault((scope, key.strip().lower()), deque())
             while q and q[0] <= t - window_s:
                 q.popleft()
             if len(q) >= limit:
@@ -100,7 +112,7 @@ class RateLimiter:
             if scope is None:
                 self._hits.clear()
             else:
-                self._hits.pop((scope, (key or "").lower()), None)
+                self._hits.pop((scope, (key or "").strip().lower()), None)
 
 
 limiter = RateLimiter()
@@ -224,7 +236,10 @@ class SubscriberAccounts:
     def authenticate(self, email: str, password: str) -> int | None:
         row = self.db.one("SELECT id, password_hash FROM subscribers WHERE email=? AND disabled_at IS NULL",
                           ((email or "").strip().lower(),))
-        if row and verify_password(password, row["password_hash"]):
+        if row is None or not row["password_hash"]:
+            burn_password_check(password)
+            return None
+        if verify_password(password, row["password_hash"]):
             return int(row["id"])
         return None
 
@@ -232,12 +247,17 @@ class SubscriberAccounts:
         with self.db.tx() as c:
             row = c.execute("SELECT id, disabled_at FROM subscribers WHERE google_sub=?", (ident.sub,)).fetchone()
             if row is None:
-                row = c.execute("SELECT id, disabled_at, google_sub FROM subscribers WHERE email=?",
+                row = c.execute("SELECT id, disabled_at, google_sub, password_hash FROM subscribers WHERE email=?",
                                 (ident.email,)).fetchone()
                 if row is not None:
                     if row["google_sub"] and row["google_sub"] != ident.sub:
                         raise HTTPException(403, "Email đã liên kết với tài khoản Google khác")
                     c.execute("UPDATE subscribers SET google_sub=? WHERE id=?", (ident.sub, row["id"]))
+                    if row["password_hash"]:
+                        # Đăng ký bằng email không xác minh quyền sở hữu hộp thư; Google thì có. Người đã
+                        # đặt mật khẩu trước (có thể là kẻ chiếm chỗ) mất mật khẩu và mọi phiên đang mở.
+                        c.execute("UPDATE subscribers SET password_hash=NULL WHERE id=?", (row["id"],))
+                        c.execute("DELETE FROM subscriber_sessions WHERE subscriber_id=?", (row["id"],))
             if row is not None:
                 if row["disabled_at"]:
                     raise HTTPException(403, "Tài khoản đã bị khoá")
@@ -307,18 +327,26 @@ class SubscriberAccounts:
         provider.send(phone, code)
 
     def otp_verify(self, subscriber_id: int, phone: str, code: str) -> str:
+        # Lỗi được ghi nhận rồi mới ném SAU khi COMMIT: ném HTTPException bên trong tx() sẽ ROLLBACK
+        # và xoá luôn lần đếm sai, khiến mã 6 số bị dò không giới hạn.
+        failure = None
         with self.db.tx() as c:
             row = c.execute("SELECT * FROM otp_codes WHERE phone=?", (phone,)).fetchone()
             if row is None or row["subscriber_id"] != subscriber_id or row["expires_at"] < now():
-                raise HTTPException(400, "Mã OTP không hợp lệ hoặc đã hết hạn")
-            if row["attempts"] >= OTP_MAX_ATTEMPTS:
+                failure = HTTPException(400, "Mã OTP không hợp lệ hoặc đã hết hạn")
+            elif row["attempts"] >= OTP_MAX_ATTEMPTS:
                 c.execute("DELETE FROM otp_codes WHERE phone=?", (phone,))
-                raise HTTPException(429, "Nhập sai quá nhiều lần, hãy gửi lại mã")
-            if not hmac.compare_digest(row["code_hash"], _token_hash(f"{phone}:{(code or '').strip()}")):
+                failure = HTTPException(429, "Nhập sai quá nhiều lần, hãy gửi lại mã")
+            elif not hmac.compare_digest(row["code_hash"], _token_hash(f"{phone}:{(code or '').strip()}")):
                 c.execute("UPDATE otp_codes SET attempts=attempts+1 WHERE phone=?", (phone,))
-                raise HTTPException(400, "Mã OTP không đúng")
-            c.execute("DELETE FROM otp_codes WHERE phone=?", (phone,))
-            c.execute("UPDATE subscribers SET msisdn=?, msisdn_kind='verified' WHERE id=?", (phone, subscriber_id))
+                if row["attempts"] + 1 >= OTP_MAX_ATTEMPTS:
+                    c.execute("DELETE FROM otp_codes WHERE phone=?", (phone,))
+                failure = HTTPException(400, "Mã OTP không đúng")
+            else:
+                c.execute("DELETE FROM otp_codes WHERE phone=?", (phone,))
+                c.execute("UPDATE subscribers SET msisdn=?, msisdn_kind='verified' WHERE id=?", (phone, subscriber_id))
+        if failure is not None:
+            raise failure
         return phone
 
     def count(self) -> int:

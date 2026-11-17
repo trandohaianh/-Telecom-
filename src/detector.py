@@ -18,7 +18,7 @@ import reason_codes as rc
 from config import MODEL_DIR, MODEL_VERSION
 from fast_iforest import FastIForest
 from model_manifest import validate_model_manifest
-from feature_store import AUDIO_FEATURES, CALL_FEATURES, SMS_META_FEATURES, FeatureStore
+from feature_store import AUDIO_FEATURES, CALL_FEATURES, PROTECTED, SMS_META_FEATURES, FeatureStore
 
 # ACTIONS ánh xạ cặp (event_type, decision) sang nhãn tiếng Việt/Anh để UI và operator hiểu hành động.
 ACTIONS = {
@@ -339,6 +339,11 @@ class Detector:
         # from earlier AUDIO events affects later CALLs equally for every micro-batch size.
         for ev, r, f in zip(events, results, all_features):
             et = ev["event_type"]
+            if ev.get("caller") in PROTECTED:
+                # Số tổng đài được bảo vệ là nạn nhân bị giả mạo, không bao giờ bị chặn theo trí nhớ thu giọng:
+                # vài đoạn AUDIO giả CLI ngân hàng không được làm chặn cả các cuộc gọi thật từ trung kế ngân hàng.
+                # Cuộc gọi giả CLI không qua trung kế đã có protected_cli_mismatch và luật dự phòng.
+                continue
             if et == "AUDIO" and f["caller_speech_ratio"] < HARVEST_MAX_SPEECH and f["callee_speech_s"] >= 1.0:
                 self.harvest_hits.setdefault(ev["caller"], {})[ev["callee"]] = ev["ts"]
             if et in ("CALL", "AUDIO") and self._is_harvester(ev["caller"], ev["ts"]):

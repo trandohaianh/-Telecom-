@@ -193,6 +193,10 @@ def analyze_wav(payload: bytes, *, caller_channel: int | None = None, asr=None) 
     warnings = []
     if channels == 1 or caller_channel is None:
         warnings.append("party_attribution_unavailable")
+    if channels > 1 and caller_channel is None:
+        # Channel 0 may be the callee: scoring it would judge the wrong party (training uses the
+        # labelled caller channel per row). The model abstains on this warning.
+        warnings.append("caller_channel_required")
     if features["rms_dbfs"] < -50:
         warnings.append("near_silence")
     if features["clipping_ratio"] > .01:

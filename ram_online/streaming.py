@@ -11,7 +11,7 @@ import json
 import os
 import time
 
-from .core import PolicyStore, make_client, normalize_phone, run
+from .core import PolicyStore, normalize_phone, run
 from .resources import owned_redis, close_async
 
 WINDOW_LUA = """
@@ -66,12 +66,37 @@ class SlidingWindowDetector:
                 "flagged": flagged, "fresh": fresh, "activated": activated}
 
 
-async def process_kafka_message(message, detector, consumer, commit=None):
-    event = json.loads(message.value())
-    caller = normalize_phone(event["caller"])
-    if message.key() != caller.encode("ascii"):
-        raise ValueError("Kafka key must equal canonical caller")
-    result = await detector.process(event)
+# Lỗi xác định theo nội dung bản ghi: chạy lại bao nhiêu lần cũng hỏng y như vậy.
+POISON_ERRORS = (ValueError, KeyError, TypeError, UnicodeError)
+
+
+def _is_poison(exc):
+    if isinstance(exc, POISON_ERRORS):
+        return True
+    # Redis trả lỗi xung đột call_id/timestamp từ WINDOW_LUA: cũng là lỗi dữ liệu, không phải lỗi hạ tầng.
+    return type(exc).__name__ == "ResponseError" and "conflict" in str(exc)
+
+
+async def process_kafka_message(message, detector, consumer, commit=None, dead_letter=None):
+    """At-least-once: commit only after success, or after the record is durably dead-lettered.
+
+    Without a dead-letter sink a malformed record still stops the consumer (no silent loss).
+    With one, the record goes to the DLQ first and then its offset is committed, so a single
+    bad record no longer blocks its partition forever.
+    """
+    try:
+        event = json.loads(message.value())
+        if not isinstance(event, dict):
+            raise ValueError("Kafka value must be a JSON object")
+        caller = normalize_phone(event["caller"])
+        if message.key() != caller.encode("ascii"):
+            raise ValueError("Kafka key must equal canonical caller")
+        result = await detector.process(event)
+    except Exception as exc:
+        if dead_letter is None or not _is_poison(exc):
+            raise
+        await dead_letter(message, f"{type(exc).__name__}: {exc}"[:500])
+        result = {"dead_lettered": True, "reason": type(exc).__name__}
     if commit is None:
         await asyncio.to_thread(consumer.commit, message=message, asynchronous=False)
     else:
@@ -137,13 +162,31 @@ async def consume(args):
                 threshold=args.threshold, activate_demo_blocks=args.activate_demo_blocks)
             async def commit(message):
                 await owner.call(consumer.commit, message=message, asynchronous=False)
+            dead_letter = None
+            if getattr(args, "dlq_topic", None):
+                from confluent_kafka import Producer
+                producer = Producer({**{k: v for k, v in config.items() if k.startswith(("security.", "ssl."))},
+                                     "bootstrap.servers": args.bootstrap, "acks": "all",
+                                     "enable.idempotence": True})
+
+                async def dead_letter(message, reason):
+                    failures = []
+                    producer.produce(args.dlq_topic, key=message.key(), value=message.value(),
+                                     headers=[("error", reason.encode()), ("source_topic", message.topic().encode()),
+                                              ("source_partition", str(message.partition()).encode()),
+                                              ("source_offset", str(message.offset()).encode())],
+                                     on_delivery=lambda err, _msg: err and failures.append(err))
+                    remaining = await asyncio.to_thread(producer.flush, 10.0)
+                    if remaining or failures:
+                        raise RuntimeError("dead-letter publish not acknowledged; offset left uncommitted")
             while True:
                 message = await owner.call(consumer.poll, 1.0)
                 if message is None:
                     continue
                 if message.error():
                     raise RuntimeError("Kafka message error")
-                result = await process_kafka_message(message, detector, consumer, commit=commit)
+                result = await process_kafka_message(message, detector, consumer, commit=commit,
+                                                     dead_letter=dead_letter)
                 # Do not print the caller's phone number into production logs.
                 print(json.dumps({k: v for k, v in result.items() if k != "caller"}), flush=True)
     finally:
@@ -162,6 +205,8 @@ def main():
     parser.add_argument("--namespace", default="telecom-policy")
     parser.add_argument("--threshold", type=int, default=100)
     parser.add_argument("--activate-demo-blocks", action="store_true")
+    parser.add_argument("--dlq-topic", default=os.environ.get("KAFKA_DLQ_TOPIC"),
+                        help="topic for malformed records; without it a malformed record stops the consumer")
     try:
         run(consume(parser.parse_args()))
     except (asyncio.CancelledError, KeyboardInterrupt):

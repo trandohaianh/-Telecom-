@@ -19,6 +19,10 @@ class OnlineUnavailable(RuntimeError):
     """Unknown/late policy decision. Adapter applies its explicit fail-open policy."""
 
 
+class OnlineOverloaded(OnlineUnavailable):
+    """Shed locally before any Redis call (capacity/event-loop lag). Not a dependency failure."""
+
+
 def normalize_phone(value: str) -> str:
     if not isinstance(value, str) or not re.fullmatch(r"\+[1-9][0-9]{7,14}", value):
         raise ValueError("phone must be canonical E.164, e.g. +84901234567")
@@ -183,7 +187,7 @@ class OnlineGate:
         started = time.perf_counter()
         phone = normalize_phone(phone_number)
         if self._inflight >= self.max_inflight:
-            raise OnlineUnavailable("online capacity exceeded")
+            raise OnlineOverloaded("online capacity exceeded")
         self._inflight += 1
         try:
             snapshot = self.snapshot  # One immutable reference per request.
@@ -191,7 +195,7 @@ class OnlineGate:
             manifest = snapshot.manifest if snapshot else ""
             remaining = self.budget_ms / 1000 - (time.perf_counter() - started)
             if remaining <= 0:
-                raise OnlineUnavailable("decision deadline exceeded before Redis")
+                raise OnlineOverloaded("decision deadline exceeded before Redis")
             async with asyncio.timeout(remaining):
                 result = await self.policy.client.eval(
                     CHECK_LUA, 2, self.policy.manifest_key, self.policy.deny_key,

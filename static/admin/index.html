@@ -359,9 +359,9 @@ function card(a){
   // Tạo nhãn trực quan cho fail-open, dự phòng, hồi tố, zero-day và sự kiện được tiêm thủ công.
   const tags = `<span class="tag ${cls}">${fo ? 'FAIL-OPEN' : a.decision}</span> ${fb ? `<span class="tag fb">${L==='vi'?'DỰ PHÒNG':'FALLBACK'}</span>` : ''} ${a.retro ? `<span class="tag retro">${L==='vi'?'HỒI TỐ':'RETRO'}</span>` : ''} ${a.zero_day ? '<span class="tag z">ZERO-DAY</span>' : ''} ${a.injected ? `<span class="tag inj">${L==='vi'?'MÔ PHỎNG':'INJECTED'}</span>` : ''}`;
   // Hiển thị tối đa bốn mã/lý do phát hiện theo ngôn ngữ đang chọn.
-  const rs = (a.reasons || []).slice(0, 4).map(r => `<li><code>${r.code}</code> ${L === 'vi' ? r.vi : r.en}</li>`).join('');
+  const rs = (a.reasons || []).slice(0, 4).map(r => `<li><code>${esc(r.code)}</code> ${esc(L === 'vi' ? r.vi : r.en)}</li>`).join('');
   // Trả markup của thẻ, gồm loại event, hai số liên quan, risk/anomaly và thời gian.
-  return `<div class="al ${cls}" data-id="${a.event_id}"><div class="top"><div>${tags} <b>${T[a.event_type][L==='vi'?0:1]}</b> <span class="mono" style="color:var(--mut)">${a.party ?? ''} → ${a.counterparty ?? ''}</span></div><span class="mono">${a.zero_day ? 'anomaly +' + a.anomaly_score.toFixed(3) : (a.risk != null ? 'risk ' + a.risk.toFixed(3) : '')} · ${a.time}</span></div><div class="act">${L === 'vi' ? a.action_vi : a.action_en}</div><ul>${rs}</ul></div>`;
+  return `<div class="al ${cls}" data-id="${esc(a.event_id)}"><div class="top"><div>${tags} <b>${T[a.event_type][L==='vi'?0:1]}</b> <span class="mono" style="color:var(--mut)">${esc(a.party)} → ${esc(a.counterparty)}</span></div><span class="mono">${a.zero_day ? 'anomaly +' + a.anomaly_score.toFixed(3) : (a.risk != null ? 'risk ' + a.risk.toFixed(3) : '')} · ${esc(a.time)}</span></div><div class="act">${esc(L === 'vi' ? a.action_vi : a.action_en)}</div><ul>${rs}</ul></div>`;
 }
 // Cập nhật các KPI, trạng thái breaker và danh sách cảnh báo từ phản hồi /api/state.
 function render(s){

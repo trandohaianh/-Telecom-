@@ -21,7 +21,7 @@ import pyarrow.parquet as pq
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from feature_store import CALL_FEATURES, FeatureStore
-from event_contract import (json_safe, order_key, payload_hash, validate_call,
+from event_contract import (fsync_directory, json_safe, order_key, payload_hash, validate_call,
                             require_checkpoint_namespace)
 
 
@@ -63,6 +63,7 @@ class StatefulCallStream:
             temporary_manifest = manifest.with_suffix(".pending")
             temporary_manifest.write_text(json.dumps(expected), encoding="utf-8")
             temporary_manifest.replace(manifest)
+            fsync_directory(manifest.parent)
         self.store = FeatureStore()
         self.last_batch = -1
         self.last_ts = self.max_ts = self.watermark = None
@@ -116,6 +117,16 @@ class StatefulCallStream:
         pending, seen = list(self.pending_events), dict(self.seen)
         max_ts = self.max_ts
         quarantine, duplicates, ignored, accepted = [], 0, 0, 0
+        # D13: same rule as the distributed engine. Conflicting copies of one event_id inside a batch
+        # are all quarantined; accepting "the first" depended on arrival order.
+        batch_hashes = {}
+        for raw in raw_rows:
+            try:
+                probe = validate_call(dict(raw))
+            except ValueError:
+                continue
+            if probe is not None:
+                batch_hashes.setdefault(probe["event_id"], set()).add(payload_hash(probe))
         for raw in raw_rows:
             try:
                 row = validate_call(raw)
@@ -123,6 +134,8 @@ class StatefulCallStream:
                     ignored += 1
                     continue
                 event_id, digest = row["event_id"], payload_hash(row)
+                if len(batch_hashes.get(event_id, ())) > 1:
+                    raise ValueError("duplicate event_id with conflicting payload")
                 previous = seen.get(event_id)
                 if previous:
                     if previous["hash"] != digest:
@@ -195,6 +208,7 @@ class StatefulCallStream:
                 with path.open("r+b") as handle:
                     os.fsync(handle.fileno())
             temporary.rename(target)
+            fsync_directory(target.parent)
         finally:
             if temporary.exists():
                 shutil.rmtree(temporary)

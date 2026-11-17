@@ -17,6 +17,20 @@ android {
 
     buildFeatures { buildConfig = true }
 
+    // Ký bản phát hành khi có keystore (truyền qua -P hoặc ~/.gradle/gradle.properties, không lưu trong repo):
+    //   -PreleaseKeystore=/duong/dan.jks -PreleaseStorePassword=... -PreleaseKeyAlias=... -PreleaseKeyPassword=...
+    val releaseKeystore = project.findProperty("releaseKeystore") as String?
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = project.findProperty("releaseStorePassword") as String?
+                keyAlias = project.findProperty("releaseKeyAlias") as String?
+                keyPassword = project.findProperty("releaseKeyPassword") as String?
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Trình giả lập Android thấy máy tính chạy server ở địa chỉ 10.0.2.2 (HTTP chỉ cho bản debug).
@@ -27,6 +41,7 @@ android {
             val releaseServer = (project.findProperty("releaseServer") as String?) ?: "https://telecom-demo.duckdns.org/app/"
             require(releaseServer.startsWith("https://")) { "releaseServer phải dùng https://" }
             buildConfigField("String", "DEFAULT_SERVER", "\"$releaseServer\"")
+            if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }

@@ -1,7 +1,7 @@
 name: Deploy
 
 # Khi CI xanh trên main: SSH vào VM, kéo code, build lại container Telecom, smoke test.
-# Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY. Repo trên VM: ~/telecom
+# Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS (khuyến nghị). Repo trên VM: ~/telecom
 on:
   workflow_run:
     workflows: ["CI"]
@@ -13,7 +13,8 @@ concurrency: {group: deploy-telecom, cancel-in-progress: false}
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Chỉ CI của một lần push lên main (không phải PR có nhánh tên main), và chỉ đúng commit CI đã chạy.
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -22,8 +23,20 @@ jobs:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_REF: ${{ github.event.workflow_run.head_sha || '' }}
         run: |
           if [ -z "$HOST" ]; then echo "::warning::Chưa cấu hình DEPLOY_HOST"; exit 0; fi
           install -m 600 /dev/null key && printf '%s\n' "$SSH_KEY" > key
-          ssh -i key -o StrictHostKeyChecking=accept-new "$USER@$HOST" 'bash -lc "bash ~/telecom/deploy/cloud/deploy.sh"'
-          rm -f key
+          case "$DEPLOY_REF" in ''|*[!0-9a-f]*) DEPLOY_REF="" ;; esac
+          # Runner mới mỗi lần: accept-new tin bất kỳ host key nào. Ghim bằng secret DEPLOY_KNOWN_HOSTS
+          # (ssh-keyscan -H <host> chạy một lần từ máy tin cậy).
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > known_hosts
+            HOSTKEY_OPTS="-o StrictHostKeyChecking=yes -o UserKnownHostsFile=known_hosts"
+          else
+            echo "::warning::Chưa cấu hình DEPLOY_KNOWN_HOSTS: host key không được ghim (accept-new)"
+            HOSTKEY_OPTS="-o StrictHostKeyChecking=accept-new"
+          fi
+          ssh -i key $HOSTKEY_OPTS "$USER@$HOST" "DEPLOY_REF=$DEPLOY_REF bash -lc 'bash ~/telecom/deploy/cloud/deploy.sh'"
+          rm -f key known_hosts

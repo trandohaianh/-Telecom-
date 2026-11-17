@@ -20,7 +20,7 @@ import httpx
 import numpy as np
 
 from security import sign_network, network_timestamp
-from precise_event_loop import run_async, clock_description
+from precise_event_loop import run_async
 
 DEADLINE_MS = 30.0
 ARRIVAL_PACING = "thread_sleep" if sys.platform == "win32" else "asyncio_sleep"

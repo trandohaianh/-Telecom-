@@ -155,10 +155,13 @@ def _save_users(db: dict) -> None:
 
 
 def login_password(username: str, password: str, clock=time.time):
-    from accounts import verify_password
+    from accounts import burn_password_check, verify_password
 
     name = (username or "").strip().lower()
     u = users().get(name)
+    if not u or not u.get("password_hash"):
+        burn_password_check(password)
+        return None
     if not u or u.get("role") not in ROLES or u.get("disabled") or not verify_password(password, u.get("password_hash")):
         return None
     return _open_session(_public(name, u), clock)
@@ -203,10 +206,14 @@ def upsert_operator(name: str, role: str, *, email: str | None = None, password:
             u["disabled"] = bool(disabled)
         db[name] = u
         _save_users(db)
-    if disabled:
+    if disabled or password:
+        # Khoá tài khoản hoặc đổi mật khẩu kết thúc mọi phiên đang mở, kể cả trong kho phiên bền:
+        # trước đây kho bền giữ phiên lại, dùng tiếp được nếu tài khoản được mở khoá trong TTL.
         with _sessions_lock:
             for k in [k for k, s in SESSIONS.items() if s["name"] == name]:
                 del SESSIONS[k]
+            if _session_store is not None and hasattr(_session_store, "delete_sessions_for"):
+                _session_store.delete_sessions_for(name)
     return next(o for o in list_operators() if o["name"] == name)
 
 
@@ -259,8 +266,12 @@ def require(min_role: str):
         u = session_user(bearer(authorization))
         if u is None:
             raise HTTPException(401, "session missing or expired: sign in again at /api/login")
-        if u["name"] in suspended or users().get(u["name"], {}).get("disabled"):
+        account = users().get(u["name"], {})
+        if u["name"] in suspended or account.get("disabled"):
             raise HTTPException(403, "account suspended by an administrator")
+        # Vai trò lấy từ tài khoản hiện tại, không phải bản sao lúc mở phiên: hạ quyền có hiệu lực ngay.
+        if account.get("role") in ROLES and account["role"] != u["role"]:
+            u = {**u, "role": account["role"], "role_label": ROLE_LABEL_VI.get(account["role"], account["role"])}
         if ROLES[u["role"]] < ROLES[min_role]:
             raise HTTPException(403, f"role '{u['role']}' cannot do this (needs '{min_role}')")
         return u
@@ -443,26 +454,52 @@ class AuditLog:
         return [json.loads(x) for x in self.path.read_text(encoding="utf-8").splitlines()[-n:] if x.strip()]
 
 
-def verify_audit(path: Path = None, user_db: dict | None = None) -> dict:
-    """Checks the chain and every signature. Reports the first broken line and why."""
+def verify_audit(path: Path = None, user_db: dict | None = None, anchor: dict | None = None) -> dict:
+    """Checks the chain and every signature. Reports the first broken line and why.
+
+    The chain alone cannot see lines deleted from the END of the file. ``head`` (records + last
+    hash) is returned so it can be copied to a system outside this server; passing that copy back
+    as ``anchor`` detects truncation or rewriting of everything up to it.
+    """
     path, db = Path(path or AUDIT_FILE), (user_db if user_db is not None else users())
-    prev, n = GENESIS, 0
+    result = _verify_audit_chain(path, db)
+    if anchor is not None and result["valid"]:
+        want_n, want_hash = int(anchor.get("records", 0)), str(anchor.get("hash", ""))
+        if want_n > result["records"] or (want_n and result["hashes"][want_n - 1] != want_hash):
+            result.update(valid=False, problem="log truncated or rewritten before the external anchor",
+                          first_bad_line=min(want_n, result["records"] + 1))
+    result.pop("hashes", None)
+    return result
+
+
+def _verify_audit_chain(path: Path, db: dict) -> dict:
+    prev, n, hashes = GENESIS, 0, []
+
+    def out(**kw):
+        return {"head": {"records": n, "hash": prev}, "hashes": hashes, **kw}
     if not path.exists():
-        return {"valid": True, "records": 0, "first_bad_line": None, "problem": None}
+        return out(valid=True, records=0, first_bad_line=None, problem=None)
     for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
-        row = json.loads(line)
-        payload = json.dumps(row["entry"], ensure_ascii=False, sort_keys=True)
+        try:
+            row = json.loads(line)
+            payload = json.dumps(row["entry"], ensure_ascii=False, sort_keys=True)
+            if not isinstance(row["entry"], dict) or not all(isinstance(row[k], str) for k in ("prev", "hash", "sig")):
+                raise TypeError("audit record fields have the wrong type")
+        except (ValueError, TypeError, KeyError, AttributeError):
+            # Dòng hỏng là dấu hiệu bị sửa, không phải lỗi 500 của máy chủ.
+            return out(valid=False, records=n, first_bad_line=i, problem="malformed record (not valid audit JSON)")
         if row["prev"] != prev:
-            return {"valid": False, "records": n, "first_bad_line": i, "problem": "chain broken (line removed or reordered)"}
+            return out(valid=False, records=n, first_bad_line=i, problem="chain broken (line removed or reordered)")
         if _digest(prev, payload) != row["hash"]:
-            return {"valid": False, "records": n, "first_bad_line": i, "problem": "content edited after it was written"}
+            return out(valid=False, records=n, first_bad_line=i, problem="content edited after it was written")
         actor = row["entry"].get("actor")
         if actor not in db or not hmac.compare_digest(_sign(db[actor]["sign_key"], row["hash"]), row["sig"]):
-            return {"valid": False, "records": n, "first_bad_line": i,
-                    "problem": f"signature does not match '{actor}' (written without that user's key)"}
+            return out(valid=False, records=n, first_bad_line=i,
+                       problem=f"signature does not match '{actor}' (written without that user's key)")
         prev, n = row["hash"], n + 1
-    return {"valid": True, "records": n, "first_bad_line": None, "problem": None}
+        hashes.append(prev)
+    return out(valid=True, records=n, first_bad_line=None, problem=None)
 
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import collections
 import copy
+import heapq
 import itertools
 import threading
 import time
@@ -132,7 +133,8 @@ class FallbackRules:
                     self.deny[key] = after
                     updates[key] = after
         if len(self.deny) > self.max_entries:
-            for key, _ in sorted(self.deny.items(), key=lambda kv: kv[1])[: len(self.deny) - self.max_entries]:
+            # nsmallest: O(n log k) cho k mục cần bỏ (thường 1), thay vì sắp xếp lại 200k mục mỗi lần BLOCK.
+            for key, _ in heapq.nsmallest(len(self.deny) - self.max_entries, self.deny.items(), key=lambda kv: kv[1]):
                 del self.deny[key]
                 evicted.append(key)
 
@@ -164,8 +166,10 @@ class GuardedDetector:
     # __init__ lưu detector được bảo vệ, ngân sách, luật dự phòng và hàng đợi chấm lại có giới hạn.
     def __init__(self, detector, budget_ms: float, breaker: CircuitBreaker | None = None,
                  fallback: FallbackRules | None = None, rescore_max: int = 50_000,
-                 registry=None):
+                 registry=None, content_budget_ms: float | None = None):
         self.det, self.budget_ms = detector, budget_ms
+        # Batch không có CALL (chỉ SMS/AUDIO) có ngân sách tầng 2 (170 ms), không phải 30 ms của tầng 1.
+        self.content_budget_ms = content_budget_ms
         self.cb = breaker or CircuitBreaker()
         self.fallback = fallback if fallback is not None else FallbackRules()
         # Danh bạ số thương mại đã đăng ký gọi ra hàng loạt. Chỉ miễn các tín hiệu
@@ -220,13 +224,16 @@ class GuardedDetector:
             self.cb.record_failure("error")
             return self._degraded(events, f"error: {type(exc).__name__}")
         elapsed = (time.perf_counter() - t) * 1000.0
-        if elapsed > self.budget_ms:
+        budget = self.budget_ms
+        if self.content_budget_ms is not None and not any(e.get("event_type") == "CALL" for e in events):
+            budget = max(budget, self.content_budget_ms)
+        if elapsed > budget:
             self.cb.record_failure("timeout")
             # The model did score these events (its state is already updated), only too late to act
             # before the phone rang: keep the late verdicts instead of scoring the events twice.
             # Decide these events first (the network already continued them), only then learn from
             # the late verdicts, so a late verdict never acts on its own event.
-            out = self._degraded(events, f"timeout {elapsed:.1f} ms > {self.budget_ms:.0f} ms", queue=False)
+            out = self._degraded(events, f"timeout {elapsed:.1f} ms > {budget:.0f} ms", queue=False)
             self.stats["late_verdicts"] += len(res)
             self._keep_retro(events, res)
             return out
@@ -294,7 +301,6 @@ class GuardedDetector:
             return []
         if not self.cb.allow_request():
             return []
-        t = time.perf_counter()
         batch = list(itertools.islice(self.rescore_queue, min(max_n, len(self.rescore_queue))))
         if not batch:
             return []
@@ -303,8 +309,13 @@ class GuardedDetector:
         before = fs.state_dict() if fs is not None else None
         harvest = copy.deepcopy(getattr(self.det, "harvest_hits", None))
         model_error = None
+        # Đo riêng thời gian chấm điểm: sao chép/khôi phục state là bảo trì, không phải lỗi mô hình,
+        # nên không được đếm thành timeout và mở breaker cho cả lưu lượng thật.
+        t = time.perf_counter()
+        scoring_ms = 0.0
         try:
             res = self.det.score_batch(batch)
+            scoring_ms = (time.perf_counter() - t) * 1000.0
             if len(res) != len(batch):
                 raise RuntimeError("rescore result count does not match queued events")
         except Exception as exc:
@@ -341,7 +352,7 @@ class GuardedDetector:
         for _ in batch:
             self.rescore_queue.popleft()
         self.stats["rescored"] += len(batch)
-        if (time.perf_counter() - t) * 1000.0 > budget_ms:
+        if scoring_ms > budget_ms:
             self.cb.record_failure("timeout")
         else:
             self.cb.record_success()

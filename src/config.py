@@ -19,6 +19,15 @@ for _d in (DATA_DIR, MODEL_DIR, LOG_DIR, STATIC_DIR):
 # SLA_TOTAL_MS là tổng ngân sách latency cho một quyết định từ nhận event đến action.
 SLA_TOTAL_MS = 200.0          # whole decision path
 # SLA_TIER1_MS là ngân sách pre-call tier 1, nơi phản hồi phải rất nhanh.
+# Event time is Unix seconds (UTC). Hour-of-day features and the simulator's daily profile both use
+# local Vietnam time (UTC+7) through local_hour(), so training data and live traffic agree (D6).
+LOCAL_UTC_OFFSET_S = 7 * 3600
+
+
+def local_hour(ts: float) -> float:
+    return ((ts + LOCAL_UTC_OFFSET_S) / 3600.0) % 24
+
+
 SLA_TIER1_MS = 30.0           # pre-call signalling decision
 # SLA_TIER2_MS là ngân sách cho audio / content tier 2, chấm điểm kỹ hơn.
 SLA_TIER2_MS = 170.0          # in-call audio / SMS content decision

@@ -15,5 +15,5 @@
     "serving_fail_open": 0,
     "serving_unexpected_enforce": 0
   },
-  "must_be_true": ["evidence_chain_valid"]
+  "must_be_true": ["evidence_chain_valid", "smoke_passed"]
 }

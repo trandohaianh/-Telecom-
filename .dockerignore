@@ -19,3 +19,10 @@ _stage*
 *.tar.gz
 runtime/*
 !runtime/artifacts_v22
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+**/secrets
+**/*.key

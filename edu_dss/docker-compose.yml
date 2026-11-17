@@ -72,7 +72,6 @@ services:
     restart: unless-stopped
     command: ["sh", "/srv/worker-entrypoint.sh"]
     environment:
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
       EDU_ADAPTER_TOKEN_FILE: /run/secrets/edu_adapter_token
       CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-2}
@@ -83,7 +82,7 @@ services:
       EDU_DEMO_MODE: ${EDU_DEMO_MODE:-0}
       EDU_LLM_REQUESTS_PER_MINUTE: ${EDU_LLM_REQUESTS_PER_MINUTE:-60}
       EDU_LLM_TASK_RATE_LIMIT: ${EDU_LLM_TASK_RATE_LIMIT:-5/m}
-    secrets: [jwt_secret, redis_password, edu_adapter_token]
+    secrets: [redis_password, edu_adapter_token]   # no JWT secret: the worker never verifies tokens
     depends_on: { redis-cache: { condition: service_healthy } }
     networks: [data, worker-egress]
     read_only: true

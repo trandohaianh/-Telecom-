@@ -40,6 +40,7 @@ PSI_WATCH = 0.10
 # PSI_ALERT là ngưỡng cảnh báo nặng: feature hoặc decision band đã lệch rõ so với baseline.
 PSI_ALERT = 0.25
 N_BINS = 10
+ZERO_REF_BLOCK_SHARE = 0.001     # block share that counts as "moved" when the reference had none
 EPS = 1e-6
 MIN_MONITOR_EVENTS = 100
 
@@ -63,6 +64,15 @@ def _edges(ref: np.ndarray, n_bins: int = N_BINS):
         if e.size < 2:
             # Isolate a constant value so a new nonzero population can still trigger drift.
             return np.unique(np.array([-np.inf, e[0], np.nextafter(e[0], np.inf), np.inf]))
+        if e.size > n_bins + 1:
+            # Zero-inflated continuous feature (>90 % one value, the rest spread out): one bin per
+            # distinct value gave hundreds of sparse bins whose sampling noise alone exceeded
+            # PSI_WATCH. Isolate the modal value and quantile-bin the remainder instead.
+            values, counts = np.unique(ref, return_counts=True)
+            mode = values[np.argmax(counts)]
+            rest = ref[ref != mode]
+            cuts = np.concatenate([[mode, np.nextafter(mode, np.inf)], np.quantile(rest, qs)[1:-1]])
+            return np.unique(np.concatenate([[-np.inf], cuts, [np.inf]]))
         e = np.concatenate([[-np.inf], (e[:-1] + e[1:]) / 2.0, [np.inf]])
     else:
         e = np.concatenate([[-np.inf], e[1:-1], [np.inf]])
@@ -232,6 +242,9 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
         # whatever the feature distributions say.
         r = report["band_share_ratio"]["BLOCK"]
         report["block_band_moved"] = bool(r is not None and (r >= 2.0 or r <= 0.5))
+        if not ref.get("BLOCK") and now["BLOCK"] > ZERO_REF_BLOCK_SHARE:
+            # Tham chiếu không có BLOCK: tỷ lệ không xác định, nhưng 0 -> >0,1 % vẫn là thay đổi khách hàng cảm nhận.
+            report["block_band_moved"] = True
 
     if decisions is not None and "decision_rates" in baseline:
         n = max(len(decisions), 1)
@@ -243,7 +256,8 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
         # A block rate that moves by more than half of itself is worth a human look even when the
         # feature distributions look stable: it is the number customers feel.
         ref_block = ref.get("BLOCK", 0.0)
-        report["block_rate_doubled"] = bool(ref_block > 0 and now.get("BLOCK", 0.0) > 2 * ref_block)
+        report["block_rate_doubled"] = bool(now.get("BLOCK", 0.0) > 2 * ref_block if ref_block > 0
+                                            else now.get("BLOCK", 0.0) > ZERO_REF_BLOCK_SHARE)
 
     if event_times is not None:
         times = np.asarray(event_times, dtype=float)
@@ -267,8 +281,14 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
         if decisions is not None and len(decisions) != len(labels):
             raise ValueError("segment labels must align with decisions")
         report["segments"] = {}
+        report["empty_segments"] = []
         for name, ref in baseline["segments"].items():
             mask = labels == name
+            if not mask.any():
+                # Một giờ yên tĩnh không có cuộc gọi quốc tế không phải là lỗi chất lượng dữ liệu.
+                report["empty_segments"].append(name)
+                report["segments"][name] = {"rows": 0, "recommendation": NO_ACTION}
+                continue
             report["segments"][name] = evaluate_drift(
                 ref, {k: np.asarray(v)[mask] for k, v in features.items()},
                 np.asarray(scores)[mask] if scores is not None else None,

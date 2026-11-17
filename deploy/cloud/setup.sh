@@ -20,11 +20,14 @@ sudo docker network inspect edge >/dev/null 2>&1 || sudo docker network create e
 
 if [ -n "${DUCKDNS_TOKEN:-}" ] && [[ "$TELECOM_DOMAIN" == *.duckdns.org ]]; then
   sub="${TELECOM_DOMAIN%.duckdns.org}"
-  line="*/5 * * * * curl -fsS 'https://www.duckdns.org/update?domains=${sub}&token=${DUCKDNS_TOKEN}&ip=' >/dev/null 2>&1"
-  ( crontab -l 2>/dev/null | grep -v "domains=${sub}&" ; echo "$line" ) | crontab -
+  # Token nằm trong file cấu hình curl quyền 600, không nằm trong crontab hay dòng lệnh (ps).
+  conf="$HOME/.config/duckdns/${sub}.curl"
+  mkdir -p "$(dirname "$conf")" && chmod 700 "$(dirname "$conf")"
+  ( umask 077; printf 'url = "https://www.duckdns.org/update?domains=%s&token=%s&ip="\nsilent\nfail\n' \
+      "$sub" "$DUCKDNS_TOKEN" > "$conf" )
+  line="*/5 * * * * curl -K '$conf' >/dev/null 2>&1 # duckdns:${sub}"
+  ( crontab -l 2>/dev/null | grep -v -e "domains=${sub}&" -e "# duckdns:${sub}\$" ; echo "$line" ) | crontab -
 fi
-
-sudo docker compose --env-file .env up -d --build telecom
 
 if sudo docker ps --format '{{.Names}}' | grep -q '^fieldops-caddy-1$'; then
   # Caddy chung của FieldOps: thêm site cho Telecom rồi reload (không gián đoạn FieldOps).
@@ -33,7 +36,9 @@ if sudo docker ps --format '{{.Names}}' | grep -q '^fieldops-caddy-1$'; then
   sudo docker exec fieldops-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 else
   echo "Không thấy Caddy của FieldOps → chạy Caddy riêng (profile standalone)."
-  sudo docker compose --env-file .env --profile standalone up -d caddy
+  sudo docker compose --env-file .env --profile standalone up -d --no-deps caddy
 fi
-bash "$HERE/smoke.sh" "https://${TELECOM_DOMAIN}" || true
+# Telecom chỉ tin X-Forwarded-For từ đúng Caddy (rate limit theo IP không bị container khác giả).
+FORWARDED_ALLOW_IPS="$(bash "$HERE/proxy_ip.sh")" sudo -E docker compose --env-file .env up -d --build telecom
+bash "$HERE/smoke.sh" "https://${TELECOM_DOMAIN}" || echo "Cảnh báo: smoke test thất bại" >&2
 echo "Xong: app thuê bao https://${TELECOM_DOMAIN}/app/ · vận hành https://${TELECOM_DOMAIN}/admin/"

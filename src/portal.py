@@ -253,7 +253,9 @@ def claim_demo_number(me: dict = Depends(subscriber_session)):
     eng = engine()
     if eng is None or not eng.demo_mode or eng.sim is None:
         raise HTTPException(409, "Chỉ chế độ demo mới cấp số giả lập; hãy xác minh số bằng OTP")
-    pool = [s.msisdn for s in eng.sim.subs]
+    # Ba số của đăng nhập demo kiểu cũ ai cũng mở được: không bao giờ cấp chúng cho tài khoản thật.
+    public = set(getattr(eng, "demo_numbers", ()) or ())
+    pool = [s.msisdn for s in eng.sim.subs if s.msisdn not in public]
     number = subscribers().claim_demo_number(me["id"], pool)
     with eng.lock:
         eng.inbox[number]
@@ -284,11 +286,33 @@ def otp_start(body: PhoneIn, request: Request, me: dict = Depends(subscriber_ses
 @router.post("/api/app/phone/otp/verify")
 def otp_verify(body: OtpIn, me: dict = Depends(subscriber_session)):
     phone = subscribers().otp_verify(me["id"], accounts.normalize_msisdn(body.phone), body.code)
+    if me.get("msisdn") != phone:
+        forget_number_history(phone)
     eng = engine()
     if eng is not None:
         with eng.lock:
             eng.inbox[phone]
     return {"msisdn": phone, "kind": "verified"}
+
+
+def forget_number_history(msisdn: str) -> None:
+    """Số vừa có chủ mới: chủ mới không được thấy cảnh báo (kèm nội dung SMS) của chủ cũ,
+    và người giám hộ chủ cũ đã duyệt không được tiếp tục nhận cảnh báo của chủ mới."""
+    with db().tx() as c:
+        c.execute("DELETE FROM subscriber_alerts WHERE msisdn=?", (msisdn,))
+        c.execute("DELETE FROM guardians WHERE protected=? OR guardian=?", (msisdn, msisdn))
+        c.execute("DELETE FROM invites WHERE protected=? OR guardian=?", (msisdn, msisdn))
+    eng = engine()
+    if eng is None:
+        return
+    with eng.lock:
+        if msisdn in eng.inbox:
+            eng.inbox[msisdn].clear()
+        eng.guardians.pop(msisdn, None)
+        eng.invites.pop(msisdn, None)
+        for mapping in (eng.guardians, eng.invites):
+            for linked in mapping.values():
+                linked.discard(msisdn)
 
 
 # ---- ghi xuống CSDL các thao tác của app (server.py gọi sau khi cập nhật bộ nhớ engine)
@@ -371,7 +395,7 @@ def operators(u=Depends(require("admin"))):
 
 @router.post("/api/admin/operators")
 def save_operator(body: OperatorIn, u=Depends(require("admin"))):
-    if body.name == u["name"] and (body.disabled or body.role != "admin"):
+    if (body.name or "").strip().lower() == u["name"] and (body.disabled or body.role != "admin"):
         raise HTTPException(400, "Không tự khoá hoặc tự hạ quyền chính mình")
     if body.password is not None and len(body.password) < 10:
         raise HTTPException(422, "Mật khẩu nhân viên tối thiểu 10 ký tự")
@@ -468,6 +492,10 @@ def add_infra(body: InfraIn, u=Depends(require("admin"))):
         rid = c.execute("INSERT INTO infra_costs(month, provider, item, amount_usd, note, created_by, created_at) "
                         "VALUES (?,?,?,?,?,?,?)", (body.month, body.provider, body.item, body.amount_usd, body.note,
                                                    u["name"], now())).lastrowid
+    from server import audit
+
+    audit.record(u["name"], "infra_cost_add", target=str(rid), provider=body.provider, item=body.item,
+                 amount_usd=body.amount_usd, month=body.month)
     return {"id": rid, **body.model_dump()}
 
 
@@ -476,6 +504,9 @@ def delete_infra(cost_id: int, u=Depends(require("admin"))):
     with db().tx() as c:
         if not c.execute("DELETE FROM infra_costs WHERE id=?", (cost_id,)).rowcount:
             raise HTTPException(404, "Không tìm thấy")
+    from server import audit
+
+    audit.record(u["name"], "infra_cost_delete", target=str(cost_id))
     return {"ok": True}
 
 

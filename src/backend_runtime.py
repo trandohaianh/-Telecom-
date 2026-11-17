@@ -34,6 +34,10 @@ NUMERIC = {"ts", "duration_s", "end_ts", "caller_age_days", "vocoder_artifact", 
 TEXT_FIELDS = {"event_id", "call_id", "caller", "callee", "sender", "recipient", "cell_id", "imei",
                "origin_trunk", "network", "sms_route", "codec", "text", "transcript", "event_type"}
 OPTIONAL = NUMERIC | TEXT_FIELDS
+# Upper sanity bound for event time in Unix SECONDS (~year 5138). A millisecond timestamp (1.7e12) or
+# 1e308 would otherwise become the IngestGuard frontier and mark every later event LATE (unscored ALLOW),
+# a state that is checkpointed and survives restarts.
+MAX_EVENT_TS = 1e11
 
 
 def validate_event(ev, kind="VERDICT"):
@@ -74,6 +78,9 @@ def validate_event(ev, kind="VERDICT"):
             raise ValueError("CDR completion must be finite and not precede setup")
     if kind == "VERDICT" and ev["event_type"] == "CALL" and "duration_s" in ev:
         raise ValueError("setup verdicts must not include duration_s; send a separate CDR")
+    for name in ("ts", "end_ts"):
+        if name in ev and ev[name] > MAX_EVENT_TS:
+            raise ValueError(f"{name} must be Unix seconds (got a value above {MAX_EVENT_TS:.0e})")
     ev.setdefault("caller_age_days", -1)
     return ev
 
@@ -141,6 +148,8 @@ class InferenceRuntime:
         self.owner_stall_after_s = owner_stall_after_s
         self._owner_busy_since = 0.0
         self._last_owner_progress = time.perf_counter()
+        self._last_maintenance = time.perf_counter()
+        self.busy_maintenance_interval_s = 1.0
         self.batch_size, self.batch_wait_ms = batch_size, batch_wait_ms
         self.cache_capacity = cache_capacity
         self._completed = collections.OrderedDict()
@@ -177,6 +186,25 @@ class InferenceRuntime:
                 "rescore": list(self.g.rescore_queue),
                 "retro": list(self.g.retro), "retro_alerts": self.g.stats["retro_alerts"],
                 "published_retro": self._published_retro}
+
+    def _compact_state(self):
+        """Drop window entries no future scoring can read, before each periodic checkpoint.
+
+        Serving never called FeatureStore.prune_state, so per-callee deques, IMEI/cell links and pending
+        CDR heaps of quiet parties grew for the life of the process and were serialised into every
+        checkpoint. Scored events always have ts >= the guard's scoring floor (older ones are LATE), and
+        rescoring replays fail-open events at their own ts, so the safe horizon is the smaller of the
+        two. Metadata (first_seen, age, completed-call history) is kept: no TTL is applied here.
+        """
+        # Per-party frontiers (D1) admit events up to allowed_lateness_s behind the global maximum.
+        horizon = getattr(self.guard, "scoring_floor", self.guard.max_ts)
+        for event in self.g.rescore_queue:
+            ts = event.get("ts") if isinstance(event, dict) else None
+            if isinstance(ts, (int, float)) and math.isfinite(ts):
+                horizon = min(horizon, float(ts))
+        if math.isfinite(horizon):
+            self.g.det.fs.prune_state(horizon)
+            self.stats["state_compactions"] += 1
 
     def checkpoint(self):
         with self.execution_lock:
@@ -518,6 +546,7 @@ class InferenceRuntime:
                 next_seq = max([self.last_seq] + [work.seq for work, _, _ in completed])
                 if new_count and (self._since_checkpoint + new_count >= self.checkpoint_every or
                                   time.perf_counter() - self._checkpoint_at >= self.checkpoint_interval_s):
+                    self._compact_state()
                     snapshot = self._snapshot()
                     snapshot["seq"] = next_seq
                     snapshot["unconfirmed_delivery"] = [raw for _, raw, duplicate in completed
@@ -636,23 +665,8 @@ class InferenceRuntime:
             except queue.Empty:
                 if self._closing:
                     break
-                try:
-                    self._owner_busy_since = time.perf_counter()
-                    # Publish pending intents first: a failing callback must apply
-                    # backpressure before another rescore can overwrite the bounded deque.
-                    self._publish_retro()
-                    with self.execution_lock:
-                        limit = self.g.retro.maxlen or 32
-                        self.g.drain_rescore(max_n=min(32, limit))
-                    self._publish_retro()
-                except Exception as exc:
-                    self.stats["maintenance_errors"] += 1
-                    if isinstance(exc, RescoreStateRestoreError):
-                        self._stop_after_owner_error(exc)
-                        break
-                finally:
-                    self._owner_busy_since = 0.0
-                    self._last_owner_progress = time.perf_counter()
+                if not self._maintenance(32):
+                    break
                 continue
             works = [first]
             if self.batch_wait_ms:
@@ -684,8 +698,36 @@ class InferenceRuntime:
                 self._last_owner_progress = time.perf_counter()
                 for work in works:
                     self.queue.task_done()
+            # Under steady traffic the queue is never empty for 100 ms, so idle-only draining
+            # starved the rescore queue until it silently dropped its oldest fail-open events.
+            busy_for = time.perf_counter() - self._last_maintenance
+            if busy_for >= self.busy_maintenance_interval_s and (
+                    getattr(self.g, "rescore_queue", None) or getattr(self.g, "retro", None)):
+                if not self._maintenance(8):
+                    break
         if self._fatal_error is None:
             self.checkpoint()
+
+    def _maintenance(self, max_rescore):
+        """Publish retrospective intents and drain a bounded rescore batch. False = owner stopped."""
+        try:
+            self._owner_busy_since = time.perf_counter()
+            # Publish pending intents first: a failing callback must apply
+            # backpressure before another rescore can overwrite the bounded deque.
+            self._publish_retro()
+            with self.execution_lock:
+                limit = self.g.retro.maxlen or 32
+                self.g.drain_rescore(max_n=min(max_rescore, limit))
+            self._publish_retro()
+        except Exception as exc:
+            self.stats["maintenance_errors"] += 1
+            if isinstance(exc, RescoreStateRestoreError):
+                self._stop_after_owner_error(exc)
+                return False
+        finally:
+            self._owner_busy_since = 0.0
+            self._last_owner_progress = self._last_maintenance = time.perf_counter()
+        return True
 
     def progress(self):
         # Readiness must not take the writer/model locks when a native scorer stalls.

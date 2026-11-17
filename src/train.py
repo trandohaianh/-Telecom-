@@ -129,6 +129,9 @@ def train_call():
     for seg in ["domestic", "foreign", "trunk"]:
         # Chọn các đặc trưng bất thường của nhóm hiện tại để khớp mô hình.
         part = clean_tr[seg_tr == seg][ANOMALY_FEATURES]
+        if len(part) < 2:
+            # sklearn would fail later with an opaque "max_samples=0"; runtime needs every segment.
+            raise ValueError(f"zero-day segment {seg!r} has {len(part)} clean training rows; need at least 2")
         iso = IsolationForest(n_estimators=100, max_samples=min(1024, len(part)), random_state=7)
         iso.fit(part.values)
         # Đổi dấu điểm bình thường thành độ bất thường rồi tìm ngưỡng theo FPR nhóm.

@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 
+MAX_EVENT_TS = 1e11  # Unix seconds (~year 5138)
 EVENT_FIELDS = ("event_id", "event_type", "ts", "caller", "callee", "cell_id", "imei",
                 "origin_trunk", "network", "caller_age_days", "duration_s", "label", "fraud_type")
 
@@ -83,12 +84,29 @@ def validate_call(row):
         row[key] = number
     if row["duration_s"] < 0:
         raise ValueError("negative duration_s")
+    if not 0 <= row["ts"] <= MAX_EVENT_TS:
+        # Same bound as the main API (src/backend_runtime.MAX_EVENT_TS): one millisecond (1.7e12)
+        # or absurd ts would push the watermark forward and quarantine all later traffic as late.
+        raise ValueError("ts must be Unix seconds in [0, 1e11]")
     if not math.isfinite(row["ts"] + row["duration_s"]):
         raise ValueError("CALL completion ts + duration_s must be finite")
     if row.get("imei") is not None and not isinstance(row["imei"], str):
         raise ValueError("imei must be a string")
     row["imei"] = row.get("imei") or ""
     return row
+
+
+def fsync_directory(path):
+    """Persist a rename: without fsyncing the parent, power loss can drop the new directory entry
+    while Spark's own commit survives, silently losing that batch's output. No-op on Windows."""
+    import os
+    if os.name != "posix":
+        return
+    fd = os.open(str(path), os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def order_key(row):

@@ -18,6 +18,7 @@ from pyspark.sql import SparkSession, Window, functions as F, types as T
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent / "src"
 sys.path.insert(0, str(SRC))
+from config import LOCAL_UTC_OFFSET_S  # noqa: E402  (same local-hour convention as FeatureStore)
 
 EVENT_SCHEMA = T.StructType([
     T.StructField(name, T.DoubleType() if name in ("ts", "caller_age_days", "duration_s", "label")
@@ -30,7 +31,7 @@ EVENT_SCHEMA = T.StructType([
 def add_sql_basics(df):
     def window(seconds):
         return Window.partitionBy("caller").orderBy("ts").rangeBetween(-seconds, 0)
-    result = df.withColumn("hour_of_day", (F.col("ts") / 3600.0) % 24)
+    result = df.withColumn("hour_of_day", ((F.col("ts") + LOCAL_UTC_OFFSET_S) / 3600.0) % 24)  # == config.local_hour
     for name, seconds in (("calls_1m", 60), ("calls_10m", 600), ("calls_1h", 3600)):
         result = result.withColumn(name, F.count("*").over(window(seconds)).cast("double"))
     return result.withColumn("callee_dispersion_1h",

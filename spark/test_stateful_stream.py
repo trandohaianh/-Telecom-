@@ -128,12 +128,13 @@ class StreamStateTests(unittest.TestCase):
                 event("late", 1.), {"_parse_error": "bad JSON", "_raw": "{"},
                 {"event_type": "SMS"}, event(123, 200.), event("badimei", 200., imei=123)]), 1)
             metrics = processor.last_metrics
-            self.assertEqual(metrics["duplicates"], 1)
-            self.assertEqual(metrics["quarantined"], 5)
+            # D13: both in-batch copies of "a" conflict, so both are quarantined (as in the distributed engine).
+            self.assertEqual(metrics["duplicates"], 0)
+            self.assertEqual(metrics["quarantined"], 6)
             self.assertEqual(metrics["ignored_rows"], 1)
             self.assertEqual(metrics["emitted_rows"], 0)
             self.assertEqual(len(pd.read_parquet(processor.root / "batch-00000000000000000001" /
-                                                "quarantine.parquet")), 5)
+                                                "quarantine.parquet")), 6)
 
     def test_fail_policy_does_not_mutate_and_replay_source_checks(self):
         with tempfile.TemporaryDirectory() as directory:

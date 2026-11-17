@@ -6,6 +6,7 @@ import httpx
 import zlib
 from pathlib import Path
 from redis import Redis
+from .cache_keys import explanation_key, leaderboard_key
 from .config import REDIS_URL
 from .grade_baseline import predict_demo_grade
 
@@ -57,7 +58,7 @@ def train_automl(request, progress):
             {"model": "DummyClassifier", "metric": 0.50, "note": "synthetic demo fixture"},
             {"model": "LogisticRegression", "metric": 0.68, "note": "synthetic demo fixture"},
         ]
-        key = f"edu:leaderboard:{request['requested_by']}:{model_ref}"
+        key = leaderboard_key(request["requested_by"], model_ref)
         worker_cache.set(key, json.dumps(leaderboard, separators=(",", ":")), ex=3600)
         return {"model_ref": model_ref, "leaderboard_rows": len(leaderboard), "mode": "demo"}
     progress("training")
@@ -65,7 +66,7 @@ def train_automl(request, progress):
         response = client.post(url, json=request, headers=_adapter_headers())
         response.raise_for_status()
         result = response.json()
-    key = f"edu:leaderboard:{request['requested_by']}:{result['model_ref']}"
+    key = leaderboard_key(request["requested_by"], result["model_ref"])
     worker_cache.set(key, json.dumps(result.get("leaderboard", []), separators=(",", ":")), ex=30 * 86400)
     return {"model_ref": result["model_ref"], "leaderboard_rows": len(result.get("leaderboard", []))}
 
@@ -87,7 +88,7 @@ def precompute_cms(request):
             "questions": ["Ý chính của đoạn này là gì?", "Có thể áp dụng khái niệm này ở đâu?"],
             "mode": "demo_fixture_only",
         } for index, chunk in enumerate(chunks)]
-        key = f"edu:explanation:{request['course_id']}:{request['lecture_id']}"
+        key = explanation_key(request["course_id"], request["lecture_id"])
         worker_cache.set(key, json.dumps(explanations, ensure_ascii=False, separators=(",", ":")), ex=86400)
         return {"cache_key": key, "chunks": len(explanations), "mode": "demo"}
     with httpx.Client(timeout=httpx.Timeout(45, connect=5)) as client:
@@ -95,7 +96,7 @@ def precompute_cms(request):
             "lecture_id": request["lecture_id"], "chunks": chunks}, headers=_adapter_headers())
         response.raise_for_status()
         explanations = response.json()["explanations"]
-    key = f"edu:explanation:{request['course_id']}:{request['lecture_id']}"
+    key = explanation_key(request["course_id"], request["lecture_id"])
     worker_cache.set(key, json.dumps(explanations, separators=(",", ":")), ex=86400)
     return {"cache_key": key, "chunks": len(explanations)}
 

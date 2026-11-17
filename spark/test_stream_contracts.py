@@ -31,7 +31,12 @@ class CallContractTests(unittest.TestCase):
             self.assertIsNotNone(classified[-3])
             self.assertFalse(classified[-2])
             self.assertEqual(json.loads(classified[-1])["event_id"], row["event_id"])
-        self.assertEqual(validate_call(event("finite", 1e308, duration_s=0.))["ts"], 1e308)
+        # D12 (owner decision 17/11/2026): far-future/ms timestamps are rejected like the main API.
+        with self.assertRaisesRegex(ValueError, "Unix seconds"):
+            validate_call(event("finite", 1e308, duration_s=0.))
+        with self.assertRaisesRegex(ValueError, "Unix seconds"):
+            validate_call(event("millis", 1.7e12))
+        self.assertEqual(validate_call(event("unix", 1.7e9))["ts"], 1.7e9)
 
     def test_live_completion_fields_cannot_override_replay(self):
         for key in ("start_ts", "end_ts"):
@@ -123,6 +128,19 @@ class CheckpointOwnerTests(unittest.TestCase):
                 (checkpoint / other).mkdir()
                 with self.assertRaisesRegex(ValueError, "different feature engine"):
                     factory(checkpoint)
+
+
+class ImeiPartitionKeyTests(unittest.TestCase):
+    def test_rows_without_imei_do_not_share_one_hot_key(self):
+        from distributed_features import imei_entity, imei_partition
+        rows = [dict(event_id=f"e{i}", caller=f"C{i}", ts=float(i), imei="") for i in range(3)]
+        keys = {imei_entity(r) for r in rows}
+        self.assertEqual(len(keys), 3)
+        self.assertNotIn("", keys)
+        out = list(imei_partition(sorted(((imei_entity(r), r["ts"], r["event_id"]), r) for r in rows)))
+        self.assertEqual([v for _, v in out], [0.0, 0.0, 0.0])
+        same = [dict(event_id="a", caller="X", ts=0.0, imei="35391"), dict(event_id="b", caller="Y", ts=1.0, imei="35391")]
+        self.assertEqual(imei_entity(same[0]), "35391")
 
 
 if __name__ == "__main__":

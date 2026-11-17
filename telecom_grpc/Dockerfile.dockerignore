@@ -3,3 +3,11 @@
 !ram_online/**
 !telecom_grpc/
 !telecom_grpc/**
+# Khoá TLS và mật khẩu Redis do bootstrap-local.ps1 tạo không bao giờ được vào image.
+telecom_grpc/secrets
+telecom_grpc/tls
+**/*.key
+**/*.pem
+**/.env
+**/.env.*
+**/__pycache__

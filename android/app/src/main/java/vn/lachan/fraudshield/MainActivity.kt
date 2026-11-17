@@ -1,7 +1,10 @@
 package vn.lachan.fraudshield
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebResourceError
@@ -56,6 +59,20 @@ class MainActivity : AppCompatActivity() {
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (request.isForMainFrame) showError(error.description.toString())
+            }
+
+            // Chỉ trang của chính server mở trong WebView (nơi giữ phiên đăng nhập trong localStorage).
+            // Liên kết sang nơi khác (kể cả liên kết trong nội dung cảnh báo) mở bằng trình duyệt hệ thống.
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                val target = request.url
+                val home = Uri.parse(serverUrl())
+                if (target.scheme == home.scheme && target.host == home.host && target.port == home.port) return false
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, target).addCategory(Intent.CATEGORY_BROWSABLE))
+                } catch (_: ActivityNotFoundException) {
+                    // Không có ứng dụng mở được liên kết: bỏ qua, không tải nó trong WebView.
+                }
+                return true
             }
         }
 

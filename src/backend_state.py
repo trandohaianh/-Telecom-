@@ -288,6 +288,13 @@ class BackendState:
             self.db.execute("DELETE FROM sessions WHERE token_hash=?", (hashlib.sha256(token.encode()).hexdigest(),))
         return payload
 
+    def delete_sessions_for(self, name):
+        """Revoke every durable operator session of one account (disable, password change)."""
+        with self.lock:
+            for token_hash, payload in self.db.execute("SELECT token_hash,payload FROM sessions").fetchall():
+                if json.loads(payload).get("name") == name:
+                    self.db.execute("DELETE FROM sessions WHERE token_hash=?", (token_hash,))
+
     def suspend(self, name):
         with self.lock:
             self.db.execute("INSERT OR IGNORE INTO suspended VALUES (?)", (name,))

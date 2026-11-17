@@ -26,3 +26,10 @@ Use durable external Redis or managed Redis with backups, monitoring, TLS, and t
 ## Grade prediction baseline
 
 The student-only API exposes POST /api/student/grade-baseline and derives identity from the verified JWT; course access is checked before model access. In EDU_DEMO_MODE=1 it fits ordinary least squares on seven synthetic prior-GPA/final-GPA pairs, using a fixed demo GPA of 2.5, and reports a two-row synthetic holdout MAE/RMSE. The response is marked demo_fixture_only and must not be presented as a result trained or validated on real student records. Outside demo mode, configure EDU_GRADE_ADAPTER; the adapter receives only the authenticated subject and course so it can resolve trusted academic data, and the API validates its prediction is finite and within the 0..4 scale. This exercises the prediction contract; it is not a production academic decision model.
+
+## Authorization changes (audit 2026-11-17)
+
+- `POST /api/instructor/automl` now requires `course_id`; the caller must teach that course, and the adapter receives `course_id` so it resolves `dataset_ref` only inside it.
+- Demo tokens carry `"demo": true` and are rejected when `EDU_DEMO_MODE` is not `1`.
+- Set `JWT_AUDIENCE` to require and verify the `aud` claim.
+- The Celery worker no longer receives `JWT_SECRET`; only the API (and the demo-token CLI) load it.

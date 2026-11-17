@@ -6,10 +6,11 @@
  "unscored_events": 0,
  "unscored_by_status": {},
  "ingest": {
-  "policy": "strict_event_time_frontier",
+  "policy": "per_party_event_time_frontier",
   "keys": 2647,
-  "max_ts": 43762.315025915785,
-  "watermark": 43642.315025915785,
+  "parties": 218,
+  "max_ts": 104962.31502591578,
+  "watermark": 104842.31502591578,
   "dedup_ttl_s": 900.0,
   "allowed_lateness_s": 120.0,
   "admitted": 50000,
@@ -67,28 +68,24 @@
  },
  "drift": {
   "features": {
-   "active_hours_on_network": 3.7774,
-   "callee_dispersion_1h": 0.059,
-   "caller_age_days": 0.0382,
-   "calls_10m": 0.0251,
-   "calls_1h": 0.0285,
-   "calls_1m": 0.0151,
-   "completed_calls_seen": 0.0301,
-   "imei_per_msisdn_24h": 0.0001,
-   "in_out_ratio_24h": 0.0409,
-   "incoming_24h": 0.1032,
-   "mean_log_duration": 0.0202,
-   "msisdn_per_imei_24h": 0.0001,
-   "new_sims_on_cell_1h": 0.0001,
-   "short_call_ratio": 0.0433,
-   "velocity_kmh": 0.0014
+   "active_hours_on_network": 0.0093,
+   "callee_dispersion_1h": 0.0039,
+   "caller_age_days": 0.0624,
+   "calls_10m": 0.0143,
+   "calls_1h": 0.0184,
+   "calls_1m": 0.0033,
+   "completed_calls_seen": 0.0017,
+   "imei_per_msisdn_24h": 0.0,
+   "in_out_ratio_24h": 0.0555,
+   "incoming_24h": 0.0416,
+   "mean_log_duration": 0.0018,
+   "msisdn_per_imei_24h": 0.0,
+   "new_sims_on_cell_1h": 0.0003,
+   "short_call_ratio": 0.0028,
+   "velocity_kmh": 0.0001
   },
-  "watch": [
-   "incoming_24h"
-  ],
-  "alert": [
-   "active_hours_on_network"
-  ],
+  "watch": [],
+  "alert": [],
   "quality": {
    "active_hours_on_network": {
     "observations": 35136,
@@ -170,8 +167,8 @@
   "insufficient_features": [],
   "quality_alert": [],
   "min_monitor_events": 100,
-  "max_feature_psi": 3.7774,
-  "null_psi_max": 0.0088,
+  "max_feature_psi": 0.0624,
+  "null_psi_max": 0.0018,
   "score_quality": {
    "observations": 35136,
    "finite": 35136,
@@ -183,9 +180,9 @@
    "ALLOW": 0.99815
   },
   "band_share_ratio": {
-   "BLOCK": 0.071,
-   "FLAG": 1.269,
-   "ALLOW": 1.013
+   "BLOCK": 3.356,
+   "FLAG": 1.666,
+   "ALLOW": 0.999
   },
   "block_band_moved": true,
   "freshness": {
@@ -197,28 +194,24 @@
   "segments": {
    "domestic": {
     "features": {
-     "active_hours_on_network": 3.9525,
-     "callee_dispersion_1h": 0.0617,
-     "caller_age_days": 0.0466,
-     "calls_10m": 0.0254,
-     "calls_1h": 0.0286,
-     "calls_1m": 0.0157,
-     "completed_calls_seen": 0.0312,
-     "imei_per_msisdn_24h": 0.056,
-     "in_out_ratio_24h": 0.0354,
-     "incoming_24h": 0.1253,
-     "mean_log_duration": 0.0213,
-     "msisdn_per_imei_24h": 0.0977,
-     "new_sims_on_cell_1h": 0.0001,
-     "short_call_ratio": 0.0467,
-     "velocity_kmh": 0.0057
+     "active_hours_on_network": 0.0095,
+     "callee_dispersion_1h": 0.0039,
+     "caller_age_days": 0.0874,
+     "calls_10m": 0.0151,
+     "calls_1h": 0.0229,
+     "calls_1m": 0.0035,
+     "completed_calls_seen": 0.0017,
+     "imei_per_msisdn_24h": 0.0,
+     "in_out_ratio_24h": 0.0465,
+     "incoming_24h": 0.0431,
+     "mean_log_duration": 0.0017,
+     "msisdn_per_imei_24h": 0.0005,
+     "new_sims_on_cell_1h": 0.0004,
+     "short_call_ratio": 0.003,
+     "velocity_kmh": 0.0001
     },
-    "watch": [
-     "incoming_24h"
-    ],
-    "alert": [
-     "active_hours_on_network"
-    ],
+    "watch": [],
+    "alert": [],
     "quality": {
      "active_hours_on_network": {
       "observations": 33873,
@@ -300,8 +293,8 @@
     "insufficient_features": [],
     "quality_alert": [],
     "min_monitor_events": 100,
-    "max_feature_psi": 3.9525,
-    "null_psi_max": 0.0077,
+    "max_feature_psi": 0.0874,
+    "null_psi_max": 0.002,
     "score_quality": {
      "observations": 33873,
      "finite": 33873,
@@ -313,36 +306,33 @@
      "ALLOW": 0.998199
     },
     "band_share_ratio": {
-     "BLOCK": 0.066,
-     "FLAG": 1.271,
-     "ALLOW": 1.013
+     "BLOCK": 4.667,
+     "FLAG": 1.664,
+     "ALLOW": 0.999
     },
     "block_band_moved": true,
     "recommendation": "INVESTIGATE"
    },
    "foreign": {
     "features": {
-     "active_hours_on_network": 1.5309,
-     "callee_dispersion_1h": 0.0011,
+     "active_hours_on_network": 0.0192,
+     "callee_dispersion_1h": 0.0018,
      "caller_age_days": 0.0,
-     "calls_10m": 0.0418,
-     "calls_1h": 0.0578,
-     "calls_1m": 0.011,
-     "completed_calls_seen": 0.0165,
+     "calls_10m": 0.0093,
+     "calls_1h": 0.0164,
+     "calls_1m": 0.0025,
+     "completed_calls_seen": 0.0032,
      "imei_per_msisdn_24h": 0.0,
-     "in_out_ratio_24h": 0.3497,
+     "in_out_ratio_24h": 0.0821,
      "incoming_24h": 0.0,
-     "mean_log_duration": 0.0922,
+     "mean_log_duration": 0.0332,
      "msisdn_per_imei_24h": 0.0,
      "new_sims_on_cell_1h": 0.0,
-     "short_call_ratio": 0.0291,
+     "short_call_ratio": 0.0104,
      "velocity_kmh": 0.0
     },
     "watch": [],
-    "alert": [
-     "active_hours_on_network",
-     "in_out_ratio_24h"
-    ],
+    "alert": [],
     "quality": {
      "active_hours_on_network": {
       "observations": 1118,
@@ -424,8 +414,8 @@
     "insufficient_features": [],
     "quality_alert": [],
     "min_monitor_events": 100,
-    "max_feature_psi": 1.5309,
-    "null_psi_max": 0.0181,
+    "max_feature_psi": 0.0821,
+    "null_psi_max": 0.0351,
     "score_quality": {
      "observations": 1118,
      "finite": 1118,
@@ -442,35 +432,31 @@
      "ALLOW": 1.0
     },
     "block_band_moved": false,
-    "recommendation": "INVESTIGATE"
+    "recommendation": "NO_ACTION"
    },
    "trunk": {
     "features": {
-     "active_hours_on_network": 6.3652,
-     "callee_dispersion_1h": 0.0618,
+     "active_hours_on_network": 0.0865,
+     "callee_dispersion_1h": 0.0,
      "caller_age_days": 0.0,
-     "calls_10m": 0.0001,
-     "calls_1h": 0.1567,
-     "calls_1m": 0.0484,
+     "calls_10m": 0.0472,
+     "calls_1h": 0.3665,
+     "calls_1m": 0.0005,
      "completed_calls_seen": 0.0,
-     "imei_per_msisdn_24h": 1.2189,
-     "in_out_ratio_24h": 3.9641,
+     "imei_per_msisdn_24h": 0.0008,
+     "in_out_ratio_24h": 3.8907,
      "incoming_24h": 0.0,
-     "mean_log_duration": 0.2253,
-     "msisdn_per_imei_24h": 0.2217,
-     "new_sims_on_cell_1h": 0.0917,
+     "mean_log_duration": 0.1886,
+     "msisdn_per_imei_24h": 0.0008,
+     "new_sims_on_cell_1h": 0.0,
      "short_call_ratio": 0.0,
-     "velocity_kmh": 0.1364
+     "velocity_kmh": 0.0
     },
     "watch": [
-     "calls_1h",
-     "mean_log_duration",
-     "msisdn_per_imei_24h",
-     "velocity_kmh"
+     "mean_log_duration"
     ],
     "alert": [
-     "active_hours_on_network",
-     "imei_per_msisdn_24h",
+     "calls_1h",
      "in_out_ratio_24h"
     ],
     "quality": {
@@ -554,8 +540,8 @@
     "insufficient_features": [],
     "quality_alert": [],
     "min_monitor_events": 100,
-    "max_feature_psi": 6.3652,
-    "null_psi_max": 0.2073,
+    "max_feature_psi": 3.8907,
+    "null_psi_max": 0.4958,
     "score_quality": {
      "observations": 145,
      "finite": 145,
@@ -567,16 +553,17 @@
      "ALLOW": 0.972414
     },
     "band_share_ratio": {
-     "BLOCK": 0.185,
+     "BLOCK": 1.193,
      "FLAG": null,
-     "ALLOW": 1.143
+     "ALLOW": 0.995
     },
-    "block_band_moved": true,
-    "recommendation": "RETRAIN_RECOMMENDED"
+    "block_band_moved": false,
+    "recommendation": "INVESTIGATE"
    }
   },
+  "empty_segments": [],
   "unknown_segments": [],
-  "recommendation": "RETRAIN_RECOMMENDED",
+  "recommendation": "INVESTIGATE",
   "scope": "all scored CALL events in the window"
  }
 }

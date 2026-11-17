@@ -3,7 +3,7 @@ services:
   kafka:
     image: apache/kafka:3.9.0
     ports:
-      - "29092:29092"
+      - "127.0.0.1:29092:29092"   # plaintext, unauthenticated: loopback only
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -40,10 +40,15 @@ services:
     volumes:
       - ..:/work
       - ivy-cache:/home/spark/.ivy2
+    # Repo mount is read-write (checkpoints live under spark/), but local secrets are masked.
+    tmpfs:
+      - /work/secrets
+      - /work/telecom_grpc/secrets
+      - /work/telecom_grpc/tls
     working_dir: /work/spark
     command: ["sleep", "infinity"]
     ports:
-      - "4040:4040"
+      - "127.0.0.1:4040:4040"
 volumes:
   ivy-cache:
   kafka-data:

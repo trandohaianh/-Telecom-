@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import copy
 from contextlib import contextmanager
+import bisect
 import heapq
 import math
 import re
 import time
 from collections import defaultdict, deque
 
+from config import local_hour
 from data_generator import GATEWAY_TACS, OFFICIAL_DOMAINS, PROTECTED_CLI, REGISTERED_CELLS, BRAND_SENDERS
 
 # Các hằng số thời gian xác định window 1 phút, 10 phút, 1 giờ và 24 giờ cho feature.
@@ -51,6 +53,14 @@ AUDIO_FEATURES = ["vocoder_artifact", "pitch_jitter", "spectral_flatness", "spea
 
 
 # Xóa các phần tử cũ khỏi deque để giữ cửa sổ trượt luôn là dữ liệu trong khoảng thời gian hợp lệ.
+def _insort_time(q, ts):
+    """Append keeping event-time order; out-of-order inserts are bounded by allowed lateness."""
+    if not q or q[-1] <= ts:
+        q.append(ts)
+    else:
+        bisect.insort(q, ts)
+
+
 def _prune(dq: deque, horizon: float):
     while dq and dq[0][0] < horizon:
         dq.popleft()
@@ -81,10 +91,16 @@ class FeatureStore:
 
     # ------------------------------------------------------------------ CALL (Tier 1)
 # Tính toàn bộ feature của một event CALL dựa trên lịch sử phát sinh từ stream cho đến thời điểm đó.
+    def _touch(self, party, ts):
+        # max(): with per-party frontiers (D1) another party's slightly older event may arrive later.
+        previous = self.last_seen.get(party)
+        self.last_seen[party] = ts if previous is None or ts > previous else previous
+
     def call_features(self, ev: dict) -> dict:
         ts, caller, callee = ev["ts"], ev["caller"], ev["callee"]
         cell, imei, origin = ev["cell_id"], ev["imei"], ev["origin_trunk"]
-        self.last_seen[caller] = self.last_seen[callee] = ts
+        self._touch(caller, ts)
+        self._touch(callee, ts)
         age = ev.get("caller_age_days", -1)
         self.age_by_msisdn[caller] = age
         first = self.first_seen.setdefault(caller, ts)
@@ -115,8 +131,10 @@ class FeatureStore:
         ic = self.in_calls[caller]
         while ic and ic[0] < ts - D1:
             ic.popleft()
-        self.in_calls[callee].append(ts)
+        _insort_time(self.in_calls[callee], ts)
         out24 = self._count_out_24h(caller, ts)
+        # Only calls received at or before this event (another party's newer call may already be stored).
+        incoming = len(ic) if not ic or ic[-1] <= ts else bisect.bisect_right(ic, ts)
 
         # Lịch sử call đã xong chỉ xuất hiện sau khi CDR biết duration, vì vậy short_call_ratio và mean_log_duration dựa trên dữ liệu hoàn chỉnh.
         pend = self.pending_cdr[caller]
@@ -134,9 +152,9 @@ class FeatureStore:
         unknown_radio = cell.startswith("X-")
         if imei:
             im = self.imei_by_msisdn[caller]
-            im[imei] = ts
+            im[imei] = max(ts, im.get(imei, ts))
             ms = self.msisdn_by_imei[imei]
-            ms[caller] = ts
+            ms[caller] = max(ts, ms.get(caller, ts))
             d1 = ts - D1
             for links in (im, ms):
                 for key in [k for k, last_ts in links.items() if last_ts < d1]:
@@ -162,7 +180,7 @@ class FeatureStore:
             nsc = self.new_sims_cell[cell]
             # SIM mới đăng ký HOẶC mới xuất hiện hoạt động (SIM cũ đi thuê không còn lọt qua đặc trưng này)
             if 0 <= age < 60 or (age >= 0 and active_h < FRESH_ACTIVE_H):
-                nsc[caller] = ts
+                nsc[caller] = max(ts, nsc.get(caller, ts))
             if nsc:
                 stale = [k for k, v in nsc.items() if v < h]
                 for k in stale:
@@ -173,8 +191,8 @@ class FeatureStore:
         return {
             "calls_1m": len(q1), "calls_10m": len(q10), "calls_1h": n1h,
             "callee_dispersion_1h": len(cc) / n1h,
-            "in_out_ratio_24h": (len(ic) + 1) / (out24 + 1),
-            "incoming_24h": len(ic),
+            "in_out_ratio_24h": (incoming + 1) / (out24 + 1),
+            "incoming_24h": incoming,
             "short_call_ratio": short, "mean_log_duration": mlog, "completed_calls_seen": len(hist),
             "imei_per_msisdn_24h": imei_cnt, "msisdn_per_imei_24h": msisdn_cnt, "imei_gateway_tac": gw,
             "cell_registered": 1.0 if registered else 0.0,
@@ -188,7 +206,7 @@ class FeatureStore:
             "cli_protected": 1.0 if caller in PROTECTED else 0.0,
             "protected_cli_mismatch": 1.0 if (caller in PROTECTED and origin != "BANK_TRUNK") else 0.0,
             "network_2g": 1.0 if ev["network"] == "2G" else 0.0,
-            "hour_of_day": (ts / 3600.0) % 24,
+            "hour_of_day": local_hour(ts),
             "active_hours_on_network": active_h,
         }
 
@@ -210,30 +228,33 @@ class FeatureStore:
         ts = ev["ts"]
         if et == "CALL":
             caller, callee = ev["caller"], ev["callee"]
-            self.last_seen[caller] = self.last_seen[callee] = ts
+            self._touch(caller, ts)
+            self._touch(callee, ts)
             first = self.first_seen.setdefault(caller, ts)
             self.first_seen.setdefault(callee, ts)
             if owns(callee):
-                self.in_calls[callee].append(ts)
+                _insort_time(self.in_calls[callee], ts)
             # Không dọn mục cũ ở đây (O(1) mỗi side update): call_features của shard sở hữu
             # luôn loại các mục quá 24 h / 1 h trước khi đếm, nên số đếm vẫn chính xác.
             imei = ev.get("imei")
             if imei:
-                self.msisdn_by_imei[imei][caller] = ts
+                links = self.msisdn_by_imei[imei]
+                links[caller] = max(ts, links.get(caller, ts))
             cell = ev["cell_id"]
             if cell in REGISTERED_CELLS or cell.startswith("X-"):
                 age = ev.get("caller_age_days", -1)
                 if 0 <= age < 60 or (age >= 0 and min((ts - first) / 3600.0, ACTIVE_CAP_H) < FRESH_ACTIVE_H):
-                    self.new_sims_cell[cell][caller] = ts
+                    cells = self.new_sims_cell[cell]
+                    cells[caller] = max(ts, cells.get(caller, ts))
         elif et == "SMS":
             sender, recipient = ev["sender"], ev.get("recipient")
-            self.last_seen[sender] = ts
+            self._touch(sender, ts)
             self.first_seen.setdefault(sender, ts)
             if recipient:
-                self.last_seen[recipient] = ts
+                self._touch(recipient, ts)
                 self.first_seen.setdefault(recipient, ts)
         elif et == "AUDIO":
-            self.last_seen[ev["caller"]] = ts
+            self._touch(ev["caller"], ts)
 
     # ------------------------------------------------------------------ checkpoint / restore
     # The whole store lives in RAM, so a process restart loses every window and the 24 h warm-up
@@ -444,10 +465,10 @@ class FeatureStore:
 # Tính feature SMS dựa trên route, sender, URL và lưu lượng gần đây của sender đó.
     def sms_features(self, ev: dict) -> dict:
         ts, sender = ev["ts"], ev["sender"]
-        self.last_seen[sender] = ts
+        self._touch(sender, ts)
         recipient = ev.get("recipient")
         if recipient:
-            self.last_seen[recipient] = ts
+            self._touch(recipient, ts)
         self.first_seen.setdefault(sender, ts)
         if recipient:
             self.first_seen.setdefault(recipient, ts)
@@ -472,7 +493,7 @@ class FeatureStore:
     # ------------------------------------------------------------------ AUDIO (Tier 2)
 # Tính feature audio từ transcript, codec và age của caller để cảnh báo voice scam.
     def audio_features(self, ev: dict) -> dict:
-        self.last_seen[ev["caller"]] = ev["ts"]
+        self._touch(ev["caller"], ev["ts"])
         tr = ev.get("transcript", "")
         age = self.age_by_msisdn.get(ev["caller"], -2)
         return {

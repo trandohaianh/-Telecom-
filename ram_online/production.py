@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import math
 import time
 
-from .core import OnlineUnavailable, normalize_phone
+from .core import OnlineOverloaded, OnlineUnavailable, normalize_phone
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,11 @@ class CircuitBreaker:
             self.state = "closed"
             self.epoch += 1
         self.failures = 0
+
+    def released(self, permit):
+        """Request shed locally: Redis was never asked, so this is neither success nor failure."""
+        if permit.probe and permit.epoch == self.epoch:
+            self.state, self.retry_at = "open", self.clock()  # let the next request probe at once
 
     def failure(self, permit):
         if permit.epoch != self.epoch:
@@ -99,9 +104,18 @@ class FailOpenGate:
         except asyncio.CancelledError:
             self.breaker.cancelled(permit)
             raise
+        except OnlineOverloaded:
+            # Quá tải cục bộ không chứng minh Redis hỏng: không được mở breaker (sẽ cho qua mọi số bị chặn).
+            self.breaker.released(permit)
+            return CallDecision(True, "unavailable", "hidden", "online_overloaded")
         except OnlineUnavailable:
             self.breaker.failure(permit)
             return CallDecision(True, "unavailable", "hidden", "policy_unavailable")
+        except Exception:
+            # Lỗi không được bọc (OSError thô, lỗi client bất ngờ) trước đây đi thẳng ra gRPC thành mã UNKNOWN
+            # thay vì một quyết định. Coi như lỗi phụ thuộc: tính vào breaker và trả quyết định fail-open rõ ràng.
+            self.breaker.failure(permit)
+            return CallDecision(True, "unavailable", "hidden", "policy_error")
         except BaseException:
             self.breaker.cancelled(permit)
             raise

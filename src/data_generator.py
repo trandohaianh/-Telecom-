@@ -34,7 +34,10 @@ for _city, (_lat, _lon) in CITIES.items():
     for _i in range(CELLS_PER_CITY):
         REGISTERED_CELLS[f"{_city}-{_i:04d}"] = (_lat + _rng.uniform(-0.15, 0.15), _lon + _rng.uniform(-0.15, 0.15))
 
-# Danh sách số nóng ngân hàng và cơ quan mà cuộc gọi giả mạo cố gắng sao chép.
+# Danh sách số nóng ngân hàng và cơ quan mà cuộc gọi giả mạo cố gắng sao chép.
+from config import LOCAL_UTC_OFFSET_S, local_hour
+SIM_DAY0_S = 86400.0   # simulated day 0 starts at local midnight of 1970-01-02 (Unix-style seconds)
+
 PROTECTED_CLI = ["1900545413", "1800599928", "02439741234", "1900558868", "02838221234", "113"]  # bank / agency hotlines
 BRAND_SENDERS = ["Vietcombank", "Techcombank", "BIDV", "VPBank", "MoMo", "VNPAY", "EVNHANOI", "Shopee", "Viettel"]
 OFFICIAL_DOMAINS = ["vietcombank.com.vn", "techcombank.com", "bidv.com.vn", "vpbank.com.vn", "momo.vn",
@@ -102,8 +105,8 @@ def _haversine(a, b):
 
 # Tạo mô hình hoạt động theo giờ để traffic tăng ở khung giờ cao điểm trong ngày.
 def day_profile(t: float) -> float:
-    """Relative activity by hour of day (Vietnam time, simulation t=0 is 00:00)."""
-    h = (t / 3600.0) % 24
+    """Relative activity by local (Vietnam) hour of day; t is Unix-style UTC seconds."""
+    h = local_hour(t)
     if h < 6:
         return 0.12
     if h < 8:
@@ -130,7 +133,7 @@ def poisson_times(rng: np.random.Generator, rate_per_s: float, t0: float, t1: fl
     out = []
     for t in ts:
         if work_hours:
-            h = (t / 3600.0) % 24
+            h = local_hour(t)
             if not (8 <= h < 18):
                 continue
             if rng.random() < rate_per_s / peak:
@@ -473,7 +476,9 @@ class TrafficSimulator:
     def build(self, hours: float, start_hour: float = 0.0, warmup_hours: float = 0.0):
         """warmup_hours of legitimate-only traffic are simulated BEFORE start_hour so that the
         feature store has realistic history when the measured window begins (no cold start)."""
-        t0 = start_hour * 3600
+        # start_hour is LOCAL time. Simulated ts are UTC-style seconds (same convention as live traffic),
+        # placed one day after the epoch so even a 24 h warm-up stays at non-negative times.
+        t0 = SIM_DAY0_S + start_hour * 3600 - LOCAL_UTC_OFFSET_S
         t1 = t0 + hours * 3600
         self.legit(t0 - warmup_hours * 3600, t1)
         R = self.r
@@ -489,6 +494,13 @@ class TrafficSimulator:
             self.sms_phish(t0, t1, int(120 * days), TRAIN_LURES, SCAM_DOMAINS_TRAIN)
             self.deepfake(t0, t1, int(60 * days))
             self.voice_harvest(t0, t1, max(1, round(6 * days)), (15, 45))
+        elif self.window == "reference":
+            # Drift reference (D7): realistic prevalence of the KNOWN families only, never used for
+            # training or thresholds, and without the zero-day family reserved for the test window.
+            self.simbox(t0, t1, 2, (5, 10), tag="SB_R1", active_h=(0.75, 1.25), dedicated_imei=False)
+            self.cli_spoof(t0, t1, 4)
+            self.sms_phish(t0, t1, 6, TRAIN_LURES, SCAM_DOMAINS_TRAIN)
+            self.deepfake(t0, t1, 3)
         elif self.window == "threats":
             # New-threat evaluation: farms on old rented SIMs and silent voice-harvesting numbers, nothing else.
             self.simbox(t0, t1, 2, (5, 10), tag="SB_AGED", active_h=(0.75, 1.25), aged=True)

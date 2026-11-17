@@ -15,7 +15,7 @@ import shutil
 import tempfile
 import time
 
-from event_contract import (EVENT_FIELDS, json_safe, order_key, payload_hash, validate_call,
+from event_contract import (EVENT_FIELDS, fsync_directory, json_safe, order_key, payload_hash, validate_call,
                             require_checkpoint_namespace)
 
 
@@ -150,7 +150,10 @@ class DistributedCallStream:
             if json.loads(manifest.read_text(encoding="utf-8")) != expected:
                 raise ValueError("Distributed checkpoint source or semantic configuration changed")
         else:
-            manifest.write_text(json.dumps(expected, allow_nan=False), encoding="utf-8")
+            pending = manifest.with_suffix(".pending")   # atomic: a torn source.json would brick the checkpoint
+            pending.write_text(json.dumps(expected, allow_nan=False), encoding="utf-8")
+            pending.replace(manifest)
+            fsync_directory(manifest.parent)
         self.latest, self.last_batch, self.max_ts, self.watermark, self.last_key = None, -1, None, None, None
         self.last_metrics = {}
         self.buffered_rows = 0
@@ -356,6 +359,7 @@ class DistributedCallStream:
                 import os
                 os.fsync(handle.fileno())
             temporary.rename(target)
+            fsync_directory(target.parent)
             self._adopt(target, receipt)
             self._retain()
             return self.spark.read.parquet(str(target / "features"))

@@ -68,7 +68,8 @@ def model_quality() -> dict:
             "any_fpr_pct": m["block_or_flag"]["fpr_pct"],
             "family_min_detected_pct": min(v["detected_pct"] for v in fam.values()) if fam else None,
             "zero_day_caught_pct": round(100 * (zd["events"] - zd["missed"]) / zd["events"], 1) if zd["events"] else None,
-            "session_pre_ring_block_recall_pct": round(sess["recall_pct"], 2),
+            "session_pre_ring_block_recall_pct": (round(sess["recall_pct"], 2)
+                                                  if sess.get("recall_pct") is not None else None),
             "scored_events": m["scored_events"],
             "throughput_eps_offline": round(len(events) / score_s),
         },
@@ -126,6 +127,11 @@ def regressions(metrics: dict, baseline: dict, tol: float) -> tuple[list[str], d
             out.append(f"{k}: {b} → {a}")
         if k in LOWER and k.endswith("_ms") and a > b * 1.25 + 2:
             out.append(f"{k}: {b} → {a}")
+        elif k in LOWER and "fpr" in k:
+            # FPR có mục tiêu 0,01-0,2 %: dung sai 3 điểm % không bao giờ kích hoạt. Dùng biên tương đối
+            # 50 % cộng 0,005 điểm % (một vài sự kiện trên 50k) để còn bắt được hồi quy thật.
+            if a > b * 1.5 + 0.005:
+                out.append(f"{k}: {b} → {a}")
         elif k in LOWER and not k.endswith("_ms") and a > b + (tol if k.endswith("_pct") else 0):
             out.append(f"{k}: {b} → {a}")
     return out, deltas

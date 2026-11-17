@@ -20,6 +20,7 @@ import contextlib
 # gc dùng để dọn rác và đóng băng các đối tượng dùng chung trước khi stream chạy.
 # json đọc các file số liệu đã lưu và giải mã bản ghi bằng chứng.
 import json
+import re
 # queue chuyển các sự kiện thử tấn công từ request API sang thread xử lý.
 import queue
 # threading chạy luồng giả lập song song với máy chủ web.
@@ -39,7 +40,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 # Nạp cấu hình đường dẫn và giới hạn SLA của hệ thống.
-from config import DATA_DIR, LOG_DIR, MODEL_DIR, MODEL_VERSION, SLA_TIER1_MS, SLA_TIER2_MS, STATIC_DIR
+from config import DATA_DIR, LOG_DIR, MODEL_DIR, SLA_TIER1_MS, SLA_TIER2_MS, STATIC_DIR
 from backend_state import BackendState, EventConflict
 from backend_model_identity import loaded_model_identity
 from backend_runtime import InferenceRuntime, REQUIRED, validate_event
@@ -50,11 +51,12 @@ from data_generator import PROTECTED_CLI, TrafficSimulator
 from detector import Detector
 # Hàm load_events đọc các tệp sự kiện đã tạo trước.
 from events_io import load_events
-# EvidenceLog ghi chuỗi bằng chứng; verify kiểm tra tính toàn vẹn của chuỗi đó.
-from evidence import EvidenceLog, verify, verify_incremental
+# verify kiểm tra tính toàn vẹn của chuỗi bằng chứng (ghi qua DurableEvidenceLog).
+from evidence import verify, verify_incremental
 # GuardedDetector bọc detector để áp dụng timeout, luật dự phòng, fail-open và circuit breaker.
 from resilience import GuardedDetector
 # Phân quyền theo vai trò, che số điện thoại cho người xem và nhật ký thao tác có chữ ký.
+import accounts
 import security
 from security import DEMO_MODE, AuditLog, mask_imei, mask_number, require, verify_audit
 # AI agent vận hành: giám sát và đề xuất, con người quyết định.
@@ -78,6 +80,7 @@ class LiveEngine:
         self._stream_thread = None
         self.lock = threading.RLock()
         self.det_lock = threading.RLock()
+        self._inject_lock = threading.Lock()
         self.events = []
         if detector_factory is Detector:
             det = Detector(require_manifest=os.environ.get("FRAUD_REQUIRE_MANIFEST", "0") == "1")
@@ -89,7 +92,7 @@ class LiveEngine:
             self.events = load_events(DATA_DIR / "test_events_50k.csv")
             det.prime(load_events(DATA_DIR / "test_warmup_24h_events.csv.gz"))
         det.warm_up()
-        self.g = GuardedDetector(det, budget_ms=SLA_TIER1_MS)
+        self.g = GuardedDetector(det, budget_ms=SLA_TIER1_MS, content_budget_ms=SLA_TIER2_MS)
         self.store = BackendState(None if self.demo_mode else (
             state_path or os.environ.get("FRAUD_STATE_DB", LOG_DIR / "live_state.sqlite3")))
         # The runtime acquires the exclusive owner before any live-state replay.
@@ -105,6 +108,10 @@ class LiveEngine:
         self.network_mode = "shadow"  # An operator must deliberately re-enable enforcement after restart.
         self.network_stats = collections.Counter()
         self.counts = collections.Counter()
+        # LATE/DUPLICATE trả ALLOW không chấm điểm; đếm riêng để không lẫn vào ALLOW thật (D1).
+        self.ingest_counts = collections.Counter()
+        # Quyết định của riêng CALL đã chấm điểm (ALLOW gồm cả FAIL_OPEN): cùng miền với baseline drift (D7).
+        self.call_decisions = collections.Counter()
         self.by_type = collections.Counter()
         self.alerts = collections.deque(maxlen=60)
         self.lat = collections.deque(maxlen=3000)
@@ -153,11 +160,16 @@ class LiveEngine:
             return
         with self.lock:
             self.network_stats[result["decision"]] += 1
+            ingest = result.get("ingest")
+            if ingest and ingest != "ADMITTED":
+                self.ingest_counts[ingest] += 1
             if result.get("record_type") == "audio_observation":
                 # Real acoustic observations have their own schema and model domain.
                 return
             self.processed += 1
             self.by_type[event["event_type"]] += 1
+            if event["event_type"] == "CALL" and (not ingest or ingest == "ADMITTED"):
+                self.call_decisions[result["decision"]] += 1
             self.counts["FAIL_OPEN" if result.get("fail_open") and result["decision"] == "ALLOW" else result["decision"]] += 1
             self.lat.append(result.get("latency_ms", 0.0))
             self._track(event, result)
@@ -398,6 +410,11 @@ class LiveEngine:
     # --------------------------------------------------------------- attack injection
     # Tạo một kiểu tấn công tổng hợp, gửi qua cùng detector rồi trả quyết định cho dashboard.
     def inject(self, kind: str, target: str | None = None):
+        # Các luồng simulate-stream của nhiều người dùng chạy song song nhưng dùng chung self.sim.events.
+        with self._inject_lock:
+            return self._inject_unlocked(kind, target)
+
+    def _inject_unlocked(self, kind: str, target: str | None = None):
         # Chọn timestamp sau sự kiện nền mới nhất để sự kiện thử nghiệm nằm ở tương lai gần.
         last_ts = self.events[(self.pos - 1) % len(self.events)]["ts"] + self.offset
         # Dùng simulator riêng cho thao tác injection để không đụng luồng dữ liệu nền.
@@ -433,7 +450,7 @@ class LiveEngine:
         evs = sorted(sim.events, key=lambda e: e["ts"])[:25]
         # Gán ID riêng của phiên demo và cờ để giao diện nhận biết event do người dùng tiêm.
         for k, e in enumerate(evs):
-            e["event_id"] = f"INJ-{kind[:3]}-{int(time.time() * 1000) % 10_000_000}-{k}"
+            e["event_id"] = f"INJ-{kind[:3]}-{secrets.token_hex(6)}-{k}"
             e["injected"] = True
         # Nhắm vào số của người dùng app. Với kiểu tấn công "rải" (SIM box, Wangiri) chỉ cuộc cuối tới người
         # dùng: họ là một trong nhiều người nhận, nên đổi mọi người nhận thành một số sẽ làm sai hành vi.
@@ -481,6 +498,7 @@ class LiveEngine:
                 "model_manifest": getattr(self.g.det, "model_manifest", {"status": "legacy_unverified"}),
                 "uptime_s": round(time.time() - self.started),
                 "processed": self.processed, "decisions": dict(self.counts), "by_type": dict(self.by_type),
+                "ingest_unscored": dict(self.ingest_counts), "call_decisions": dict(self.call_decisions),
                 "eps": self.rate_hist[-1] if self.rate_hist else 0, "eps_history": list(self.rate_hist),
                 "latency_ms": {"p50": round(float(np.percentile(lat, 50)), 3), "p99": round(float(np.percentile(lat, 99)), 3)},
                 "breaker": {"state": cb.state, **cb.stats}, "chaos": {"delay_ms": self.g.chaos_delay_ms, "error": self.g.chaos_error},
@@ -742,8 +760,11 @@ def api_latest(n: int = 5, u=Depends(require("analyst"))):
 
 @app.get("/api/audit")
 # Nhật ký thao tác: ai đã làm gì, kèm kết quả kiểm tra chuỗi hash và chữ ký của từng dòng (chỉ admin).
-def api_audit(n: int = 20, u=Depends(require("admin"))):
-    return {"verify": verify_audit(), "entries": audit.tail(n)}
+def api_audit(n: int = 20, anchor_records: int | None = None, anchor_hash: str | None = None,
+              u=Depends(require("admin"))):
+    # verify.head nên được chép định kỳ ra hệ thống ngoài; gửi lại qua anchor_* để phát hiện xoá đuôi log.
+    anchor = None if anchor_records is None else {"records": anchor_records, "hash": anchor_hash or ""}
+    return {"verify": verify_audit(anchor=anchor), "entries": audit.tail(n)}
 
 
 # ====================================================================== network link (đứng song song với nhà mạng)
@@ -764,10 +785,19 @@ async def network_request(request: Request):
     if why:
         raise HTTPException(401, f"network link refused: {why}")
     try:
-        ev = json.loads(body)
-        return validate_event(ev, "CDR" if request.url.path.endswith("/cdr") else "VERDICT")
-    except (ValueError, TypeError) as exc:
+        ev = validate_event(json.loads(body), "CDR" if request.url.path.endswith("/cdr") else "VERDICT")
+    except (ValueError, TypeError, RecursionError) as exc:
         raise HTTPException(400, str(exc))
+    # Yêu cầu đã ký trong ±30 s đồng hồ thật, nên mốc sự kiện kiểu Unix không thể ở xa trong tương lai.
+    # Một mốc như vậy sẽ đẩy watermark của IngestGuard và làm mọi sự kiện thật sau đó thành LATE (không chấm).
+    # Mốc < 1e9 là đồng hồ giả lập (demo/kiểm thử bắt đầu từ 0) nên không so với đồng hồ thật.
+    if ev["ts"] >= UNIX_TS_FLOOR and ev["ts"] > time.time() + NETWORK_MAX_FUTURE_S:
+        raise HTTPException(400, f"ts is more than {NETWORK_MAX_FUTURE_S:.0f} s in the future")
+    return ev
+
+
+UNIX_TS_FLOOR = 1e9
+NETWORK_MAX_FUTURE_S = 300.0
 
 
 @app.post("/api/v1/verdict")
@@ -899,6 +929,8 @@ def app_demo_numbers(_=Depends(legacy_demo_login)):
 def app_session(msisdn: str, _=Depends(legacy_demo_login)):
     if msisdn not in engine.demo_numbers:
         raise HTTPException(403, "only demo numbers can sign in without OTP")
+    if portal.db().one("SELECT 1 AS x FROM subscribers WHERE msisdn=?", (msisdn,)):
+        raise HTTPException(403, "this number belongs to a registered account")
     token = secrets.token_urlsafe(24)
     with engine.lock:
         engine.app_sessions[token] = {"msisdn": msisdn, "created": time.time(), "last": time.time()}
@@ -1002,10 +1034,24 @@ def _number_keys(number: str) -> set:
     return keys
 
 
+_NUMBER_RE = re.compile(r"^[0-9A-Za-z]{3,15}$")
+
+
+# Báo cáo / lời mời chỉ nhận số (hoặc tên thương hiệu SMS) hợp lệ: chuỗi tuỳ ý làm phình bộ nhớ và CSDL.
+def _checked_number_keys(number: str) -> set:
+    keys = _number_keys(number or "")
+    if not all(_NUMBER_RE.match(k) for k in keys):
+        raise HTTPException(422, "invalid phone number")
+    return keys
+
+
 @app.post("/api/app/report")
 # Người dùng báo cáo số lừa đảo; mỗi thuê bao chỉ được tính một lần cho mỗi số.
 def app_report(number: str, reason: str = "", msisdn=Depends(app_user)):
-    keys = _number_keys(number)
+    accounts.limiter.hit("app_report", msisdn, 30, 3600)
+    if len(reason) > 500:
+        raise HTTPException(422, "reason is limited to 500 characters")
+    keys = _checked_number_keys(number)
     if msisdn in keys:
         raise HTTPException(400, "cannot report your own number")
     number = max(keys, key=len)
@@ -1029,7 +1075,8 @@ def app_family(msisdn=Depends(app_user)):
 @app.post("/api/app/family/invite")
 # Mời một người thân (ví dụ bố mẹ) cho phép mình nhận cảnh báo khi họ gặp lừa đảo. Cần họ đồng ý trên app của họ.
 def app_family_invite(number: str, msisdn=Depends(app_user)):
-    keys = _number_keys(number)
+    accounts.limiter.hit("family_invite", msisdn, 10, 3600)
+    keys = _checked_number_keys(number)
     target = next((k for k in keys if len(k) == 11 and k.startswith("84")), max(keys, key=len))
     if target == msisdn:
         raise HTTPException(400, "cannot protect your own number")
@@ -1046,6 +1093,9 @@ def app_family_invite(number: str, msisdn=Depends(app_user)):
 # Người được mời đồng ý hoặc từ chối. Người được bảo vệ có thể gỡ người giám hộ bất kỳ lúc nào (accept=false).
 def app_family_respond(guardian: str, accept: bool, msisdn=Depends(app_user)):
     with engine.lock:
+        # Chỉ chấp nhận lời mời đang chờ: không thì bất kỳ chuỗi nào cũng thành "người giám hộ" (và một inbox mới).
+        if accept and guardian not in engine.invites.get(msisdn, ()):
+            raise HTTPException(404, "no pending invite from this number")
         engine.invites[msisdn].discard(guardian)
         if accept:
             engine.guardians[msisdn].add(guardian)

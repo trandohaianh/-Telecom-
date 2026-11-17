@@ -100,7 +100,9 @@ class LiveEngine:
         self.evidence_path = evidence_path or EVIDENCE_PATH
         try:
             self.store.acquire_owner()
-            self.log = DurableEvidenceLog(self.evidence_path, self.store)
+            # Demo evidence rotates (simulated traffic, ~1.25 GB/day otherwise); live evidence never does.
+            self.log = DurableEvidenceLog(self.evidence_path, self.store,
+                                          rotate_bytes=_demo_evidence_cap() if self.demo_mode else None)
         except BaseException:
             self.store.close()
             raise
@@ -404,6 +406,8 @@ class LiveEngine:
         now = time.time()
         full = now - getattr(self, "_ev_full_at", 0.0) > 1800
         state = {} if full else dict(getattr(self, "_ev_state", {}))
+        if state and self.evidence_path.stat().st_size < state.get("pos", 0):
+            state = {}                  # the demo log rotated: start again from the new file's first line
         # Child process: the hash-chain re-check must not compete with the inference owner for the GIL.
         ok, n, bad, state = verify_in_subprocess(self.evidence_path, state)
         if ok is None:
@@ -781,6 +785,17 @@ def api_verify(u=Depends(require("analyst"))):
         raise HTTPException(503, "Không chạy được bước kiểm chuỗi bằng chứng, thử lại sau")
     last = state.get("prev", "") if ok and n else ""
     return {"chain_valid": ok, "records": n, "first_bad_line": bad, "last_hash": last}
+
+
+def _demo_evidence_cap() -> int:
+    raw = os.environ.get("FRAUD_DEMO_EVIDENCE_MAX_MB") or "256"
+    try:
+        mb = int(raw)
+    except ValueError:
+        raise ValueError("FRAUD_DEMO_EVIDENCE_MAX_MB must be an integer") from None
+    if not 8 <= mb <= 65536:
+        raise ValueError("FRAUD_DEMO_EVIDENCE_MAX_MB must be within [8, 65536]")
+    return mb << 20
 
 
 def _tail_evidence(path, n, chunk=1 << 16):

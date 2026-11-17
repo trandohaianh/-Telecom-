@@ -25,10 +25,10 @@ EduDSS, Spark, `ram_online` và `telecom_grpc` chỉ được chạy lại test 
 
 | Hạng mục | Trạng thái | Ghi chú |
 |---|---|---|
-| Mã nguồn và test | **Ready** | Bộ chính 604/604; Spark + gRPC 26/26; EduDSS 16/16; QA end-to-end 32/32 trên server thật có ký HMAC |
+| Mã nguồn và test | **Ready** | Bộ chính 606/606; Spark + gRPC 26/26; EduDSS 16/16; QA end-to-end 32/32 trên server thật có ký HMAC |
 | Bảo mật ứng dụng | **Ready** (đã sửa trong đợt này) | Không có SQL injection; RBAC đủ; không có IDOR; header bảo mật, giới hạn body và 500 an toàn đã được thêm |
-| Cấu hình triển khai | **Ready** sau sửa, nhưng **chưa build bằng Docker thật** | Máy này có Docker CLI và Compose v5.5.1 nhưng daemon không chạy. `docker compose config` đã qua; lệnh build và chạy ở §5 |
-| SLA ≤ 30 ms | **Needs Attention** | Trên máy WSL: p99 33,4 ms ở 100 EPS, vì fsync của đĩa ảo chậm. Chủ dự án đã quyết giữ `FULL`, nên phải đo lại trên phần cứng đích (§4) |
+| Cấu hình triển khai | **Ready**: **đã build và chạy thật bằng Docker** (§7) | `docker compose build` đạt (390 s, image 1,38 GB, `pip check` sạch). Container healthy sau 88 s; smoke 7/7; QA 32/32; dữ liệu còn nguyên sau khi build lại và tạo lại container. Đợt chạy thật tìm thêm một lỗi (bằng chứng demo không xoay vòng) và đã sửa |
+| SLA ≤ 30 ms | **Needs Attention** | Trên WSL: p99 33,4 ms ở 100 EPS. **Trong container Docker Desktop:** fsync p50 21 ms (p99 40 ms), nên một commit `FULL` mất khoảng 37 ms và SLA là **không thể** trên môi trường này. Chủ dự án quyết giữ `FULL`, nên phải chốt trên phần cứng đích có fsync dưới 1 ms (§4, §7) |
 | Chế độ chặn thật (enforce) | **Blocked**, đúng thiết kế | Cần kiểm định trên lưu lượng thật có nhãn và đặt `FRAUD_REAL_TRAFFIC_VALIDATED=1`. Toàn bộ số đo chất lượng mới chỉ trên dữ liệu mô phỏng |
 
 ---
@@ -37,7 +37,7 @@ EduDSS, Spark, `ram_online` và `telecom_grpc` chỉ được chạy lại test 
 
 1. **Ba nhánh rà soát song song, chỉ đọc:** backend; ops/deploy; frontend và Android.
 2. **Kiểm lại từng phát hiện trên code trước khi sửa.** Lỗi Web Push trong container được hai nhánh tìm ra độc lập.
-3. **Mỗi bản sửa code có test hồi quy** trong `tests/test_round7_readiness.py`: 27 test, cả 27 đều hỏng trên commit trước (`b5cc1fb`) và đều đạt sau khi sửa.
+3. **Mỗi bản sửa code có test hồi quy** trong `tests/test_round7_readiness.py`: 29 test, cả 29 đều hỏng trên commit trước (`b5cc1fb`) và đều đạt sau khi sửa.
 4. **Chạy lại toàn bộ bộ test và QA** trên WSL, bản sao sạch của cây làm việc, bundle `tfd-v2.6`. QA chạy trên server thật: đăng ký, OTP demo, mô phỏng tấn công, tra số, báo cáo số, người thân, đăng nhập vận hành, audit + neo, phán quyết ký HMAC, phát lại, CDR, WAV.
 5. **Kiểm tĩnh:**
    - `docker compose config` (có cả profile standalone);
@@ -113,8 +113,7 @@ EduDSS, Spark, `ram_online` và `telecom_grpc` chỉ được chạy lại test 
 
 | Mức | Việc | Vì sao chưa xong | Cách làm |
 |---|---|---|---|
-| **Cao trước khi go-live** | **Đo lại SLA p99 ≤ 30 ms trên phần cứng đích** | Đĩa ảo WSL fsync mất 4–25 ms. Chủ dự án quyết giữ `synchronous=FULL` (không mất phán quyết khi mất điện) | Trên máy đích, cần SSD có tụ chống mất điện, fsync < 0,5 ms. Chạy ba lần: `python -B src/verify_live_http.py --rates 50,100 --seconds 30`. Đạt khi p99 ≤ 30 ms, fail-open = 0, ≥ 95 % trong 30 ms. Chi tiết A/B ở báo cáo 05 §5 |
-| **Cao trước khi go-live** | **Build và chạy image thật** | Docker daemon không chạy trên máy này | Các lệnh ở §5 (build, `id` = 10001, healthy, smoke, push key = 200) |
+| **Cao trước khi go-live** | **Đo lại SLA p99 ≤ 30 ms trên phần cứng đích** | Đĩa ảo WSL fsync mất 4–25 ms; Docker Desktop 21–40 ms. Chủ dự án quyết giữ `synchronous=FULL` (không mất phán quyết khi mất điện) | Trên máy đích, cần SSD có tụ chống mất điện, fsync < 0,5 ms. Chạy ba lần: `python -B src/verify_live_http.py --rates 50,100 --seconds 30`. Đạt khi p99 ≤ 30 ms, fail-open = 0, ≥ 95 % trong 30 ms. Chi tiết A/B ở báo cáo 05 §5 |
 | TB | IP proxy tin cậy được chụp lúc deploy | Khi FieldOps tạo lại Caddy, IP của nó đổi, mọi người dùng thành một IP, và rate limit thành giới hạn chung | Gán subnet cố định cho mạng `edge` và `ipv4_address` cố định cho Caddy, rồi đặt `FORWARDED_ALLOW_IPS` theo IP đó. Cần sửa ở repo FieldOps (ngoài phạm vi) |
 | TB | Backup nằm cùng volume với dữ liệu | Mất VM là mất cả hai | Thêm cron rclone (hoặc tương đương) chép `/srv/state/logs/backups` lên object storage; ghi quy trình restore |
 | TB | CSP chưa có `script-src` | Ba trang dùng script nội tuyến; phiên thuê bao lưu trong `localStorage` | Tách script ra file `.js`, rồi `script-src 'self' https://accounts.google.com`. Chạy `Content-Security-Policy-Report-Only` trước một thời gian |
@@ -196,4 +195,76 @@ promtool check rules monitoring/alerts/telecom-rules.yml
 | `requirements-serve.txt`, `requirements.txt` | Ghim phụ thuộc import trực tiếp; `pywebpush` cho dev |
 | `static/app/index.html`, `static/app/sw.js`, `static/admin/index.html`, `static/admin/manage.html` | Xử lý lỗi, polling, escape, offline, thông báo |
 | `android/.../MainActivity.kt` | Chỉ bản debug được đổi máy chủ |
-| `tests/test_round7_readiness.py` (mới) | 27 test hồi quy |
+| `src/backend_evidence.py`, `src/server.py` (đợt Docker) | Xoay vòng file bằng chứng ở chế độ demo (`FRAUD_DEMO_EVIDENCE_MAX_MB`, mặc định 256); kiểm tăng dần bắt đầu lại sau khi xoay |
+| `tests/test_round7_readiness.py` (mới) | 29 test hồi quy |
+
+---
+
+## 7. Dry run Docker thật (17/11/2026, Docker Desktop 29.8.0, Compose v5.5.1, VM 8 GB / 8 CPU)
+
+**Cách chạy:**
+- Project riêng `telecom-dryrun`, không đụng tới dry run EduDSS chạy song song (`edudss-saas`).
+- File env **tạm**, secret sinh ngẫu nhiên, không dùng `.env` thật.
+- File override: mạng riêng `telecom-dryrun-edge` thay cho mạng `edge` ngoài; cổng chỉ mở trên `127.0.0.1:18090`.
+- Dọn bằng `down -v` khi xong: 0 container, 0 volume, 0 mạng còn lại; file env tạm đã xoá. Image `telecom-fraud:local` được giữ làm cache; xoá bằng `docker image rm telecom-fraud:local`.
+
+### 7.1 Kết quả
+
+| Bước | Kết quả |
+|---|---|
+| `docker compose build` | **Đạt**: 390 s lần đầu, 42 s khi build lại; image 1,38 GB; `pip check` sạch. Cảnh báo numpy 2.4.0 bị "yank" đã biết: đây là bản đã kiểm với mô hình |
+| User trong image | `uid=10001(app)`; `/srv/app` chỉ đọc (`touch` bị từ chối) |
+| Nội dung image | Chỉ có `requirements-serve.txt`, `runtime/`, `serve.py`, `src/`, `static/`. Không có `secrets/`, `.env`, `*.docx`, `network_link.key`, `users.json`; log pytest của bundle đã bị loại |
+| Biến trong image | `FRAUD_VAPID_PRIVATE_KEY_FILE=/srv/state/secrets/…`, `FRAUD_REQUIRE_MANIFEST=1`, CSDL và log đều nằm dưới `/srv/state` |
+| Healthcheck | **healthy** sau 88 s lần đầu, 44 s khi khởi động lại; RAM 664 MiB, ổn định ở **774–778 MiB suốt 18 phút** (không rò rỉ) trên giới hạn 2 GiB |
+| `/health/ready` | `tfd-v2.6`, manifest `verified`, `journal_durability: FULL`, demo bật |
+| `smoke.sh` | **7/7** (app, admin, ready, auth config, metrics 401 không token / 200 có token, demo ẩn danh tắt 403) |
+| Kiểm cứng hoá | `/api/app/push/key` → **200** (trước bản sửa là 500); đủ 5 header bảo mật; body 1,1 MB → **413**; Bearer có ký tự ngoài ASCII → **401** |
+| QA end-to-end (32 luồng) | **32/32** ở các lượt sau. Lượt **đầu tiên** sau mỗi lần khởi động hỏng 1 luồng (`1 ms reorder … scored`: trả `PENDING`). Xem §7.2 |
+| Dữ liệu sau khi build lại và tạo lại container | Khoá VAPID và `users.json` **giữ nguyên** (cùng SHA-256), nên các thiết bị đã đăng ký push không phải đăng ký lại |
+| Xoay vòng bằng chứng demo (ngưỡng thử 8 MB) | File cũ 21,7 MB thành `evidence_demo.1.jsonl`; file mới bắt đầu chuỗi từ GENESIS. **Cả hai chuỗi hợp lệ** (`verify`: 25 651 và 1 167 bản ghi) |
+
+### 7.2 Phát hiện mới từ đợt chạy thật
+
+1. **Bằng chứng demo tăng khoảng 1,25 GB/ngày và không xoay vòng (đã sửa).**
+   - Đo được 0,9 MB/phút.
+   - Lúc khởi động, `DurableEvidenceLog` kiểm và đọc **cả file hai lần**, nên vài tuần sau một lần khởi động lại sẽ OOM; với `restart: unless-stopped`, container rơi vào vòng khởi động lại liên tục.
+   - **Sửa:** chỉ ở chế độ demo (dữ liệu mô phỏng), xoay khi đạt `FRAUD_DEMO_EVIDENCE_MAX_MB` (mặc định 256 MB), giữ 1 bản cũ. Chế độ thật **không xoay**, vì chính sách lưu giữ bằng chứng thật cần chủ dự án quyết.
+   - Test: `test_demo_evidence_rotates_and_both_chains_stay_valid`, `test_only_demo_mode_rotates_evidence`.
+2. **Trên Docker Desktop, SLA `FULL` không thể đạt.** Đo trong container sạch, từ cùng image, không có server demo:
+
+   | Phép đo | Kết quả |
+   |---|---|
+   | fsync thô trong container | p50 **21,05 ms**, p99 40,2 ms (WSL trực tiếp: 3,4 ms) |
+   | `verify_live_http` 50 / 100 EPS, `FULL` | p50 37,6 / 37,4 ms; 0 % trong 30 ms |
+   | Cùng phép đo với `NORMAL` (chỉ để chẩn đoán, **không** đổi mặc định) | p50 10,7 / 10,5 ms; 94,8 / 94,7 % trong 30 ms |
+
+   **Kết luận:** chi phí là một lần fsync cố định cho mỗi commit trên overlay filesystem của Docker Desktop. Docker Desktop trên Windows **không** phải môi trường hợp lệ để chốt SLA. Trên VM đích, đo fsync trên chính volume trạng thái trước (cần p99 dưới 1 ms; nếu cao hơn, chọn block volume hiệu năng cao hơn hoặc đĩa local NVMe):
+   ```bash
+cat > fsync_probe.py <<'EOF'
+import os, tempfile, time
+f = open(tempfile.mkdtemp(dir=".") + "/x", "wb"); t = []   # in the current dir = the state volume
+for _ in range(100):
+    f.write(b"x" * 512); f.flush(); a = time.perf_counter(); os.fsync(f.fileno()); t.append((time.perf_counter() - a) * 1000)
+t.sort(); print("fsync p50 %.2f ms p99 %.2f ms" % (t[50], t[98]))
+EOF
+docker run --rm -v "$PWD/fsync_probe.py:/tmp/p.py:ro" -v telecom_telecom_state:/srv/state --entrypoint sh telecom-fraud:local \
+  -c 'cd /srv/state && python /tmp/p.py'      # đo trên chính volume trạng thái
+   ```
+3. **Chế độ demo: khoảng 2 % phán quyết API vượt hạn 30 ms** (6 / 290 là `PENDING` trong 150 s, rải đều).
+   - Nguyên nhân là luồng phát lại dashboard 300 sự kiện/giây giữ `det_lock` và tranh GIL với API trên cùng tiến trình; commit tối đa chỉ 0,66 ms vì demo dùng kho trong RAM.
+   - Giả thuyết "chấm lại sau fail-open" đã bị loại: `rescored = 0`.
+   - Ở shadow mode, `PENDING` tức là cho qua và không hành động, nên **vô hại**. Chế độ thật (`FRAUD_DEMO=0`) không có luồng phát lại này.
+   - Đây là lý do của luồng QA thỉnh thoảng hỏng ở lượt đầu. **Không phải lỗi production.**
+4. **Công cụ đo SLA cần thư mục ghi được.** `verify_live_http.py` ghi vào `ROOT/data`, mà thư mục này chỉ đọc trong image. Muốn chạy trong container thì chép sang `/tmp` trước:
+   ```bash
+   docker run --rm --entrypoint sh telecom-fraud:local -c 'cp -r /srv/app /tmp/app && cd /tmp/app && python -B src/verify_live_http.py --rates 50,100 --seconds 30 --model-dir /tmp/app/runtime/artifacts_v22/models'
+   ```
+5. **`smoke.sh` dưới Git Bash trên Windows.** Đặt `MSYS_NO_PATHCONV=1` thì `curl -H @/tmp/…` không đọc được file header. Chỉ là lỗi môi trường: không đặt biến đó thì đạt 7/7, và trên VM Linux không xảy ra.
+
+### 7.3 Trạng thái sau dry run
+
+**Needs Attention**, không đổi:
+- **Đã sẵn sàng:** build, chạy, bảo mật, dữ liệu sau khi khởi động lại, cấu hình demo. Đã kiểm bằng Docker thật.
+- **Còn chặn go-live:** đo SLA trên phần cứng đích có fsync dưới 1 ms (giữ `FULL`).
+- **Chế độ enforce:** vẫn khoá đúng thiết kế, cho tới khi có kiểm định trên lưu lượng thật.

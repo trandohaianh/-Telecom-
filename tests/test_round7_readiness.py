@@ -304,3 +304,42 @@ def test_android_release_cannot_be_pointed_at_another_server():
     kt = read("android/app/src/main/java/vn/lachan/fraudshield/MainActivity.kt")
     assert "if (!BuildConfig.DEBUG) BuildConfig.DEFAULT_SERVER" in kt
     assert "visibility = android.view.View.GONE" in kt and "if (!BuildConfig.DEBUG) return" in kt
+
+
+# =========================================================================== dry run Docker thật (17/11/2026)
+def test_demo_evidence_rotates_and_both_chains_stay_valid(tmp_path):
+    import time as _t
+    from backend_evidence import DurableEvidenceLog
+    from backend_state import BackendState
+    from evidence import verify
+    path = tmp_path / "evidence_demo.jsonl"
+    log = DurableEvidenceLog(path, BackendState(), rotate_bytes=1 << 20)
+    pad = "x" * 900
+    for i in range(1600):                                     # ~1.6 MB of FLAG records
+        log.submit({"event_id": f"E{i}", "decision": "FLAG", "pad": pad})
+        if i % 200 == 0:
+            _t.sleep(0.05)
+    deadline = _t.time() + 10
+    while log.rotations == 0 and _t.time() < deadline:
+        _t.sleep(0.05)
+    log.close()
+    assert log.rotations >= 1 and log.rotated_path().exists()
+    assert path.stat().st_size < (1 << 20) + 200_000
+    for f in (path, log.rotated_path()):
+        ok, n, bad = verify(f)
+        assert ok and n > 0 and bad is None
+    with pytest.raises(ValueError):
+        DurableEvidenceLog(tmp_path / "x.jsonl", BackendState(), rotate_bytes=1000)
+
+
+def test_only_demo_mode_rotates_evidence(monkeypatch):
+    import server
+    src = read("src/server.py")
+    assert "rotate_bytes=_demo_evidence_cap() if self.demo_mode else None" in src
+    assert server._demo_evidence_cap() == 256 << 20
+    for bad in ("1", "abc", "999999"):
+        monkeypatch.setenv("FRAUD_DEMO_EVIDENCE_MAX_MB", bad)
+        with pytest.raises(ValueError):
+            server._demo_evidence_cap()
+    compose = yaml.safe_load(read("deploy/cloud/docker-compose.yml"))
+    assert "FRAUD_DEMO_EVIDENCE_MAX_MB" in compose["services"]["telecom"]["environment"]

@@ -41,6 +41,8 @@ services:
       FRAUD_VAPID_SUBJECT: ${FRAUD_VAPID_SUBJECT:-}
       FRAUD_SQLITE_SYNCHRONOUS: ${FRAUD_SQLITE_SYNCHRONOUS:-FULL}
       FRAUD_MAX_BODY_BYTES: ${FRAUD_MAX_BODY_BYTES:-1048576}
+      # Chế độ demo: xoay vòng file bằng chứng (lưu lượng mô phỏng, ~1,25 GB/ngày nếu không xoay)
+      FRAUD_DEMO_EVIDENCE_MAX_MB: ${FRAUD_DEMO_EVIDENCE_MAX_MB:-256}
       LOG_LEVEL: ${LOG_LEVEL:-warning}
     volumes:
       - telecom_state:/srv/state

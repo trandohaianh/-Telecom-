@@ -1,96 +1,96 @@
 {
   "train": {
-    "events": 322647,
-    "fraud_events": 4061,
-    "fraud_rate_pct": 1.2587,
+    "events": 322306,
+    "fraud_events": 3720,
+    "fraud_rate_pct": 1.1542,
     "by_type": {
-      "AUDIO": 6307,
-      "CALL": 214698,
+      "AUDIO": 6229,
+      "CALL": 214435,
       "SMS": 101642
     },
     "fraud_by_family": {
       "CLI_SPOOF": 120,
-      "DEEPFAKE_VOICE": 370,
-      "SIM_BOX": 2712,
+      "DEEPFAKE_VOICE": 372,
+      "SIM_BOX": 2630,
       "SMS_PHISH": 240,
-      "VOICE_HARVEST": 619
+      "VOICE_HARVEST": 358
     },
-    "warmup_events": 98025,
-    "seconds": 31.4
+    "warmup_events": 98020,
+    "seconds": 48.5
   },
   "val": {
-    "events": 164681,
-    "fraud_events": 2228,
-    "fraud_rate_pct": 1.3529,
+    "events": 163335,
+    "fraud_events": 882,
+    "fraud_rate_pct": 0.54,
     "by_type": {
-      "AUDIO": 3199,
-      "CALL": 110509,
+      "AUDIO": 3174,
+      "CALL": 109188,
       "SMS": 50973
     },
     "fraud_by_family": {
       "CLI_SPOOF": 60,
-      "DEEPFAKE_VOICE": 176,
-      "SIM_BOX": 1593,
+      "DEEPFAKE_VOICE": 181,
+      "SIM_BOX": 348,
       "SMS_PHISH": 120,
-      "VOICE_HARVEST": 279
+      "VOICE_HARVEST": 173
     },
     "warmup_events": 100213,
-    "seconds": 18.6
+    "seconds": 45.8
   },
   "cal": {
-    "events": 161316,
-    "fraud_events": 1886,
-    "fraud_rate_pct": 1.1691,
+    "events": 160845,
+    "fraud_events": 1415,
+    "fraud_rate_pct": 0.8797,
     "by_type": {
-      "AUDIO": 3144,
-      "CALL": 107014,
+      "AUDIO": 3200,
+      "CALL": 106487,
       "SMS": 51158
     },
     "fraud_by_family": {
       "CLI_SPOOF": 60,
-      "DEEPFAKE_VOICE": 182,
-      "SIM_BOX": 1309,
+      "DEEPFAKE_VOICE": 183,
+      "SIM_BOX": 679,
       "SMS_PHISH": 120,
-      "VOICE_HARVEST": 215
+      "VOICE_HARVEST": 373
     },
-    "warmup_events": 98567,
-    "seconds": 22.7
+    "warmup_events": 98557,
+    "seconds": 32.1
   },
   "test": {
     "events": 50000,
-    "fraud_events": 66,
-    "fraud_rate_pct": 0.132,
+    "fraud_events": 71,
+    "fraud_rate_pct": 0.142,
     "by_type": {
-      "AUDIO": 779,
-      "CALL": 35136,
-      "SMS": 14085
+      "AUDIO": 777,
+      "CALL": 35139,
+      "SMS": 14084
     },
     "fraud_by_family": {
-      "CLI_SPOOF": 4,
-      "DEEPFAKE_VOICE": 10,
-      "SIM_BOX": 34,
-      "SMS_PHISH": 6,
-      "ZERO_DAY_WANGIRI": 12
+      "CLI_SPOOF": 3,
+      "DEEPFAKE_VOICE": 9,
+      "SIM_BOX": 49,
+      "SMS_PHISH": 5,
+      "ZERO_DAY_WANGIRI": 5
     },
     "warmup_events": 158787,
-    "seconds": 19.8
+    "seconds": 18.1
   },
   "ref": {
-    "events": 52407,
-    "fraud_events": 31,
-    "fraud_rate_pct": 0.0592,
+    "events": 52418,
+    "fraud_events": 42,
+    "fraud_rate_pct": 0.0801,
     "by_type": {
-      "AUDIO": 854,
-      "CALL": 37063,
+      "AUDIO": 852,
+      "CALL": 37076,
       "SMS": 14490
     },
     "fraud_by_family": {
       "CLI_SPOOF": 4,
-      "DEEPFAKE_VOICE": 11,
-      "SIM_BOX": 10,
+      "DEEPFAKE_VOICE": 9,
+      "SIM_BOX": 23,
       "SMS_PHISH": 6
     },
     "warmup_events": 159869,
-    "seconds": 12.1
+    "seconds": 13.2
   }
 }

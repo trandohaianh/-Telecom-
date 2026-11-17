@@ -85,10 +85,13 @@ def test_bat_thuong_khong_giam_sat_van_giu():
     assert r["decision"] == "FLAG"
 
 
-def test_thu_giong_van_chan():
+def test_thu_giong_chi_canh_bao_voi_so_da_dang_ky():
+    # Quyết định chủ dự án 17/11/2026: số thương mại đã đăng ký chạm trí nhớ thu giọng (A108) chỉ bị
+    # gắn cờ, không bị chặn 1 giờ (khoảng 2 % cuộc gọi thật cũng có đoạn im lặng).
     reg, r = fresh(), verdict("BLOCK", ("A108",))
     reg.apply(call(), r)
-    assert r["decision"] == "BLOCK"
+    assert r["decision"] == "FLAG" and r["reasons"][0]["code"] == "C004"
+    assert reg.stats["harvest_downgraded"] == 1
 
 
 # ------------------------------------------------------------- trần tốc độ

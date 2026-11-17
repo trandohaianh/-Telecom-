@@ -205,6 +205,8 @@ class IngestGuard:
             restored._legacy_frontier = restored.max_ts
         elif state.get("legacy_frontier") is not None:
             restored._legacy_frontier = float(state["legacy_frontier"])
+            if not math.isfinite(restored._legacy_frontier) or restored._legacy_frontier > restored.max_ts:
+                raise ValueError("invalid legacy ingestion frontier")
         restored.stats = {k: int(state.get("stats", {}).get(k, 0)) for k in (ADMITTED, DUPLICATE, LATE)}
         if any(v < 0 for v in restored.stats.values()):
             raise ValueError("invalid ingestion counters")

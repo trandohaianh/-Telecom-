@@ -53,6 +53,9 @@ AUDIO_FEATURES = ["vocoder_artifact", "pitch_jitter", "spectral_flatness", "spea
 
 
 # Xóa các phần tử cũ khỏi deque để giữ cửa sổ trượt luôn là dữ liệu trong khoảng thời gian hợp lệ.
+_MISSING = object()
+
+
 def _insort_time(q, ts):
     """Append keeping event-time order; out-of-order inserts are bounded by allowed lateness."""
     if not q or q[-1] <= ts:
@@ -91,6 +94,13 @@ class FeatureStore:
 
     # ------------------------------------------------------------------ CALL (Tier 1)
 # Tính toàn bộ feature của một event CALL dựa trên lịch sử phát sinh từ stream cho đến thời điểm đó.
+    def _first(self, party, ts):
+        previous = self.first_seen.get(party)
+        if previous is None or ts < previous:
+            self.first_seen[party] = ts
+            return ts
+        return previous
+
     def _touch(self, party, ts):
         # max(): with per-party frontiers (D1) another party's slightly older event may arrive later.
         previous = self.last_seen.get(party)
@@ -103,8 +113,9 @@ class FeatureStore:
         self._touch(callee, ts)
         age = ev.get("caller_age_days", -1)
         self.age_by_msisdn[caller] = age
-        first = self.first_seen.setdefault(caller, ts)
-        self.first_seen.setdefault(callee, ts)
+        # min(): with per-party frontiers another party's NEWER event may have created the entry first.
+        first = self._first(caller, ts)
+        self._first(callee, ts)
         active_h = min((ts - first) / 3600.0, ACTIVE_CAP_H)
 
         # Cửa sổ trượt theo phút/10 phút/1 giờ giúp đếm nhịp gọi và độ phân tán callee hiệu quả.
@@ -159,8 +170,9 @@ class FeatureStore:
             for links in (im, ms):
                 for key in [k for k, last_ts in links.items() if last_ts < d1]:
                     del links[key]
-            imei_cnt = len(im)
-            msisdn_cnt = len(ms)
+            # Links refreshed by another party's newer event (<= allowed lateness ahead) are not counted.
+            imei_cnt = len(im) if max(im.values()) <= ts else sum(1 for v in im.values() if v <= ts)
+            msisdn_cnt = len(ms) if max(ms.values()) <= ts else sum(1 for v in ms.values() if v <= ts)
             gw = 1.0 if imei[:8] in GW_TACS else 0.0
         else:
             imei_cnt = msisdn_cnt = 0
@@ -185,7 +197,8 @@ class FeatureStore:
                 stale = [k for k, v in nsc.items() if v < h]
                 for k in stale:
                     del nsc[k]
-                new_sims = len(nsc)
+                new_sims = (len(nsc) if not nsc or max(nsc.values()) <= ts
+                            else sum(1 for v in nsc.values() if v <= ts))
 
         # Trả về vector feature cuối cùng sau khi tất cả điều kiện thời gian và trạng thái đã được cập nhật.
         return {
@@ -230,8 +243,8 @@ class FeatureStore:
             caller, callee = ev["caller"], ev["callee"]
             self._touch(caller, ts)
             self._touch(callee, ts)
-            first = self.first_seen.setdefault(caller, ts)
-            self.first_seen.setdefault(callee, ts)
+            first = self._first(caller, ts)
+            self._first(callee, ts)
             if owns(callee):
                 _insort_time(self.in_calls[callee], ts)
             # Không dọn mục cũ ở đây (O(1) mỗi side update): call_features của shard sở hữu
@@ -249,10 +262,10 @@ class FeatureStore:
         elif et == "SMS":
             sender, recipient = ev["sender"], ev.get("recipient")
             self._touch(sender, ts)
-            self.first_seen.setdefault(sender, ts)
+            self._first(sender, ts)
             if recipient:
                 self._touch(recipient, ts)
-                self.first_seen.setdefault(recipient, ts)
+                self._first(recipient, ts)
         elif et == "AUDIO":
             self._touch(ev["caller"], ts)
 
@@ -373,14 +386,8 @@ class FeatureStore:
                     evicted += 1
         return {**self.state_stats(), "metadata_evicted": evicted}
 
-    @contextmanager
-    def transaction(self, events):
-        """Rollback keys touched by one scoring batch if inference/policy fails.
-
-        Copies are limited to the batch's subscribers, devices and cells. Queue elements and
-        association values are immutable, so a shallow container copy preserves exact state.
-        This is still proportional to affected histories, not a global feature-store snapshot.
-        """
+    def snapshot_touched(self, events):
+        """Shallow copies of exactly the keys a batch can mutate (see transaction())."""
         touched = defaultdict(set)
         for ev in events:
             et = ev.get("event_type")
@@ -401,19 +408,44 @@ class FeatureStore:
                     touched[name].update((sender, recipient))
             elif et == "AUDIO":
                 touched["last_seen"].add(caller)
-        missing = object()
-        before = {name: {key: copy.copy(getattr(self, name)[key]) if key in getattr(self, name) else missing
-                         for key in keys if key is not None} for name, keys in touched.items()}
+        return {name: {key: copy.copy(getattr(self, name)[key]) if key in getattr(self, name) else _MISSING
+                       for key in keys if key is not None} for name, keys in touched.items()}
+
+    def restore_touched(self, before):
+        for name, values in before.items():
+            mapping = getattr(self, name)
+            for key, value in values.items():
+                if value is _MISSING:
+                    mapping.pop(key, None)
+                else:
+                    mapping[key] = value
+
+    @contextmanager
+    def isolated(self, events):
+        """Score events WITHOUT keeping their effect (retrospective rescoring).
+
+        Copies only the keys those events touch. The previous implementation copied and reloaded the
+        whole store, which with G2 ran every second under load and stalled the owner thread at scale.
+        """
+        before = self.snapshot_touched(events)
+        try:
+            yield
+        finally:
+            self.restore_touched(before)
+
+    @contextmanager
+    def transaction(self, events):
+        """Rollback keys touched by one scoring batch if inference/policy fails.
+
+        Copies are limited to the batch's subscribers, devices and cells. Queue elements and
+        association values are immutable, so a shallow container copy preserves exact state.
+        This is still proportional to affected histories, not a global feature-store snapshot.
+        """
+        before = self.snapshot_touched(events)
         try:
             yield
         except BaseException:
-            for name, values in before.items():
-                mapping = getattr(self, name)
-                for key, value in values.items():
-                    if value is missing:
-                        mapping.pop(key, None)
-                    else:
-                        mapping[key] = value
+            self.restore_touched(before)
             raise
 
     def state_stats(self) -> dict:
@@ -469,9 +501,9 @@ class FeatureStore:
         recipient = ev.get("recipient")
         if recipient:
             self._touch(recipient, ts)
-        self.first_seen.setdefault(sender, ts)
+        self._first(sender, ts)
         if recipient:
-            self.first_seen.setdefault(recipient, ts)
+            self._first(recipient, ts)
         q = self.sms_by_sender[sender]
         _prune(q, ts - H1)
         q.append((ts,))

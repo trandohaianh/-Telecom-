@@ -92,6 +92,8 @@ COMMERCIAL_REGISTERED = ("C001", "Số thương mại đã đăng ký, chỉ có
                          "Registered commercial caller, only bulk-outbound signals: allowed")
 COMMERCIAL_FRAUD_SIGNAL = ("C002", "Số thương mại đã đăng ký NHƯNG dính dấu hiệu gian lận ngoài phạm vi đăng ký: giữ nguyên quyết định, ưu tiên xem xét",
                            "Registered commercial caller BUT hit a fraud signal outside the registration: decision kept, priority review")
+COMMERCIAL_HARVEST = ("C004", "Số thương mại đã đăng ký có nhiều đoạn im lặng (trí nhớ thu giọng): chỉ cảnh báo, không chặn 1 giờ",
+                      "Registered commercial number with silent segments (harvest memory): flagged, not blocked for an hour")
 COMMERCIAL_OVER_RATE = ("C003", "Số thương mại đã đăng ký nhưng gọi vượt xa tốc độ đã khai: không áp dụng miễn trừ",
                         "Registered commercial caller far above its declared rate: exemption not applied")
 # RETRO đánh dấu kết quả chấm lại sau sự cố: cuộc gọi đã qua, hành động là gắn cờ số và báo người nhận.

@@ -430,10 +430,21 @@ class AuditLog:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.user_db = user_db
         self.prev = GENESIS
+        self.torn_lines = 0
         if self.path.exists():
-            for line in self.path.read_text(encoding="utf-8").splitlines():
-                if line.strip():
+            raw = self.path.read_text(encoding="utf-8", errors="replace")
+            for line in raw.splitlines():
+                if not line.strip():
+                    continue
+                try:
                     self.prev = json.loads(line)["hash"]
+                except (ValueError, TypeError, KeyError):
+                    # A crash mid-write leaves a partial line. Keep it (verify_audit reports it as
+                    # malformed: evidence is never silently rewritten) but do not refuse to start.
+                    self.torn_lines += 1
+            if raw and not raw.endswith("\n"):
+                with self.path.open("a", encoding="utf-8") as fh:
+                    fh.write("\n")   # the next record starts on its own line
         self._lock = threading.Lock()
 
     def record(self, actor: str, action: str, **params) -> dict:
@@ -445,6 +456,8 @@ class AuditLog:
             row = {"prev": self.prev, "hash": h, "sig": _sign(db[actor]["sign_key"], h), "entry": entry}
             with self.path.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+                fh.flush()
+                os.fsync(fh.fileno())
             self.prev = h
         return row
 

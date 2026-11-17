@@ -65,6 +65,20 @@ def _call_decision_window(st: dict) -> dict:
     return window
 
 
+def _block_rate_pvalue(window: dict, baseline: dict) -> float | None:
+    """One-sided binomial tail P(X >= observed BLOCKs | reference rate).
+
+    The 3-band PSI is dominated by ALLOW: with a 0.03 % reference BLOCK rate it only reaches 0.10 when
+    BLOCK grows ~80x. The block rate is what subscribers feel, so it gets its own exact test (M3).
+    """
+    n = sum(window.get(k, 0) for k in ("ALLOW", "FLAG", "BLOCK"))
+    p0 = float(baseline.get("BLOCK", 0.0) or 0.0)
+    if n < 500 or not 0 < p0 < 1:
+        return None
+    from scipy.stats import binom
+    return float(binom.sf(window.get("BLOCK", 0) - 1, n, p0))
+
+
 def _baseline_rates() -> dict:
     from config import MODEL_DIR
 
@@ -82,8 +96,12 @@ def kpi_snapshot(db: AppDB, engine) -> tuple[str, dict]:
         return "warn", {"reason": "engine not running"}
     st = engine.state(mask=True)
     d = st.get("decisions", {})
-    psi = _decision_psi(_call_decision_window(st), _baseline_rates())
-    drift_status = None if psi is None else ("alert" if psi >= 0.25 else "watch" if psi >= 0.1 else "stable")
+    window, baseline = _call_decision_window(st), _baseline_rates()
+    psi = _decision_psi(window, baseline)
+    block_p = _block_rate_pvalue(window, baseline)
+    drift_status = None if psi is None else ("alert" if psi >= 0.25 or (block_p is not None and block_p < 1e-3)
+                                             else "watch" if psi >= 0.1 or (block_p is not None and block_p < 1e-2)
+                                             else "stable")
     res = st.get("resilience") or {}
     row = {
         "processed": st.get("processed", 0), "blocked": d.get("BLOCK", 0), "flagged": d.get("FLAG", 0),

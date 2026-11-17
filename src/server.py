@@ -35,7 +35,7 @@ import numpy as np
 # secrets tạo token phiên cho app thuê bao.
 import secrets
 # FastAPI định nghĩa ứng dụng và lỗi HTTP; JSONResponse trả JSON trực tiếp.
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -169,7 +169,9 @@ class LiveEngine:
             self.processed += 1
             self.by_type[event["event_type"]] += 1
             if event["event_type"] == "CALL" and (not ingest or ingest == "ADMITTED"):
-                self.call_decisions[result["decision"]] += 1
+                # A late delivery rewrites decision to fail-open ALLOW; drift compares MODEL decisions.
+                model = result.get("model_decision") if result.get("scored") else None
+                self.call_decisions[model or result["decision"]] += 1
             self.counts["FAIL_OPEN" if result.get("fail_open") and result["decision"] == "ALLOW" else result["decision"]] += 1
             self.lat.append(result.get("latency_ms", 0.0))
             self._track(event, result)
@@ -540,6 +542,10 @@ async def _http_metrics(request: Request, call_next):
     try:
         response = await call_next(request)
         status = response.status_code
+        # The console and the subscriber app must never be framed by another site (clickjacking).
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
         return response
     finally:
         if request.url.path != "/metrics":
@@ -657,7 +663,15 @@ def api_state(u=Depends(require("viewer"))):
 @app.post("/api/reveal")
 # Mở số đầy đủ của MỘT cảnh báo: chỉ chuyên viên trở lên, bắt buộc ghi lý do, ghi nhật ký có chữ ký,
 # và AI agent theo dõi số lần mở để phát hiện rò rỉ từ bên trong.
-def api_reveal(event_id: str, reason: str, u=Depends(require("analyst"))):
+def api_reveal(event_id: str | None = None, reason: str | None = None, body: dict | None = Body(default=None),
+               u=Depends(require("analyst"))):
+    # Lý do (thường có thông tin cá nhân) nên đi trong body: query string bị ghi vào log proxy/truy cập.
+    # Query vẫn được nhận để không làm hỏng client cũ.
+    body = body if isinstance(body, dict) else {}
+    event_id = str(body.get("event_id") or event_id or "")
+    reason = str(body.get("reason") or reason or "")
+    if not event_id:
+        raise HTTPException(422, "event_id is required")
     if len(reason.strip()) < 5:
         raise HTTPException(400, "a reason (at least 5 characters) is required to reveal personal data")
     with engine.lock:
@@ -678,7 +692,11 @@ def api_agent(u=Depends(require("viewer"))):
 
 @app.post("/api/agent/{pid}/decide")
 # Con người quyết định: duyệt thì hành động mới chạy, từ chối thì không có gì thay đổi. Cả hai đều ghi nhật ký có chữ ký.
-def api_agent_decide(pid: str, decision: str, note: str = "", u=Depends(require("admin"))):
+def api_agent_decide(pid: str, decision: str | None = None, note: str = "", body: dict | None = Body(default=None),
+                     u=Depends(require("admin"))):
+    body = body if isinstance(body, dict) else {}
+    decision = str(body.get("decision") or decision or "")
+    note = str(body.get("note") or note or "")
     if decision not in ("approve", "reject"):
         raise HTTPException(400, "decision must be approve | reject")
     try:
@@ -760,10 +778,13 @@ def api_latest(n: int = 5, u=Depends(require("analyst"))):
 
 @app.get("/api/audit")
 # Nhật ký thao tác: ai đã làm gì, kèm kết quả kiểm tra chuỗi hash và chữ ký của từng dòng (chỉ admin).
-def api_audit(n: int = 20, anchor_records: int | None = None, anchor_hash: str | None = None,
+def api_audit(n: int = 20, anchor_records: int | None = Query(default=None, ge=1),
+              anchor_hash: str | None = Query(default=None, pattern="^[0-9a-f]{64}$"),
               u=Depends(require("admin"))):
     # verify.head nên được chép định kỳ ra hệ thống ngoài; gửi lại qua anchor_* để phát hiện xoá đuôi log.
-    anchor = None if anchor_records is None else {"records": anchor_records, "hash": anchor_hash or ""}
+    if (anchor_records is None) != (anchor_hash is None):
+        raise HTTPException(422, "anchor_records and anchor_hash must be given together")
+    anchor = None if anchor_records is None else {"records": anchor_records, "hash": anchor_hash}
     return {"verify": verify_audit(anchor=anchor), "entries": audit.tail(n)}
 
 
@@ -797,7 +818,9 @@ async def network_request(request: Request):
 
 
 UNIX_TS_FLOOR = 1e9
-NETWORK_MAX_FUTURE_S = 300.0
+# Must stay below IngestGuard.allowed_lateness_s (120 s): one peer clocked 130-300 s fast would
+# otherwise lift the global floor above every correctly clocked trunk and make their events LATE.
+NETWORK_MAX_FUTURE_S = 60.0
 
 
 @app.post("/api/v1/verdict")
@@ -1000,6 +1023,7 @@ def app_simulate_stream(msisdn=Depends(app_user), _=Depends(demo_only)):
 @app.get("/api/app/lookup")
 # Tra cứu một số: chỉ trả số liệu tổng hợp về số đó, không trả ai đã nhận cuộc gọi của nó.
 def app_lookup(number: str, msisdn=Depends(app_user)):
+    accounts.limiter.hit("app_lookup", msisdn, 120, 3600)   # không cho dò hàng loạt uy tín / số báo cáo
     keys = _number_keys(number)
     with engine.lock:
         rep = collections.Counter()

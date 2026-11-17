@@ -119,7 +119,7 @@ class Work:
 
 class InferenceRuntime:
     def __init__(self, guarded, state=None, on_result=None, on_retro=None, execution_lock=None,
-                 capacity=128, checkpoint_every=5000, checkpoint_interval_s=30.0, start=True, admission_capacity=None,
+                 capacity=128, checkpoint_every=100_000, checkpoint_interval_s=30.0, start=True, admission_capacity=None,
                  batch_size=16, batch_wait_ms=0.0, cache_capacity=4096, owner_stall_after_s=5.0):
         if type(capacity) is not int or capacity < 1:
             raise ValueError("inference capacity must be a positive integer")

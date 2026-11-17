@@ -39,7 +39,7 @@ def main() -> None:
 
     uvicorn.run("server:app", host=os.environ.get("HOST", "0.0.0.0"), port=int(os.environ.get("PORT", "8080")),
                 log_level=os.environ.get("LOG_LEVEL", "warning"), proxy_headers=True,
-                forwarded_allow_ips=os.environ.get("FORWARDED_ALLOW_IPS", "*"),
+                forwarded_allow_ips=os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1"),  # N5: never trust every peer by default
                 loop="precise_event_loop:uvicorn_loop_factory")
 
 

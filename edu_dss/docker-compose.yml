@@ -30,6 +30,7 @@ services:
     restart: unless-stopped
     environment:
       JWT_ISSUER: ${JWT_ISSUER:-edu-dss}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-}
       JWT_SECRET_FILE: /run/secrets/jwt_secret
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
       EDU_ADAPTER_TOKEN_FILE: /run/secrets/edu_adapter_token
@@ -61,7 +62,8 @@ services:
     secrets: [redis_acl, redis_password]
     networks: [data]
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli --user default --pass \"$$(cat /run/secrets/redis_password)\" ping | grep -q PONG"]
+      # REDISCLI_AUTH keeps the password out of redis-cli argv (visible in ps).
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(cat /run/secrets/redis_password)\" redis-cli --user default ping | grep -q PONG"]
       interval: 5s
       timeout: 2s
       retries: 10

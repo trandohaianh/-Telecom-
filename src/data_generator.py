@@ -374,7 +374,14 @@ class TrafficSimulator:
         R, r = self.r, self.rng
         city = R.choice(list(CITIES))
         cell = R.choice(self.cells_by_city[city])
-        tacs = GATEWAY_TACS if R.random() < gateway_tac_p else CONSUMER_TACS
+        # M1: a per-farm coin flip left whole training windows without a single gateway-TAC farm, so the
+        # model never saw imei_gateway_tac = 1. Explicit 0/1 keep their meaning; otherwise farms alternate.
+        if gateway_tac_p in (0.0, 1.0):
+            gateway = gateway_tac_p == 1.0
+        else:
+            self._farms = getattr(self, "_farms", 0) + 1
+            gateway = self._farms % 2 == 1
+        tacs = GATEWAY_TACS if gateway else CONSUMER_TACS
         if dedicated_imei is None:
             dedicated_imei = R.random() < 0.3
         modules = [self._imei(tacs) for _ in range(max(2, n_sims // 4))]
@@ -385,7 +392,7 @@ class TrafficSimulator:
             own = self._imei(tacs)   # "IMEI-changer" boxes give every SIM its own identity
             if aged and R.random() < 0.5:   # half of the rented SIMs are "warmed up" with ordinary calls first
                 self._warm_up_sim(sim, cell, own if dedicated_imei else R.choice(modules), age, start, "SIM_BOX", tag)
-            for t in poisson_times(r, R.uniform(*rate_range) / 3600, start, min(t1, start + dur_active), profile=False):
+            for t in poisson_times(r, R.uniform(*rate_range) / 3600, start, min(t1, start + dur_active), profile=True):
                 answered = R.random() > 0.3
                 dur = float(r.lognormal(4.0, 0.9)) if answered else float(r.uniform(0, 5))
                 self._call(t, sim, R.choice(self.subs).msisdn, cell, own if dedicated_imei else R.choice(modules), "LOCAL",
@@ -452,7 +459,7 @@ class TrafficSimulator:
             if R.random() < 0.5:
                 self._warm_up_sim(num, cell, imei, age, start, "VOICE_HARVEST", tag)
             for t in poisson_times(r, R.uniform(*rate_range) / 3600, start, min(t1, start + R.uniform(*active_h) * 3600),
-                                   profile=False):
+                                   profile=True):
                 answered = R.random() > 0.3
                 dur = float(r.uniform(3, 9)) if answered else float(r.uniform(0, 15))
                 callee = R.choice(self.subs).msisdn
@@ -467,7 +474,7 @@ class TrafficSimulator:
         start = R.uniform(t0, t0 + 0.6 * (t1 - t0))
         for _ in range(n_numbers):
             num = R.choice(["882", "881", "252", "247", "690"]) + str(R.randint(10 ** 7, 10 ** 8))
-            for t in poisson_times(r, R.uniform(*rate_range) / 3600, start, min(t1, start + active_h * 3600), profile=False):
+            for t in poisson_times(r, R.uniform(*rate_range) / 3600, start, min(t1, start + active_h * 3600), profile=True):
                 self._call(t, num, R.choice(self.subs).msisdn, "INTL", "", "INTL_GW", "VoLTE", -1,
                            float(r.uniform(0.5, 3.0)), 1, "ZERO_DAY_WANGIRI", tag)
 

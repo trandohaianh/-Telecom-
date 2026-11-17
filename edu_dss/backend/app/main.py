@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import math
 import zlib
 from contextlib import asynccontextmanager
@@ -16,7 +17,7 @@ from redis.asyncio import Redis
 from . import services
 from .cache_keys import explanation_key, leaderboard_key
 from .celery_app import celery
-from .config import MAX_BODY_BYTES, REDIS_URL, jwt_secret
+from .config import JWT_AUDIENCE, MAX_BODY_BYTES, REDIS_URL, jwt_secret
 from .course_access import course_is_authorized
 from .request_limits import RequestBodyLimitMiddleware
 from .security import Role, require_roles
@@ -68,6 +69,9 @@ class GradePredictionRequest(StrictModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     jwt_secret()  # fail closed at startup when the signing secret is missing
+    if JWT_AUDIENCE is None and os.getenv("EDU_DEMO_MODE", "0").strip() != "1":
+        # N6: without an audience any token from the same issuer/secret for another service is accepted.
+        raise RuntimeError("JWT_AUDIENCE is required outside demo mode")
     app.state.cache = Redis.from_url(REDIS_URL, decode_responses=True,
         socket_connect_timeout=.05, socket_timeout=.05, max_connections=128)
     yield

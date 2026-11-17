@@ -37,7 +37,7 @@ svg text{fill:var(--mut);font:10px var(--mono)}
 <div class="wrap">
 <header>
   <div class="logo">!</div><h1>QUẢN TRỊ · TELECOM FRAUD SHIELD</h1><div class="sp"></div>
-  <span class="tag mono" id="who">–</span><a href="/admin/"><button>← BẢNG GIÁM SÁT</button></a>
+  <span class="tag mono" id="who">–</span><button type="button" onclick="location.href='/admin/'">← BẢNG GIÁM SÁT</button>
 </header>
 <nav id="tabs">
   <button data-t="reports" class="on">BÁO CÁO SỐ</button>
@@ -111,11 +111,12 @@ async function loadReports(){
     const pending = $('#rstatus').value === 'pending';
     $('#rbody').innerHTML = rows.length ? rows.map(r => `<tr><td class="mono">${esc(r.number_masked)}</td><td class="n">${r.reporters}</td>
       <td class="n">${r.model_blocks ?? 0} / ${r.model_flags ?? 0}</td><td>${esc(r.reasons || '—')}</td><td class="mut">${when(r.last_at)}${r.reviewer ? '<br>duyệt: ' + esc(r.reviewer) : ''}</td>
-      <td>${pending ? `<button class="red" data-k="${r.key}" data-d="confirm">XÁC NHẬN CHẶN</button> <button data-k="${r.key}" data-d="dismiss">BÁC BỎ</button>` : ''}</td></tr>`).join('')
+      <td>${pending ? `<button class="red" data-k="${esc(r.key)}" data-d="confirm">XÁC NHẬN CHẶN</button> <button data-k="${esc(r.key)}" data-d="dismiss">BÁC BỎ</button>` : ''}</td></tr>`).join('')
       : '<tr><td colspan="6" class="mut">Không có báo cáo.</td></tr>';
     document.querySelectorAll('#rbody button').forEach(b => b.onclick = async () => {
       const note = prompt(b.dataset.d === 'confirm' ? 'Ghi chú xác nhận (bắt buộc ghi căn cứ):' : 'Lý do bác bỏ:');
       if (note === null) return;
+      if (!note.trim()) { alert('Cần ghi căn cứ / lý do trước khi duyệt.'); return; }
       try { await api(`/api/admin/reports/${b.dataset.k}/review`, { method: 'POST', body: JSON.stringify({ decision: b.dataset.d, note }) }); loadReports(); }
       catch(e){ fail(e); }
     });
@@ -126,10 +127,10 @@ async function loadReports(){
 async function loadPipeline(){
   try {
     const p = await api('/api/admin/pipeline');
-    $('#pbody').innerHTML = Object.entries(p.last_runs).map(([job, r]) => `<tr><td class="mono">${job}</td>
+    $('#pbody').innerHTML = Object.entries(p.last_runs).map(([job, r]) => `<tr><td class="mono">${esc(job)}</td>
       <td class="st-${r?.status || 'warn'}">${r ? r.status : 'chưa chạy'}</td><td class="mut">${when(r?.finished_at || r?.started_at)}</td>
       <td class="mut mono" style="font-size:11.5px">${esc(r?.detail ? JSON.stringify(r.detail).slice(0, 180) : '')}</td>
-      <td class="adm"><button data-j="${job}">CHẠY NGAY</button></td></tr>`).join('');
+      <td class="adm"><button data-j="${esc(job)}">CHẠY NGAY</button></td></tr>`).join('');
     document.querySelectorAll('#pbody button').forEach(b => b.onclick = async () => { b.disabled = true; try { await api('/api/admin/pipeline/run?job=' + b.dataset.j, { method: 'POST' }); loadPipeline(); } catch(e){ fail(e); b.disabled = false; } });
     applyRole();
     const k = p.kpi, last = k[k.length - 1];
@@ -164,9 +165,9 @@ async function loadCosts(){
     $('#cnote').textContent = c.note;
     $('#ubody').innerHTML = c.external_usage.by_kind.length ? c.external_usage.by_kind.map(r => `<tr><td>${esc(r.kind)}</td><td>${esc(r.provider || '')}</td><td class="n">${r.units}</td><td class="n">${usd(r.cost_usd)}</td></tr>`).join('')
       : '<tr><td colspan="4" class="mut">Chưa có (chế độ demo không gửi SMS).</td></tr>';
-    $('#ibody').innerHTML = c.infra.items.map(r => `<tr><td>${esc(r.provider)}</td><td>${esc(r.item)}</td><td class="n">${usd(r.amount_usd)}</td><td><button data-id="${r.id}">XOÁ</button></td></tr>`).join('')
+    $('#ibody').innerHTML = c.infra.items.map(r => `<tr><td>${esc(r.provider)}</td><td>${esc(r.item)}</td><td class="n">${usd(r.amount_usd)}</td><td><button data-id="${esc(r.id)}">XOÁ</button></td></tr>`).join('')
       || '<tr><td colspan="4" class="mut">Chưa nhập.</td></tr>';
-    document.querySelectorAll('#ibody button').forEach(b => b.onclick = async () => { try { await api('/api/admin/costs/infra/' + b.dataset.id, { method: 'DELETE' }); loadCosts(); } catch(e){ fail(e); } });
+    document.querySelectorAll('#ibody button').forEach(b => b.onclick = async () => { if (!confirm('Xoá khoản chi phí này?')) return; try { await api('/api/admin/costs/infra/' + b.dataset.id, { method: 'DELETE' }); loadCosts(); } catch(e){ fail(e); } });
     $('#iadd').onclick = async () => {
       try { await api('/api/admin/costs/infra', { method: 'POST', body: JSON.stringify({ month: c.infra.month, provider: $('#iprov').value, item: $('#iitem').value, amount_usd: Number($('#iamt').value) || 0 }) });
             $('#iprov').value = $('#iitem').value = ''; loadCosts(); } catch(e){ fail(e); }

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "created_utc": "2026-11-17T06:07:25.235397+00:00",
-  "model_version": "tfd-v2.3",
+  "created_utc": "2026-11-17T08:43:06.494023+00:00",
+  "model_version": "tfd-v2.4",
   "feature_schema": {
     "contract": "causal-v2-exact-24h-completion-order",
     "call": [
@@ -60,17 +60,17 @@
   "dataset_provenance": {
     "status": "verified",
     "feature_contract": "causal-v2-exact-24h-completion-order",
-    "manifest_sha256": "c78f8ba7757d8e56eba4121c4b7cbe10916d51ca4afb7b1d85914d4aec6cb6d4",
+    "manifest_sha256": "2efe5359ae75ba9f6b039cac848d79d1fd9877226c83e3722d690d6f8db327ac",
     "input_sha256": {
-      "train_call_features.parquet": "ac1fa698510198891064f6a20a79da029472167f31c1c9c66f357d98f05adbf1",
-      "train_sms_features.parquet": "924cf462a3fddecbede3875cba25df0ff5eda2926669cb83868ff25cab47ac5f",
-      "train_audio_features.parquet": "9dbb71e53872bb27589c115ccf8748394d46cd5ee67b65862e3d405d04c8ff08",
-      "val_call_features.parquet": "b77f0737b992f7cda31b5475d8dc808862f08bd12844d439ebf800af265c70bb",
-      "val_sms_features.parquet": "eb247fdb7f2632b6cbbaebc50410e9765248961a459c8bac7b9026fbd0e138e8",
-      "val_audio_features.parquet": "aa2c73df3b1521a9e73e8a41536d3f8d2e2f048a1ee4dbf82dd797cd42bc7686",
-      "cal_call_features.parquet": "50ed3fae138686843b25feab84500fa7b81bf548ce3ee6e8c0788c64b647cae4",
-      "cal_sms_features.parquet": "03d3f76fdb70be62a0688f402dc0b1acb1234ee2382219171e23e69007f2d98c",
-      "cal_audio_features.parquet": "9642078b37a8080a99f4d2a55ca9e4aeffa67e4d0251f9b43036b5e7b282222e"
+      "train_call_features.parquet": "5949edd27f4ebef3cceb5f22535c272d455891d3e2297e4dcbebfacad2315936",
+      "train_sms_features.parquet": "f13b72a11ae7b39ff64376759481c9207f0a94aee893e578582d0916c227fa4d",
+      "train_audio_features.parquet": "db9ffcd7479e0c266d12c59481c58c14bfada13bb59ff5cb987955af324132d2",
+      "val_call_features.parquet": "379ba7ebf2ada364958bc9f7ddc960cdcc6a9f75b65da1b050b62f7af504a69c",
+      "val_sms_features.parquet": "9a15a281877fb6a2c7d6f1be0ab32203dbd20095b2518eceeaa8acc4b5751c43",
+      "val_audio_features.parquet": "7b0c73f9ae348bfdb9301200f7cd2cbd48b98378fe6ece6f51e37e2651b9b9ec",
+      "cal_call_features.parquet": "30f220918a5f4c2c3d56dedcf02b6798d701dee5ad91beeb7f0d56d1b34578b6",
+      "cal_sms_features.parquet": "4d0ad99130159d3e8a297017f2a1c2be30913495444a85c2bffd4880a260c7a9",
+      "cal_audio_features.parquet": "53c1a2216b7c14b3714245600cbde79040e92cf328fd52bfd7a70bf622c59539"
     },
     "dataset_kind": "synthetic_simulator"
   },
@@ -78,28 +78,28 @@
   "drift_baseline_requires_rebuild": true,
   "artifacts": {
     "tier1_call_lgbm.txt": {
-      "sha256": "65d31fd869e1f3c95f4be8555cf1987aedfbd81f396c84f128c01a30225629f4",
-      "bytes": 571423
+      "sha256": "4ad0ab60d699ecc860d462541d3ec9446ba033acf6156fd2074f8c989d5db1e5",
+      "bytes": 426981
     },
     "tier2_audio_lgbm.txt": {
-      "sha256": "84ebb9f0e1764073ba013aa32a5c1e97763a60f51667fd43b3e0569984742dab",
-      "bytes": 100891
+      "sha256": "bdbc048938c3068b04668e586cdc6a5d3baa9626342f1decd51d7c2ceb4a38c4",
+      "bytes": 133869
     },
     "tier1_zero_day_iforest.joblib": {
-      "sha256": "d6d394ef839ec113844bccf01faabe0904b7326cc9f5ee0d4a8bf5f8d057195a",
-      "bytes": 7937493
+      "sha256": "69add8670554d8b5be3c74d9d89b4f59a33773df4e37719c0ecdf41e3f48d1c5",
+      "bytes": 7945045
     },
     "sms_text_lr.joblib": {
-      "sha256": "04eed17c4c8a1e6ba6dee0ca43e9def9bab06c7b92ddd5c98f293576ca45d76e",
-      "bytes": 597985
+      "sha256": "2d3061a2377c426445e8f60e7fc54c9c81f1367deb70e56774f8c90bf9735dab",
+      "bytes": 597889
     },
     "thresholds.json": {
-      "sha256": "0c31f999c0e35933829e141bea6d5e7c39733b2a3d8352e4af097e3d6ba0c915",
+      "sha256": "18456649c528d644cdab82c978b564c67e92a7b20e8a2831aaff34665400e5a5",
       "bytes": 384
     },
     "training_report.json": {
-      "sha256": "d8f877c740700038ac0a3332f2a069dd3db7c2d4696e86bc7dd3f01b67ee34bf",
-      "bytes": 6598
+      "sha256": "53a085dd0cf6f280e0604137beee58046b7f987cacad684d2af82f42c08f60df",
+      "bytes": 6613
     }
   }
 }

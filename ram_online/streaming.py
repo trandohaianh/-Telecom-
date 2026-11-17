@@ -31,6 +31,10 @@ return {redis.call('ZCARD', KEYS[1]), frontier}
 """
 
 
+class EventFromFuture(RuntimeError):
+    """Event ahead of this consumer's clock. Retryable (not in POISON_ERRORS)."""
+
+
 class SlidingWindowDetector:
     def __init__(self, analytics_client, policy: PolicyStore, threshold=100,
                  namespace="telecom-window", activate_demo_blocks=False):
@@ -51,7 +55,8 @@ class SlidingWindowDetector:
             raise ValueError("setup_ts_ms must be a nonnegative integer")
         now = time.time_ns() // 1_000_000
         if ts > now + 2000:
-            raise ValueError("event timestamp is too far in the future")
+            # Usually clock skew between hosts, not a bad record: retry, never dead-letter.
+            raise EventFromFuture("event timestamp is too far in the future")
         tag = "{" + self.namespace + ":" + caller + "}"
         count, frontier = await self.analytics.eval(
             WINDOW_LUA, 2, tag + ":calls", tag + ":frontier", ts, call_id)

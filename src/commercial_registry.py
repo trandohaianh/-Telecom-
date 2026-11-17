@@ -75,7 +75,7 @@ class CommercialRegistry:
     def __init__(self):
         self._by_number: dict[str, Registration] = {}
         self._lock = threading.Lock()
-        self.stats = {"exempted": 0, "kept_fraud_signal": 0, "kept_over_rate": 0}
+        self.stats = {"exempted": 0, "kept_fraud_signal": 0, "kept_over_rate": 0, "harvest_downgraded": 0}
 
     # ------------------------------------------------------------------ quản trị
     def register(self, number: str, enterprise: str, max_calls_per_hour: int,
@@ -119,6 +119,18 @@ class CommercialRegistry:
             self.stats["kept_over_rate"] += 1
             self._prepend(result, rc.COMMERCIAL_OVER_RATE,
                           extra=f"{reg.enterprise}: {int(rate)} > 2 × {reg.max_calls_per_hour} cuộc/giờ")
+            return
+
+        # Trí nhớ thu giọng (A108): ~2 % cuộc gọi thật cũng có đoạn im lặng, nên một tổng đài đã đăng ký
+        # gọi hàng loạt sẽ chạm ngưỡng "2 nạn nhân / giờ" rất nhanh. Với số đã đăng ký: hạ BLOCK → FLAG
+        # (vẫn cảnh báo, vẫn để chuyên viên xem), không cắt mọi cuộc gọi của doanh nghiệp trong 1 giờ.
+        if "A108" in codes and result.get("decision") == "BLOCK":
+            self.stats["harvest_downgraded"] += 1
+            result["decision"] = "FLAG"
+            from detector import ACTIONS
+            result["action_vi"], result["action_en"] = ACTIONS.get((result.get("event_type"), "FLAG"),
+                                                                  (result.get("action_vi"), result.get("action_en")))
+            self._prepend(result, rc.COMMERCIAL_HARVEST, extra=reg.enterprise)
             return
 
         # 2. Tín hiệu chỉ đích danh gian lận: giữ nguyên quyết định, đánh dấu ưu tiên.

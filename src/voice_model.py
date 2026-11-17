@@ -66,10 +66,15 @@ def calibrate(scores, labels, target_fpr: float, confidence=.95, *, groups=None)
     eligible = np.flatnonzero(upper <= target_fpr)
     if len(eligible):
         index = int(eligible[0])
+        # M8: a real corpus has several recordings per speaker/call. The bound is computed on the
+        # maximum score of each independent group, so clustered groups are valid units as long as the
+        # operator supplied them. Without group IDs records are not independent: never eligible.
         policy.update(threshold=float(candidates[index]), false_positives=int(fps[index]),
-                      fpr_upper=float(upper[index]), eligible=independent_single_records,
-                      eligibility_reason="independent_unit_bound_met" if independent_single_records
-                                         else "clustered_or_unverified_units_require_validation")
+                      fpr_upper=float(upper[index]), eligible=provided,
+                      statistical_unit="independent_group_max" if provided else "unverified_records",
+                      eligibility_reason=("independent_unit_bound_met" if independent_single_records
+                                          else "clustered_group_max_bound_met") if provided
+                                         else "group_ids_required")
     return policy
 
 

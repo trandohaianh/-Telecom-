@@ -1,15 +1,15 @@
 {
   "tier1_call": {
-    "val_pr_auc": 0.9983104430597662,
-    "val_roc_auc": 0.999966384843429,
-    "best_iteration": 185,
+    "val_pr_auc": 0.9820700076750648,
+    "val_roc_auc": 0.9998353917512497,
+    "best_iteration": 143,
     "thresholds": {
-      "block": 0.8833033223966438,
-      "flag": 0.29325751435274744,
+      "block": 0.8417723159156493,
+      "flag": 0.28945275841307927,
       "anomaly_flag": {
-        "domestic": 0.6579668629274488,
+        "domestic": 0.6596104927977631,
         "foreign": 0.639912813907175,
-        "trunk": 0.6752929501120178
+        "trunk": 0.6795055288915036
       }
     },
     "threshold_validation": {
@@ -91,20 +91,20 @@
     },
     "threshold_window_reused_for_early_stopping": false,
     "feature_importance_gain": {
-      "active_hours_on_network": 1340695.1,
-      "incoming_24h": 260348.8,
-      "imei_per_msisdn_24h": 66310.3,
-      "calls_1h": 65311.1,
-      "msisdn_per_imei_24h": 42820.9,
-      "new_sims_on_cell_1h": 10674.3,
-      "caller_age_days": 8514.9,
-      "hour_of_day": 8244.9,
-      "protected_cli_mismatch": 6408.1,
-      "in_out_ratio_24h": 6138.3
+      "active_hours_on_network": 1334272.2,
+      "incoming_24h": 187988.6,
+      "calls_1h": 78671.7,
+      "protected_cli_mismatch": 66557.3,
+      "msisdn_per_imei_24h": 29736.4,
+      "imei_per_msisdn_24h": 18376.5,
+      "caller_age_days": 11342.4,
+      "hour_of_day": 5811.7,
+      "mean_log_duration": 5160.1,
+      "short_call_ratio": 4988.2
     }
   },
   "sms": {
-    "val_pr_auc": 1.0,
+    "val_pr_auc": 0.9999999999999999,
     "val_roc_auc": 1.0,
     "thresholds": {
       "block": 0.9,
@@ -148,12 +148,12 @@
     }
   },
   "tier2_audio": {
-    "val_pr_auc": 0.8871509807169826,
-    "val_roc_auc": 0.9911515483713057,
-    "best_iteration": 57,
+    "val_pr_auc": 0.9175166044663614,
+    "val_roc_auc": 0.9939139577986883,
+    "best_iteration": 76,
     "thresholds": {
-      "block": 0.9127608450822884,
-      "flag": 0.7242866452829801
+      "block": 1.0000000000000002,
+      "flag": 0.7137985458958046
     },
     "threshold_validation": {
       "scope": "independent calibration window; held-out evaluation still required",

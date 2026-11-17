@@ -46,7 +46,7 @@ button:active{transform:scale(.98)}
 .c-BLOCK{background:var(--red-bg);color:var(--red)}.c-FLAG{background:var(--amber-bg);color:var(--amber)}.c-ALLOW{background:var(--green-bg);color:var(--green)}
 .empty{color:var(--mut);text-align:center;padding:22px 8px;font-size:14px}
 input,select{font:16px system-ui,sans-serif;width:100%;padding:12px 18px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink)}
-.verdict{border-radius:12px;padding:14px;margin-top:12px}.v-info{background:var(--line);color:var(--blue)}.v-danger{background:var(--red-bg);color:var(--red)}.v-warn{background:var(--amber-bg);color:var(--amber)}.v-ok{background:var(--green-bg);color:var(--green)}
+.verdict{border-radius:12px;padding:14px;margin-top:12px}.v-info{background:var(--line);color:var(--ink)}.v-danger{background:var(--red-bg);color:var(--red)}.v-warn{background:var(--amber-bg);color:var(--amber)}.v-ok{background:var(--green-bg);color:var(--green)}
 .verdict b{display:block;font-size:15px;margin-bottom:4px}.verdict span{color:var(--ink);font-size:13px}
 .tip{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.tip:last-child{border-bottom:0}.tip .ic{font-size:22px;flex:none}
 .tip b{display:block}.tip span{font-size:13px;color:var(--mut)}
@@ -95,8 +95,8 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
       <div class="note">Nhà mạng phát hiện lừa đảo ngay trên mạng lưới, trước khi điện thoại đổ chuông. App không cần đọc danh bạ của bạn.</div>
       <div id="gbtn" style="display:flex;justify-content:center;min-height:0"></div>
       <div id="gdiv" class="note" style="text-align:center;display:none">— hoặc dùng email —</div>
-      <input id="email" type="email" autocomplete="email" placeholder="Email">
-      <input id="pw" type="password" autocomplete="current-password" placeholder="Mật khẩu (tối thiểu 8 ký tự)">
+      <input id="email" type="email" autocomplete="email" aria-label="Email" placeholder="Email">
+      <input id="pw" type="password" autocomplete="current-password" aria-label="Mật khẩu" placeholder="Mật khẩu (tối thiểu 8 ký tự)">
       <div class="grid2"><button class="pri" id="signin">Đăng nhập</button><button id="signup">Tạo tài khoản</button></div>
       <div class="note" id="lerr" style="color:var(--red)"></div>
     </div>
@@ -111,9 +111,9 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
         <button class="pri full" id="claim" style="margin-top:12px">Nhận số thử nghiệm</button>
       </div>
       <div id="ph_otp" style="display:none;gap:10px">
-        <input id="phnum" inputmode="tel" placeholder="Số điện thoại (VD 0912345678)">
+        <input id="phnum" inputmode="tel" aria-label="Số điện thoại" placeholder="Số điện thoại (VD 0912345678)">
         <button class="full" id="otpsend">Gửi mã OTP</button>
-        <input id="otpcode" inputmode="numeric" maxlength="8" placeholder="Mã OTP 6 số">
+        <input id="otpcode" inputmode="numeric" maxlength="8" aria-label="Mã OTP" placeholder="Mã OTP 6 số">
         <button class="pri full" id="otpok">Xác nhận</button>
       </div>
       <div id="ph_none" class="note" style="display:none">Máy chủ chưa bật xác minh số điện thoại.</div>
@@ -131,8 +131,8 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
         <div class="stat s-grn"><b id="st_a">0</b><span>an toàn</span></div>
       </div>
     </div>
-    <h2>Thử nghiệm <span class="demo-tag">DEMO</span></h2>
-    <div class="card">
+    <h2 class="demo-only">Thử nghiệm <span class="demo-tag">DEMO</span></h2>
+    <div class="card demo-only">
       <div class="note" style="margin-bottom:10px">Giả lập một cuộc gọi hoặc tin nhắn gửi tới số của bạn, chạy qua đúng hệ thống AI của nhà mạng.</div>
       <div class="grid2">
         <button data-k="LEGIT">📞 Cuộc gọi bình thường</button>
@@ -159,7 +159,7 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
     <div class="card">
       <div class="note" style="margin-bottom:10px">Nhận thông báo ngay khi bố mẹ hoặc người thân nhận cuộc gọi, tin nhắn lừa đảo, để kịp gọi nhắc họ. Người thân phải đồng ý trên app của họ; bạn chỉ thấy loại sự kiện và kết quả, không thấy nội dung tin nhắn.</div>
       <div id="fam_recv"></div>
-      <div style="display:flex;gap:8px"><input id="fam_num" inputmode="tel" placeholder="Số của người thân"><button class="pri" id="fam_inv" style="flex:none">Mời</button></div>
+      <div style="display:flex;gap:8px"><input id="fam_num" inputmode="tel" aria-label="Số của người thân" placeholder="Số của người thân"><button class="pri" id="fam_inv" style="flex:none">Mời</button></div>
       <div id="fam_list" class="note" style="margin-top:10px"></div>
     </div>
   </section>
@@ -174,13 +174,13 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
   <section id="lookup" class="tab">
     <h2>Tra cứu số lạ</h2>
     <div class="card">
-      <input id="q" inputmode="tel" placeholder="Nhập số điện thoại, ví dụ 0901234567">
+      <input id="q" inputmode="tel" aria-label="Số cần tra cứu" placeholder="Nhập số điện thoại, ví dụ 0901234567">
       <button class="pri full" id="go" style="margin-top:10px">Kiểm tra</button>
       <div id="vres"></div>
     </div>
     <h2>Báo cáo số lừa đảo</h2>
     <div class="card">
-      <input id="rnum" inputmode="tel" placeholder="Số muốn báo cáo">
+      <input id="rnum" inputmode="tel" aria-label="Số muốn báo cáo" placeholder="Số muốn báo cáo">
       <select id="rwhy" style="margin-top:8px">
         <option>Giả danh ngân hàng / công an</option><option>Gửi link lạ, đòi OTP</option>
         <option>Gọi nháy rồi tắt máy</option><option>Gọi tới không nói gì</option><option>Khác</option>
@@ -214,7 +214,7 @@ background:var(--card);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.28);b
 </div></nav>
 
 <div class="overlay" id="ov"></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="heads" id="heads" role="status" aria-live="polite"></div>
 
 <script>
@@ -512,11 +512,16 @@ $('#fam_inv').onclick = async () => {
   try { const r = await api('/api/app/family/invite?number=' + encodeURIComponent(n), { method: 'POST' }); toast(r.note || 'Đã liên kết.'); $('#fam_num').value = ''; loadFamily(); }
   catch(e){ toast('Không gửi được lời mời: ' + e.message); }
 };
-setInterval(loadFamily, 4000);
+setInterval(() => { if (document.visibilityState !== 'hidden') loadFamily(); }, 4000);
 
 // ------------------------------------------------------------------ khởi động
-function start(){ $('#me').innerHTML = `Số của bạn<br><b>${esc(pretty(MSISDN))}</b>`; $('#nav').style.display = ''; show('home'); refresh(); loadFamily(); }
-setInterval(refresh, 2000);
+function start(){ $('#me').innerHTML = `Số của bạn<br><b>${esc(pretty(MSISDN))}</b>`; $('#nav').style.display = ''; show('home'); refresh(); loadFamily();
+  // Nút mô phỏng chỉ có nghĩa ở bản demo; ở chế độ thật (OTP) server trả 403 nên ẩn hẳn.
+  cfg().then(c => document.querySelectorAll('.demo-only').forEach(el => { el.style.display = c.phone_verification === 'demo_pool' ? '' : 'none'; })); }
+// Không hỏi server khi tab bị ẩn (đỡ pin); quay lại tab thì cập nhật ngay.
+const visible = () => document.visibilityState !== 'hidden';
+setInterval(() => { if (visible()) refresh(); }, 2000);
+document.addEventListener('visibilitychange', () => { if (visible() && MSISDN) { refresh(); loadFamily(); } });
 initGoogle();
 if (TOKEN) afterLogin(); else show('login');
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

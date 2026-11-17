@@ -39,6 +39,7 @@ else
   sudo docker compose --env-file .env --profile standalone up -d --no-deps caddy
 fi
 # Telecom chỉ tin X-Forwarded-For từ đúng Caddy (rate limit theo IP không bị container khác giả).
-FORWARDED_ALLOW_IPS="$(bash "$HERE/proxy_ip.sh")" sudo -E docker compose --env-file .env up -d --build telecom
+proxy_ip="$(bash "$HERE/proxy_ip.sh")"   # dừng (set -e) nếu không tìm thấy Caddy
+FORWARDED_ALLOW_IPS="$proxy_ip" sudo -E docker compose --env-file .env up -d --build telecom
 bash "$HERE/smoke.sh" "https://${TELECOM_DOMAIN}" || echo "Cảnh báo: smoke test thất bại" >&2
 echo "Xong: app thuê bao https://${TELECOM_DOMAIN}/app/ · vận hành https://${TELECOM_DOMAIN}/admin/"

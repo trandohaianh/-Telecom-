@@ -150,7 +150,13 @@ def route_template(request) -> str:
     return "unmatched"
 
 
+_METHODS = frozenset({"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"})
+
+
 def observe(request, status: int, started: float) -> None:
     route = route_template(request)
-    HTTP_REQUESTS.labels(method=request.method, route=route, status=str(status)).inc()
+    # Any token is a valid HTTP method on the wire: an unbounded label set would grow /metrics
+    # (and memory) forever, one counter + histogram series per invented method.
+    method = request.method if request.method in _METHODS else "OTHER"
+    HTTP_REQUESTS.labels(method=method, route=route, status=str(status)).inc()
     HTTP_LATENCY.labels(route=route).observe(time.perf_counter() - started)

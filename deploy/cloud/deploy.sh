@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Cập nhật Telecom trên VM: backup trước, kéo code, build lại, smoke test.
 set -euo pipefail
+# This script resets the very checkout it lives in, and bash reads scripts by byte offset while
+# running: a changed deploy.sh could execute mixed old/new lines. Run from a private copy instead.
+if [ -z "${DEPLOY_SH_COPY:-}" ]; then
+  copy="$(mktemp)"; cp "$0" "$copy"
+  DEPLOY_SH_COPY="$copy" exec bash "$copy" "$@"
+fi
+trap 'rm -f -- "$DEPLOY_SH_COPY"' EXIT
 APP_DIR="${APP_DIR:-$HOME/telecom}"
 cd "$APP_DIR"
 git fetch --prune origin
@@ -24,5 +31,6 @@ if [ "${SKIP_PREDEPLOY_BACKUP:-0}" != "1" ] && sudo docker ps --format '{{.Names
     exit 3
   fi
 fi
-FORWARDED_ALLOW_IPS="$(bash ./proxy_ip.sh)" sudo -E docker compose --env-file .env up -d --build telecom
+proxy_ip="$(bash ./proxy_ip.sh)"   # dừng (set -e) nếu không tìm thấy Caddy
+FORWARDED_ALLOW_IPS="$proxy_ip" sudo -E docker compose --env-file .env up -d --build telecom
 bash ./smoke.sh "https://$TELECOM_DOMAIN"

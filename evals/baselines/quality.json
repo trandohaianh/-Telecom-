@@ -2,16 +2,19 @@
  "created_at": "2026-11-16T02:17:16+00:00",
  "bundle": "runtime/artifacts_v22",
  "metrics": {
-  "block_recall_pct": 54.55,
-  "block_precision_pct": 100.0,
-  "block_fpr_pct": 0.0,
-  "block_fpr_ci_hi_pct": 0.0077,
-  "any_recall_pct": 86.36,
-  "any_fpr_pct": 0.1142,
-  "family_min_detected_pct": 80.0,
-  "zero_day_caught_pct": 91.7,
-  "session_pre_ring_block_recall_pct": 49.06,
+  "block_recall_pct": 43.5,
+  "block_precision_pct": 99.6,
+  "block_fpr_pct": 0.0003,
+  "block_fpr_ci_hi_pct": 0.0017,
+  "any_recall_pct": 81.11,
+  "any_fpr_pct": 0.0703,
+  "family_min_detected_pct": 68.2,
+  "zero_day_caught_pct": 90.2,
+  "session_pre_ring_block_recall_pct": 58.33,
   "scored_events": 50000,
-  "throughput_eps_offline": 7601
- }
+  "throughput_eps_offline": 7601,
+  "any_recall_min_window_pct": 68.57,
+  "pooled_windows": 11
+ },
+ "quality_note": "quality metrics re-baselined 2026-11-17: pooled test + 10 replicate windows over 24 h (M2/M7), bundle tfd-v2.4; serving keys unchanged (CI runner)"
 }

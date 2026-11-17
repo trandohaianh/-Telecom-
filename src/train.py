@@ -54,6 +54,35 @@ def floor(th, kind):
 from textnorm import normalize as strip_accents  # fast Vietnamese accent folding (shared with runtime)
 
 
+# Probabilities never exceed 1.0, so this threshold disables an action while staying finite (JSON-safe).
+BLOCK_DISABLED = float(np.nextafter(1.0, np.inf))
+
+
+def threshold_for_fpr_bound(neg_scores, target_fpr: float, confidence: float = 0.95) -> float:
+    """Lowest threshold whose one-sided Clopper-Pearson upper bound on the FPR is <= target (M5).
+
+    threshold_for_fpr() only bounds the POINT estimate (k <= fpr*margin*n), and the shipped reports
+    showed upper_95ci_within_target = False for CALL and AUDIO blocks. If even zero false positives
+    cannot prove the target with this many negatives (n < ln(1/(1-c))/target, ~29 957 for 1e-4),
+    the action is disabled instead of being armed on an unproven bound.
+    """
+    from scipy.stats import beta
+    s = np.sort(np.asarray(neg_scores, dtype=float))[::-1]          # descending
+    n = s.size
+    if not n or not np.isfinite(s).all():
+        raise ValueError("calibration requires finite legitimate scores")
+    best = None
+    for k in range(n):
+        upper = float(beta.ppf(confidence, k + 1, n - k))
+        if upper > target_fpr:
+            break
+        best = k
+    if best is None:
+        return BLOCK_DISABLED
+    # Threshold just above the (best+1)-th largest score: at most `best` negatives reach it (ties too).
+    return float(np.nextafter(s[best], np.inf))
+
+
 def threshold_for_fpr(neg_scores: np.ndarray, fpr: float, margin: float = 0.5) -> float:
     """Smallest threshold whose FPR on legitimate validation events is <= fpr * margin."""
     # Chọn phân vị score của mẫu hợp lệ theo FPR có thêm biên an toàn.
@@ -117,7 +146,7 @@ def train_call():
     yca = ca.fraud_type.isin(SIGNALLING_FRAUD).astype(int)
     neg = model.predict(ca[CALL_FEATURES])[yca.values == 0]
     # Chọn ngưỡng block/flag theo ngân sách FPR rồi áp mức sàn cho tầng call.
-    th = floor({"block": threshold_for_fpr(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, CALL_FLAG_FPR)}, "call")
+    th = floor({"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, CALL_FLAG_FPR)}, "call")
 
     # Zero-day: unsupervised Isolation Forests, one per peer group, trained on legitimate traffic only
     # Tách luồng hợp lệ và gán nhóm riêng để mô hình bất thường không học dữ liệu gian lận.
@@ -182,7 +211,7 @@ def train_sms():
     p = clf.predict_proba(sms_matrix(va, vec))[:, 1]
     ca, calibration_name = calibration_frame("sms")
     neg = clf.predict_proba(sms_matrix(ca, vec))[:, 1][ca.label.values == 0]
-    th = floor({"block": threshold_for_fpr(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)}, "sms")
+    th = floor({"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)}, "sms")
     # Lưu vectorizer, classifier và thứ tự metadata cần cho suy luận.
     joblib.dump({"vec": vec, "clf": clf, "meta": SMS_META_FEATURES}, MODEL_DIR / "sms_text_lr.joblib")
     # Trả ngưỡng cùng các chỉ số phân loại trên cửa sổ validation.
@@ -206,7 +235,7 @@ def train_audio():
     # Audio negatives are fewer (in-call scoring is sampled), so the block threshold is the max
     # legitimate score on validation (empirical FPR = 0) rather than an extreme quantile.
     # Dùng điểm hợp lệ lớn nhất làm ngưỡng block; ngưỡng flag theo ngân sách FPR.
-    th = floor({"block": float(neg.max()) + 1e-9, "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)}, "audio")
+    th = floor({"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)}, "audio")
     # Lưu mô hình âm thanh và trả về ngưỡng cùng chỉ số đánh giá.
     model.save_model(str(MODEL_DIR / "tier2_audio_lgbm.txt"))
     return th, {"val_pr_auc": average_precision_score(va.label, p), "val_roc_auc": roc_auc_score(va.label, p),

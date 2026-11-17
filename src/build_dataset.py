@@ -61,6 +61,11 @@ def replay(events, warmup=()):
 def make_window(name, seed, hours, start, kind, limit=None, warmup_hours=0.0):
     """Returns (warmup_events, events). Warm-up events only prime the feature store."""
     ev = TrafficSimulator(seed, window=kind).build(hours, start_hour=start, warmup_hours=warmup_hours)
+    if name != kind:
+        # M9: event IDs come from the window KIND, so "val" and "cal" (both kind val) collided ("VA…").
+        prefix = name[:3].upper()
+        for e in ev:
+            e["event_id"] = prefix + e["event_id"][2:]
     warm = [e for e in ev if e["warmup"]]
     ev = [e for e in ev if not e["warmup"]]
     if limit:

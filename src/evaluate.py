@@ -151,15 +151,23 @@ def latency_profile(events, warm, n=6000):
             for et in lat}
 
 
+def replicate_start_hour(index: int, windows: int = 10) -> float:
+    """Evenly spaced LOCAL start hours so night and evening traffic is evaluated too (M7)."""
+    return round(24.0 * index / windows, 2)
+
+
 def replicate_study(seeds=range(201, 211)):
     # Chạy nhiều cửa sổ test độc lập để lượng hóa độ dao động của chỉ số.
     rows = []
-    for s in seeds:
+    seeds = list(seeds)
+    for i, s in enumerate(seeds):
         # Sinh cửa sổ với seed riêng, chấm điểm và tính các chỉ số kết quả.
-        warm, ev = make_window("rep", s, 4.3, 8, "test", limit=50_000, warmup_hours=24)
+        # M7: các cửa sổ bắt đầu ở các giờ địa phương trải đều trong ngày (cửa sổ test chỉ có 08:00-12:18).
+        warm, ev = make_window("rep", s, 4.3, replicate_start_hour(i, len(seeds)), "test", limit=50_000, warmup_hours=24)
         res = score_stream(ev, warmup=warm)
         m = metrics(ev, res)
-        rows.append({"seed": s, "fraud_events": int(sum(e["label"] for e in ev)),
+        rows.append({"seed": s, "start_hour_local": replicate_start_hour(i, len(seeds)),
+                     "fraud_events": int(sum(e["label"] for e in ev)),
                      "recall_any_pct": m["block_or_flag"]["recall_pct"], "recall_block_pct": m["block"]["recall_pct"],
                      "fp_block": m["block"]["FP"], "fp_any": m["block_or_flag"]["FP"], "legit": m["block"]["FP"] + m["block"]["TN"],
                      "zero_day_events": m["zero_day"]["events"], "zero_day_missed": m["zero_day"]["missed"],

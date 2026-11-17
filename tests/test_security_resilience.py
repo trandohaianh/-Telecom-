@@ -177,7 +177,10 @@ def test_spoofed_hotline_is_never_deny_listed():
     fb.learn(call("S1", 0, caller="1900545413", imei="-1", origin="INTL_GW"), {"decision": "BLOCK"})
     assert "1900545413" not in fb.deny
     assert fb.check(call("S2", 1, caller="1900545413", origin="BANK_TRUNK")) is None
-    assert fb.check(call("S3", 2, caller="1900545413", origin="INTL_GW"))[0] == "BLOCK"
+    # M4 (quyết định 17/11/2026): ngân hàng thật cũng gọi qua cổng quốc tế, nên khi mô hình lỗi thì chỉ
+    # gắn cờ đường đó; giả mạo qua đường nội địa vẫn bị chặn.
+    assert fb.check(call("S3", 2, caller="1900545413", origin="INTL_GW"))[0] == "FLAG"
+    assert fb.check(call("S4", 3, caller="1900545413", origin="LOCAL"))[0] == "BLOCK"
 
 
 def test_events_missed_during_outage_are_rescored_after_recovery():

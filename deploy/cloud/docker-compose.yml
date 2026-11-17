@@ -25,7 +25,7 @@ services:
       FRAUD_BACKUP_KEEP: ${FRAUD_BACKUP_KEEP:-7}
       FRAUD_PIPELINE_DAILY_AT: ${FRAUD_PIPELINE_DAILY_AT:-02:30}
       # IP của Caddy (proxy_ip.sh). "*" tin mọi container trên mạng edge: chúng giả được X-Forwarded-For.
-      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-*}
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
     volumes:
       - telecom_state:/srv/state
     networks:

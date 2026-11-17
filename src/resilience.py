@@ -153,7 +153,9 @@ class FallbackRules:
         if self._denied(party, ts) or self._denied(ev.get("imei"), ts):
             return "BLOCK", rc.FALLBACK_DENYLIST
         if et == "CALL" and party in self.protected and ev.get("origin_trunk", "BANK_TRUNK") != "BANK_TRUNK":
-            return "BLOCK", rc.FALLBACK_SPOOF
+            # M4: real banks also call through the international gateway (offshore call centres), so
+            # while the model is down that route is only flagged; a domestic spoof is still blocked.
+            return ("FLAG" if ev.get("origin_trunk") == "INTL_GW" else "BLOCK"), rc.FALLBACK_SPOOF
         if et == "SMS" and party in self.brands and ev.get("sms_route", "BRAND_GW") != "BRAND_GW":
             return "FLAG", rc.FALLBACK_BRAND
         return None
@@ -306,7 +308,13 @@ class GuardedDetector:
             return []
         # Snapshot before consuming any queued work. A snapshot failure is retryable.
         fs = getattr(self.det, "fs", None)
-        before = fs.state_dict() if fs is not None else None
+        if fs is not None and hasattr(fs, "snapshot_touched"):
+            # Only the keys this batch can mutate (O(batch)), not the whole store (O(state)).
+            before, restore = fs.snapshot_touched(batch), fs.restore_touched
+        else:
+            before = fs.state_dict() if fs is not None else None
+            restore = fs.load_state_dict if fs is not None else None
+        # harvest_hits only holds callers with silent segments in the last hour: small, copied whole.
         harvest = copy.deepcopy(getattr(self.det, "harvest_hits", None))
         model_error = None
         # Đo riêng thời gian chấm điểm: sao chép/khôi phục state là bảo trì, không phải lỗi mô hình,
@@ -324,7 +332,7 @@ class GuardedDetector:
             restore_errors = []
             try:
                 if before is not None:
-                    fs.load_state_dict(before)
+                    restore(before)
             except Exception as exc:
                 restore_errors.append(exc)
             try:

@@ -257,6 +257,8 @@ def claim_demo_number(me: dict = Depends(subscriber_session)):
     public = set(getattr(eng, "demo_numbers", ()) or ())
     pool = [s.msisdn for s in eng.sim.subs if s.msisdn not in public]
     number = subscribers().claim_demo_number(me["id"], pool)
+    if not me.get("msisdn"):
+        forget_number_history(number)   # số giả lập tái sử dụng: không mang theo lịch sử người dùng trước
     with eng.lock:
         eng.inbox[number]
     return {"msisdn": number, "kind": "demo"}
@@ -288,6 +290,10 @@ def otp_verify(body: OtpIn, me: dict = Depends(subscriber_session)):
     phone = subscribers().otp_verify(me["id"], accounts.normalize_msisdn(body.phone), body.code)
     if me.get("msisdn") != phone:
         forget_number_history(phone)
+        if me.get("msisdn"):
+            # Số cũ vừa được nhả: người giữ số đó sau này không được để lộ dữ liệu cho người giám hộ
+            # và inbox của chủ trước (trước đây chỉ dọn khi có người khác nhận số).
+            forget_number_history(me["msisdn"])
     eng = engine()
     if eng is not None:
         with eng.lock:

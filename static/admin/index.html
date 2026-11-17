@@ -13,11 +13,11 @@
 <style>
 /* Bảng màu "xanh tín hiệu trên nền navy" (phòng giám sát an ninh mạng viễn thông). Xanh lơ là màu thương hiệu;
    ĐỎ chỉ dành cho lừa đảo/chặn để cảnh báo luôn nổi bật. Mọi cặp chữ/nền đạt WCAG AA. */
-:root{--bg:#07111f;--panel:#0d1a2b;--panel2:#12233a;--line:#1f3550;--ink:#e6f1fa;--mut:#8da2b8;--brand:#22d3ee;--on-brand:#04222b;--red:#ff4d6d;--red2:#ff7a8f;--amber:#f59e0b;--green:#22c55e;--blue:#7dd3fc;
+:root{--on-red:#1a0007;--bg:#07111f;--panel:#0d1a2b;--panel2:#12233a;--line:#1f3550;--ink:#e6f1fa;--mut:#8da2b8;--brand:#22d3ee;--on-brand:#04222b;--red:#ff4d6d;--red2:#ff7a8f;--amber:#f59e0b;--green:#22c55e;--blue:#7dd3fc;
 --term:#040b15;--drawer:#0a1626;--track:#1f3550;--scrim:rgba(0,0,0,.86);--on-ink:#000;
 --display:"Montserrat",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;color-scheme:dark}
 /* Giao diện sáng: bật bằng nút gạt trên header, lựa chọn được nhớ trong trình duyệt. */
-:root[data-theme="light"]{--bg:#f3f7fa;--panel:#ffffff;--panel2:#f7fafc;--line:#d6e1ea;--ink:#0b1b2b;--mut:#52657a;--red:#e11d48;--red2:#be123c;--brand:#0e7490;--on-brand:#ffffff;
+:root[data-theme="light"]{--on-red:#ffffff;--bg:#f3f7fa;--panel:#ffffff;--panel2:#f7fafc;--line:#d6e1ea;--ink:#0b1b2b;--mut:#52657a;--red:#e11d48;--red2:#be123c;--brand:#0e7490;--on-brand:#ffffff;
 --amber:#b45309;--green:#15803d;--blue:#0369a1;--term:#eef3f7;--drawer:#ffffff;--track:#dce6ee;--scrim:rgba(20,20,24,.55);--on-ink:#fff;color-scheme:light}
 /* Nút gạt sáng / tối. */
 .theme{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.06em;cursor:pointer;user-select:none;border:1px solid var(--line);padding:4px 8px}
@@ -38,7 +38,7 @@ h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.02em}h1 small{display
 @keyframes p{70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 /* Kiểu nút, thẻ KPI, panel và lưới bố cục trên màn hình lớn. */
 button{font:700 12px var(--display);letter-spacing:.05em;background:var(--panel2);color:var(--ink);border:1px solid var(--line);padding:9px 12px;cursor:pointer}
-button:hover{border-color:var(--brand)}button.red{background:var(--red);border-color:var(--red);color:#fff}button.pri{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}button.on{background:var(--ink);color:var(--on-ink)}
+button:hover{border-color:var(--brand)}button.red{background:var(--red);border-color:var(--red);color:var(--on-red)}button.pri{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}button.on{background:var(--ink);color:var(--on-ink)}
 .kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin:16px 0}
 .k{background:var(--panel);border:1px solid var(--line);padding:12px 12px 10px;min-width:0}
 .k .l{font-size:10.5px;color:var(--mut);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
@@ -54,7 +54,7 @@ button:hover{border-color:var(--brand)}button.red{background:var(--red);border-c
 .al.BLOCK{border-left-color:var(--red)}.al.FAIL{border-left-color:var(--blue)}
 .al .top{display:flex;justify-content:space-between;gap:8px;font-size:12px}
 .tag{font:700 10.5px var(--display);letter-spacing:.06em;padding:2px 6px;background:var(--term);border:1px solid var(--line)}
-.tag.BLOCK{background:var(--red);border-color:var(--red)}.tag.FLAG{background:var(--amber);color:#000;border-color:var(--amber)}.tag.FAIL{background:var(--blue);color:#000}
+.tag.BLOCK{background:var(--red);border-color:var(--red);color:var(--on-red)}.tag.FLAG{background:var(--amber);color:#000;border-color:var(--amber)}.tag.FAIL{background:var(--blue);color:#000}
 .tag.z{background:#7c3aed;border-color:#7c3aed}.tag.inj{background:#fff;color:#000}
 .al .act{font-size:12px;color:var(--mut);margin:4px 0}.al ul{margin:4px 0 0 0;padding-left:16px;font-size:12.5px}
 .al code{font:600 11px var(--mono);color:var(--red2)}
@@ -97,14 +97,14 @@ a.pill{color:var(--ink);text-decoration:none}
 <!-- Header: tên demo, trạng thái live, model version, circuit breaker và đổi ngôn ngữ. -->
 <header>
   <div class="brand"><div class="logo">TF</div><h1><span data-vi="Lá chắn lừa đảo viễn thông · Thời gian thực" data-en="Telecom Fraud Shield · Real-time">Lá chắn lừa đảo viễn thông · Thời gian thực</span>
-    <small data-vi="AI hai tầng: tín hiệu trước cuộc gọi (&lt;30 ms) + nội dung SMS/âm thanh (&lt;170 ms)" data-en="Two-tier AI: pre-call signalling (&lt;30 ms) + SMS/audio content (&lt;170 ms)">AI hai tầng</small></h1></div>
+    <small data-vi="AI hai tầng: tín hiệu trước cuộc gọi (mục tiêu &lt;30 ms) + nội dung SMS/âm thanh (mục tiêu &lt;170 ms)" data-en="Two-tier AI: pre-call signalling (target &lt;30 ms) + SMS/audio content (target &lt;170 ms)">AI hai tầng</small></h1></div>
   <div class="right">
     <span class="pill live"><i></i>LIVE</span>
-    <span class="pill mono" id="ver">tfd-v2.0</span>
+    <span class="pill mono" id="ver" title="Phiên bản mô hình đang chạy">—</span>
     <span class="pill" id="cbpill">BREAKER: CLOSED</span>
     <a class="pill" href="/app/" target="_blank" data-vi="APP THUÊ BAO ↗" data-en="SUBSCRIBER APP ↗">APP THUÊ BAO ↗</a>
     <span class="pill mono" id="who">–</span>
-    <a href="/admin/manage" class="analystonly" style="text-decoration:none"><button type="button" data-vi="QUẢN TRỊ" data-en="MANAGE">QUẢN TRỊ</button></a>
+    <button type="button" class="analystonly" onclick="location.href='/admin/manage'" data-vi="QUẢN TRỊ" data-en="MANAGE">QUẢN TRỊ</button>
     <button id="logout" data-vi="ĐĂNG XUẤT" data-en="SIGN OUT">ĐĂNG XUẤT</button>
     <!-- Nút gạt giao diện sáng / tối. -->
     <label class="theme" title="Sáng / Tối"><span>☾</span><input type="checkbox" id="themeSw" role="switch" aria-label="Giao diện sáng"><span class="sw"></span><span>☀</span></label>
@@ -210,16 +210,16 @@ a.pill{color:var(--ink);text-decoration:none}
 <div class="login" id="login"><form id="lform">
   <h2 style="margin:0;font-size:15px;letter-spacing:.08em" data-vi="ĐĂNG NHẬP VẬN HÀNH" data-en="OPERATOR SIGN-IN">ĐĂNG NHẬP VẬN HÀNH</h2>
   <div id="ogbtn"></div>
-  <input id="user" autocomplete="username" placeholder="tên đăng nhập / username">
-  <input id="pass" type="password" autocomplete="current-password" placeholder="mật khẩu / password">
-  <input id="tok" autocomplete="off" placeholder="token cá nhân (tuỳ chọn)" style="display:none">
+  <input id="user" autocomplete="username" aria-label="Tên đăng nhập" placeholder="tên đăng nhập / username">
+  <input id="pass" type="password" autocomplete="current-password" aria-label="Mật khẩu" placeholder="mật khẩu / password">
+  <input id="tok" autocomplete="off" aria-label="Token cá nhân" placeholder="token cá nhân (tuỳ chọn)" style="display:none">
   <a href="#" id="toktoggle" class="note" style="margin:0" data-vi="Dùng token cá nhân thay mật khẩu" data-en="Use a personal token instead">Dùng token cá nhân thay mật khẩu</a>
   <div class="err" id="lerr"></div>
   <button class="pri" type="submit" data-vi="ĐĂNG NHẬP" data-en="SIGN IN">ĐĂNG NHẬP</button>
   <a href="/app/" class="note" style="margin:0" data-vi="Bạn là thuê bao? Mở app Lá chắn lừa đảo →" data-en="Subscriber? Open the protection app →">Bạn là thuê bao? Mở app →</a>
 </form></div>
 
-<aside class="drawer" id="drawer"><button id="dclose" style="float:right">✕</button><h2 style="font-size:14px;letter-spacing:.1em" data-vi="BẰNG CHỨNG" data-en="EVIDENCE">BẰNG CHỨNG</h2>
+<aside class="drawer" id="drawer"><button id="dclose" style="float:right" aria-label="Đóng bằng chứng">✕</button><h2 style="font-size:14px;letter-spacing:.1em" data-vi="BẰNG CHỨNG" data-en="EVIDENCE">BẰNG CHỨNG</h2>
   <!-- Số luôn bị che; chuyên viên mở số đầy đủ phải ghi lý do, mỗi lần mở đều vào nhật ký. -->
   <div class="analystonly"><button id="reveal" data-vi="XEM SỐ ĐẦY ĐỦ (GHI NHẬT KÝ)" data-en="REVEAL NUMBER (LOGGED)">XEM SỐ ĐẦY ĐỦ (GHI NHẬT KÝ)</button><div class="res" id="rvres" style="min-height:0;margin-top:8px">—</div></div>
   <pre id="dbody"></pre></aside>
@@ -264,6 +264,8 @@ let TOKEN = store.get(), ME = null;
 // Áp theme đã lưu (sau khi ME đã khai báo, vì setTheme vẽ lại watermark).
 (() => { let t = 'dark'; try { t = localStorage.getItem('tfs_theme') || 'dark'; } catch(e){} setTheme(t); })();
 // api gọi endpoint kèm token; 401 mở màn đăng nhập, 403 báo không đủ quyền.
+// Người dùng đang trỏ chuột hoặc focus trong vùng này: giữ nguyên DOM (feed 700 ms, đề xuất 3 s).
+function holding(sel){ const el = $(sel); return !!el && (el.matches(':hover') || el.contains(document.activeElement)); }
 async function api(url, opts = {}){
   const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: 'Bearer ' + TOKEN } });
   if (r.status === 401){ if (ME) { ME = null; TOKEN = ''; store.set(''); } showLogin(L==='vi' ? 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.' : 'Session expired, please sign in again.'); throw new Error('401'); }
@@ -333,6 +335,7 @@ async function pollAgent(){
   if (ME) { try {
     const a = await api('/api/agent'), vi = L === 'vi';
     $('#agent_note').textContent = a.can_decide ? (vi ? 'bạn có quyền quyết định' : 'you can decide') : (vi ? 'chỉ admin quyết định' : 'admin decides');
+    if (holding('#agent')) return;   // không làm mới khi người dùng đang trỏ/thao tác: nút Duyệt không được dịch dưới con trỏ
     $('#agent').innerHTML = a.proposals.length ? a.proposals.map(p => `<div class="prop ${p.severity} ${p.status !== 'pending' ? 'done' : ''}">
       <div class="t"><span>${esc(p.title)}</span><span class="mono" style="color:var(--mut)">${esc(p.id)}</span></div>
       <ul>${p.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
@@ -344,7 +347,8 @@ async function pollAgent(){
       const ok = !!b.dataset.ok, id = b.dataset.ok || b.dataset.no;
       const note = prompt(L === 'vi' ? (ok ? 'Ghi chú khi duyệt (lý do):' : 'Lý do từ chối:') : 'Note:', '');
       if (note === null) return;
-      try { await api(`/api/agent/${encodeURIComponent(id)}/decide?decision=${ok ? 'approve' : 'reject'}&note=${encodeURIComponent(note)}`, { method: 'POST' }); } catch(e){ alert(e.message); }
+      if (!note.trim()) { alert(L === 'vi' ? 'Cần ghi lý do trước khi quyết định.' : 'A note is required.'); return; }
+      try { await api(`/api/agent/${encodeURIComponent(id)}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision: ok ? 'approve' : 'reject', note }) }); } catch(e){ alert(e.message); }
       pollAgent();
     });
   } catch(e){} }
@@ -387,7 +391,7 @@ function render(s){
     ? `Dự phòng: chặn ${fmt(R.fallback_block)} · cờ ${fmt(R.fallback_flag)} · danh sách chặn ${fmt(R.denylist_size)}\nChờ chấm lại ${fmt(R.rescore_pending)}/${fmt(R.rescore_capacity)} · đã chấm lại ${fmt(R.rescored)} · bỏ do đầy ${fmt(R.rescore_dropped)}\nCảnh báo hồi tố ${fmt(R.retro_alerts)} · kết luận đến muộn ${fmt(R.late_verdicts)}`
     : `Fallback: blocked ${fmt(R.fallback_block)} · flagged ${fmt(R.fallback_flag)} · deny-list ${fmt(R.denylist_size)}\nRe-score pending ${fmt(R.rescore_pending)}/${fmt(R.rescore_capacity)} · re-scored ${fmt(R.rescored)} · dropped (full) ${fmt(R.rescore_dropped)}\nRetro alerts ${fmt(R.retro_alerts)} · late verdicts ${fmt(R.late_verdicts)}`;
   // Tạo lại feed và gắn sự kiện click để mở JSON chứng cứ của thẻ tương ứng.
-  $('#feed').innerHTML = s.alerts.map(card).join('');
+  if (!holding('#feed')) $('#feed').innerHTML = s.alerts.map(card).join('');
   document.querySelectorAll('.al').forEach(el => el.onclick = () => { const a = s.alerts.find(x => x.event_id === el.dataset.id); OPEN_ID = a.event_id; $('#rvres').textContent = '—'; $('#dbody').textContent = JSON.stringify(a, null, 2); $('#drawer').classList.add('open'); });
 }
 $('#dclose').onclick = () => $('#drawer').classList.remove('open');
@@ -396,7 +400,7 @@ let OPEN_ID = null;
 $('#reveal').onclick = async () => {
   const reason = prompt(L === 'vi' ? 'Lý do cần xem số đầy đủ (bắt buộc, sẽ ghi vào nhật ký):' : 'Reason (required, logged):', '');
   if (!reason) return;
-  try { const r = await api(`/api/reveal?event_id=${encodeURIComponent(OPEN_ID)}&reason=${encodeURIComponent(reason)}`, { method: 'POST' });
+  try { const r = await api('/api/reveal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event_id: OPEN_ID, reason }) });
         $('#rvres').textContent = `${r.party} → ${r.counterparty}${r.imei ? '\nIMEI ' + r.imei : ''}\n${r.note}`; }
   catch(e){ $('#rvres').textContent = '✘ ' + e.message; }
 };

@@ -216,6 +216,26 @@ class VoiceService:
                 "voice shutdown deadline exceeded: executor threads may still be running") from exc
 
 
+UPLOAD_READ_TIMEOUT_S = float(os.environ.get("FRAUD_AUDIO_READ_TIMEOUT_S", "15"))
+
+
+class _Refused(Exception):
+    pass
+
+
+def _parse_signed_upload(body, stamp, signature):
+    why = security.verify_network(body, stamp, signature)
+    if why:
+        raise _Refused(why)
+    try:
+        data = json.loads(body)
+    except (ValueError, UnicodeError) as exc:
+        raise HTTPException(400, "body must be JSON") from exc
+    if not isinstance(data, dict):
+        raise HTTPException(400, "body must be a JSON object")
+    return _metadata(data)
+
+
 def create_voice_router(*, submit_event=None, mode=lambda: "shadow", record_observation=None,
                         lookup_observation=None, analyzer=analyze_wav, model=None, asr=None,
                         response_ms=None, close_timeout_s=None):
@@ -266,22 +286,25 @@ def create_voice_router(*, submit_event=None, mode=lambda: "shadow", record_obse
             raise HTTPException(503, "too many audio uploads in progress", headers={"Retry-After": "1"})
         async with uploads:
             raw = bytearray()
-            async for chunk in request.stream():
-                raw.extend(chunk)
-                if len(raw) > MAX_BODY_BYTES:
-                    raise HTTPException(413, "audio request too large")
+            try:
+                # A total read deadline: otherwise 8 unauthenticated clients trickling one byte at a
+                # time hold every upload slot forever (uvicorn has no body-read timeout).
+                async with asyncio.timeout(UPLOAD_READ_TIMEOUT_S):
+                    async for chunk in request.stream():
+                        raw.extend(chunk)
+                        if len(raw) > MAX_BODY_BYTES:
+                            raise HTTPException(413, "audio request too large")
+            except TimeoutError as exc:
+                raise HTTPException(408, "audio upload too slow") from exc
             body = bytes(raw)
             del raw
-        why = security.verify_network(body, stamp, request.headers.get("x-signature", ""))
-        if why:
-            raise HTTPException(401, "network link refused: " + why)
+        # HMAC over ~17 MB, JSON and base64 decoding cost tens of ms of CPU: off the event loop,
+        # which also serves the 30 ms CALL verdicts.
         try:
-            data = json.loads(body)
-        except (ValueError, UnicodeError) as exc:
-            raise HTTPException(400, "body must be JSON") from exc
-        if not isinstance(data, dict):
-            raise HTTPException(400, "body must be a JSON object")
-        event, payload, channel = _metadata(data)
+            event, payload, channel = await asyncio.to_thread(
+                _parse_signed_upload, body, stamp, request.headers.get("x-signature", ""))
+        except _Refused as exc:
+            raise HTTPException(401, "network link refused: " + str(exc)) from None
         result, status = await service.submit(event, payload, channel)
         return JSONResponse(result, status_code=status, headers={"Retry-After": "1"} if status == 202 else None)
 

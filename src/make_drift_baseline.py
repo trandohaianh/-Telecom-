@@ -18,6 +18,7 @@ import pandas as pd
 
 import drift
 from config import DATA_DIR, MODEL_DIR
+from detector import has_behavioural_evidence
 from feature_store import CALL_FEATURES
 from model_manifest import validate_dataset_manifest, validate_model_manifest
 
@@ -42,7 +43,11 @@ def main():
 
     # Chấm điểm cửa sổ chuẩn và phân lớp từng score theo ngưỡng call.
     scores = model.predict(va[CALL_FEATURES])
-    decisions = ["BLOCK" if s >= th["block"] else ("FLAG" if s >= th["flag"] else "ALLOW") for s in scores]
+    raw = ["BLOCK" if s >= th["block"] else ("FLAG" if s >= th["flag"] else "ALLOW") for s in scores]
+    # Live counters are POST-policy decisions (a BLOCK without behavioural evidence becomes FLAG),
+    # so the reference decision rates must be too; raw-threshold rates were not comparable (M3).
+    rows = va[CALL_FEATURES].to_dict("records")
+    decisions = ["FLAG" if d == "BLOCK" and not has_behavioural_evidence(r) else d for d, r in zip(raw, rows)]
 
     # Tạo baseline phân phối từ đặc trưng theo dõi, điểm số và các quyết định tương ứng.
     baseline = drift.build_baseline(

@@ -1,3 +1,16 @@
+> **Trạng thái đo được (17/11/2026, bundle `tfd-v2.4`, dữ liệu MÔ PHỎNG; chi tiết: [reports/04](reports/04_Danh_gia_da_vai_tro_va_thuat_toan.md)):**
+>
+> | Hạng mục | Mục tiêu | Đo được | Ghi chú |
+> |---|---|---|---|
+> | FPR chặn cứng (gộp 11 cửa sổ × 50k, trải 24 giờ) | < 0,01 % | 0,0003 % (cận trên 95 % 0,0017 %) | đạt trên mô phỏng |
+> | Recall chặn / chặn+cảnh báo (gộp) | ≥ 45 % / ≥ 80 % | 43,5 % / 81,1 % | chặn chưa đạt |
+> | Phát hiện SIM box (gộp) | ≥ 75 % | 68,2 % | chưa đạt |
+> | HTTP p99 (laptop, 50–100 EPS) | ≤ 30 ms | 28–37 ms tuỳ lần chạy | chưa ổn định; xem docs/SLA_30MS.md |
+> | 50k TPS | 50 000 | chưa đo trên phần cứng đích | chỉ ngoại suy |
+> | Chặn cuộc gọi thật | — | chưa: mặc định `shadow`, chưa có adapter nhà mạng | |
+>
+> Các con số v2.0–v2.2 bên dưới là lịch sử, đo trên một cửa sổ test duy nhất.
+
 > **Bản full-stack (16/11/2026):**
 > - Giao diện tách riêng: app thuê bao ở `/app/` (tài khoản email/Google, số giả lập riêng hoặc OTP SMS) và bảng vận hành ở `/admin/` (tên + mật khẩu hoặc Google).
 > - Trang quản trị `/admin/manage`: duyệt số bị báo cáo, quản lý tài khoản nhân viên, chi phí, pipeline/KPI.

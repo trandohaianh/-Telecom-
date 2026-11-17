@@ -427,6 +427,6 @@ Chi tiết thuật toán, công thức và lý do chọn: [05_Thuat_toan_ly_do_v
 **Còn đỏ, có lý do:** p99 phục vụ 33,4 ms và 4 fail-open ở 100 EPS (50 EPS: 17 ms, 0 fail-open). Lý do là độ trễ fsync của đĩa ảo WSL dao động 4–25 ms; tám lần A/B cùng mã chênh nhau từ 0 tới 132 fail-open. Bước tiếp theo:
 1. Đo lại trên runner CI hoặc phần cứng đích.
 2. Group commit đã có sẵn (mỗi lô ≤ 16 request dùng một fsync), nên không phải lời giải.
-3. Thí nghiệm A/B (báo cáo 05 §5) cho thấy chỉ `synchronous=NORMAL` đưa fail-open về 0–34 (so với 56–216 ở `FULL`). Đã thêm `FRAUD_SQLITE_SYNCHRONOUS` (mặc định FULL, hiện ở `/health/ready`). Đổi mặc định cần chủ dự án quyết.
+3. Thí nghiệm A/B (báo cáo 05 §5) cho thấy chỉ `synchronous=NORMAL` đưa fail-open về 0–34 (so với 56–216 ở `FULL`). Đã thêm `FRAUD_SQLITE_SYNCHRONOUS` (mặc định FULL, hiện ở `/health/ready`). **Quyết định 17/11/2026: giữ `FULL`** làm mặc định; SLA được chốt trên phần cứng đích.
 
 **Nâng cấp:** bundle tfd-v2.6 có hợp đồng đặc trưng mới (`causal-v4-…-farmcell`), nên cần thư mục `FRAUD_STATE_DB` mới và 24 giờ warm-up. Checkpoint Spark cũ cũng phải tạo lại vì `source.json` ràng buộc hợp đồng đặc trưng.

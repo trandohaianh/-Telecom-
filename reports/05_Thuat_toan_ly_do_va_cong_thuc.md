@@ -424,6 +424,6 @@ Không có bằng chứng nào thì BLOCK được hạ xuống FLAG (mã P001).
   - `FRAUD_SQLITE_CHECKPOINT_INTERVAL_S` (0,05–10 s);
   - `FRAUD_EVIDENCE_COALESCE_S` (0–5 s).
   Mọi giá trị sai đều báo lỗi ngay lúc khởi động.
-- **Cần chủ dự án quyết:**
+- **Quyết định của chủ dự án (17/11/2026): giữ `FULL`.** Lý do: với hệ thống chặn lừa đảo, mỗi phán quyết đã trả lời phải còn bằng chứng kể cả khi mất điện; SLA 30 ms sẽ được chốt trên phần cứng đích thay vì nới độ bền. `NORMAL` chỉ còn là lựa chọn bật tay cho môi trường thử. Hai phương án đã cân nhắc:
   1. **Giữ `FULL`** và chốt SLA trên phần cứng đích. SSD trung tâm dữ liệu có tụ chống mất điện thường fsync dưới 0,5 ms. Lệnh đo: `python -B src/verify_live_http.py --rates 50,100 --seconds 30`, chạy 3 lần.
   2. **Đổi mặc định sang `NORMAL`.** Tiến trình sập không mất gì. Mất điện hoặc OS sập có thể mất các phán quyết commit sau lần checkpoint gần nhất (khoảng dưới 1 giây). Khi đó nhà mạng gửi lại (at-least-once) thì sự kiện được chấm lại, nhưng bản ghi bằng chứng của những phán quyết đã trả lời trước đó sẽ không còn.

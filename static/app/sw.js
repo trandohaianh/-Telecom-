@@ -1,6 +1,6 @@
 // Service worker tối giản: lưu khung app để mở nhanh / cài lên màn hình chính.
 // Dữ liệu API luôn lấy mới từ mạng, không bao giờ trả bản cũ trong cache.
-const CACHE = 'la-chan-v4';
+const CACHE = 'la-chan-v5';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
@@ -12,7 +12,8 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/') || e.request.method !== 'GET') return;
   // Khung app: thử mạng trước để luôn có bản mới, mất mạng thì dùng cache.
   e.respondWith(fetch(e.request).then(r => { if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); } return r; })
-    .catch(() => caches.match(e.request)));
+    // Offline deep link (/app/?x, /app/#tab): fall back to the cached app shell instead of the browser error page.
+    .catch(() => caches.match(e.request).then(hit => hit || (e.request.mode === 'navigate' ? caches.match('index.html') : undefined))));
 });
 
 // Web Push (VAPID): payload chỉ có tiêu đề + một dòng hành động, KHÔNG có số điện thoại hay nội dung SMS.
@@ -27,7 +28,12 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   const target = (e.notification.data && e.notification.data.url) || '/app/';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-    for (const c of list) { if (new URL(c.url).pathname.startsWith('/app') && 'focus' in c) return c.focus(); }
+    for (const c of list) {
+      if (new URL(c.url).pathname.startsWith('/app') && 'focus' in c) {
+        return ('navigate' in c && c.url !== new URL(target, self.location.origin).href ? c.navigate(target) : Promise.resolve(c))
+          .then(w => (w || c).focus());
+      }
+    }
     return self.clients.openWindow(target);
   }));
 });

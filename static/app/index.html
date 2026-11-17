@@ -264,7 +264,15 @@ async function authed(r){
   TOKEN = j.token; store.set('tfs_app', TOKEN); await afterLogin(j.me);
 }
 async function afterLogin(me){
-  if (!me) { try { me = await api('/api/app/auth/me'); } catch(e){ return; } }
+  if (!me) {
+    try { me = await api('/api/app/auth/me'); netErr(''); }
+    catch(e){
+      // Offline PWA start or server error: never leave a blank screen; retry while still signed in.
+      if (!document.querySelector('.tab.on')) show('login');
+      if (TOKEN) { netErr('Không kết nối được máy chủ, đang thử lại…'); setTimeout(() => { if (TOKEN) afterLogin(); }, 5000); }
+      return;
+    }
+  }
   if (me.msisdn) { MSISDN = me.msisdn; store.set('tfs_app_num', MSISDN); start(); return; }
   const c = await cfg();
   $('#ph_demo').style.display = c.phone_verification === 'demo_pool' ? '' : 'none';
@@ -580,9 +588,9 @@ async function loadFamily(){
     $('#fam_recv').innerHTML = f.invites_received.map(g => `<div class="verdict v-warn" style="margin:0 0 10px"><b>${esc(pretty(g))} muốn nhận cảnh báo khi bạn gặp lừa đảo</b>
       <div style="display:flex;gap:8px;margin-top:8px"><button class="pri" data-acc="${esc(g)}">Đồng ý</button><button data-dec="${esc(g)}">Từ chối</button></div></div>`).join('');
     const parts = [];
-    if (f.protecting.length) parts.push('Bạn đang bảo vệ: ' + f.protecting.map(pretty).join(', '));
-    if (f.guardians.length) parts.push('Người bảo vệ bạn: ' + f.guardians.map(g => `${pretty(g)} <a href="#" class="rm" data-rm="${esc(g)}" aria-label="Gỡ người bảo vệ ${esc(pretty(g))}">gỡ</a>`).join(', '));
-    if (f.invites_sent.length) parts.push('Đã mời, chờ đồng ý: ' + f.invites_sent.map(pretty).join(', '));
+    if (f.protecting.length) parts.push('Bạn đang bảo vệ: ' + f.protecting.map(x => esc(pretty(x))).join(', '));
+    if (f.guardians.length) parts.push('Người bảo vệ bạn: ' + f.guardians.map(g => `${esc(pretty(g))} <a href="#" class="rm" data-rm="${esc(g)}" aria-label="Gỡ người bảo vệ ${esc(pretty(g))}">gỡ</a>`).join(', '));
+    if (f.invites_sent.length) parts.push('Đã mời, chờ đồng ý: ' + f.invites_sent.map(x => esc(pretty(x))).join(', '));
     $('#fam_list').innerHTML = parts.join('<br>') || 'Chưa liên kết người thân nào.';
     document.querySelectorAll('[data-acc],[data-dec],[data-rm]').forEach(b => b.onclick = async ev => {
       ev.preventDefault();

@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     FRAUD_ARTIFACT_DIR=/srv/app/runtime/artifacts_v22 \
     FRAUD_LOG_DIR=/srv/state/logs FRAUD_USERS_FILE=/srv/state/secrets/users.json \
     FRAUD_NETWORK_KEY=/srv/state/secrets/network_link.key FRAUD_AUDIT_FILE=/srv/state/logs/audit.jsonl \
-    FRAUD_APP_DB=/srv/state/app.sqlite3 PORT=8080
+    FRAUD_APP_DB=/srv/state/app.sqlite3 PORT=8080     FRAUD_VAPID_PRIVATE_KEY_FILE=/srv/state/secrets/vapid_private.pem FRAUD_REQUIRE_MANIFEST=1
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /srv/app
@@ -22,5 +22,5 @@ RUN useradd --system --uid 10001 app && mkdir -p /srv/state && chown -R app /srv
 USER app
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=4).status==200 else 1)"
+  CMD python -c "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:%s/health/ready' % os.environ.get('PORT','8080'), timeout=4).status==200 else 1)"
 CMD ["python", "serve.py"]

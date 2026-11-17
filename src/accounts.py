@@ -108,6 +108,25 @@ class RateLimiter:
                                     headers={"Retry-After": str(int(q[0] + window_s - t) + 1)})
             q.append(t)
 
+    def check(self, scope: str, key: str, limit: int, window_s: int) -> None:
+        """Raise 429 if the bucket is full, WITHOUT recording an attempt (pair with record())."""
+        if os.environ.get("FRAUD_RATE_LIMIT", "1") == "0" or not key:
+            return
+        t = time.monotonic()
+        with self._lock:
+            q = self._hits.get((scope, key.strip().lower()))
+            while q and q[0] <= t - window_s:
+                q.popleft()
+            if q is not None and len(q) >= limit:
+                raise HTTPException(429, "Thao tác quá nhanh, vui lòng thử lại sau.",
+                                    headers={"Retry-After": str(int(q[0] + window_s - t) + 1)})
+
+    def record(self, scope: str, key: str) -> None:
+        if os.environ.get("FRAUD_RATE_LIMIT", "1") == "0" or not key:
+            return
+        with self._lock:
+            self._hits.setdefault((scope, key.strip().lower()), deque()).append(time.monotonic())
+
     def reset(self, scope: str | None = None, key: str | None = None) -> None:
         with self._lock:
             if scope is None:
@@ -225,12 +244,14 @@ class HttpSmsOtp(OtpProvider):
         self.url = url
         token_file = os.environ.get("FRAUD_SMS_HTTP_TOKEN_FILE")
         self.token = open(token_file, encoding="utf-8").read().strip() if token_file else ""
-        self.template = os.environ.get("FRAUD_SMS_HTTP_BODY",
-                                       '{"to": "{phone}", "from": "{brandname}", "text": "{message}"}')
-        self.brandname = os.environ.get("FRAUD_SMS_BRANDNAME", "LACHAN")
+        # `or`: docker compose forwards an unset ${VAR:-} as an EMPTY string, which must mean "default".
+        self.template = (os.environ.get("FRAUD_SMS_HTTP_BODY")
+                         or '{"to": "{phone}", "from": "{brandname}", "text": "{message}"}')
+        json.loads(self.template)          # invalid template -> OtpConfigError at start-up, not at first OTP
+        self.brandname = os.environ.get("FRAUD_SMS_BRANDNAME") or "LACHAN"
         self.ok_field = os.environ.get("FRAUD_SMS_HTTP_OK_FIELD", "")
         self.ok_value = os.environ.get("FRAUD_SMS_HTTP_OK_VALUE", "")
-        self.cost_usd = float(os.environ.get("SMS_COST_USD", "0.01"))
+        self.cost_usd = float(os.environ.get("SMS_COST_USD") or "0.01")
 
     def render(self, phone: str, code: str) -> dict:
         message = f"Ma xac thuc La chan lua dao: {code}. Het han sau 5 phut. Khong chia se ma nay."
@@ -266,14 +287,25 @@ class HttpSmsOtp(OtpProvider):
             raise HTTPException(502, "Không gửi được SMS, vui lòng thử lại")
 
 
+class OtpConfigError(RuntimeError):
+    """FRAUD_OTP_PROVIDER names a provider whose required settings are missing or invalid."""
+
+
 def otp_provider() -> OtpProvider | None:
     kind = os.environ.get("FRAUD_OTP_PROVIDER", "").strip().lower()
-    if kind == "twilio":
-        return TwilioSmsOtp()
-    if kind in ("sms-http", "http"):
-        return HttpSmsOtp()
+    try:
+        if kind == "twilio":
+            return TwilioSmsOtp()
+        if kind in ("sms-http", "http"):
+            return HttpSmsOtp()
+    except KeyError as exc:      # a missing variable used to surface as a 500 on every /api/auth/config call
+        raise OtpConfigError(f"FRAUD_OTP_PROVIDER={kind} requires {exc.args[0]}") from None
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise OtpConfigError(f"FRAUD_OTP_PROVIDER={kind}: {exc}") from None
     if kind == "console":
         return ConsoleOtp()
+    if kind:
+        raise OtpConfigError(f"unknown FRAUD_OTP_PROVIDER={kind!r} (use twilio, sms-http or console)")
     return None
 
 

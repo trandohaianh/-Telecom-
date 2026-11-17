@@ -39,7 +39,12 @@ class MainActivity : AppCompatActivity() {
     private var firstLoadDone = false
     private val prefs by lazy { getSharedPreferences("lachan", MODE_PRIVATE) }
 
-    private fun serverUrl(): String = prefs.getString("server", BuildConfig.DEFAULT_SERVER) ?: BuildConfig.DEFAULT_SERVER
+    // Owner decision 2026-11-17: only debug builds may point the app at another server. A release build that
+    // accepted any https host could be talked into loading a look-alike phishing site under the app's brand,
+    // so it always uses DEFAULT_SERVER and ignores any value saved by an older version.
+    private fun serverUrl(): String =
+        if (!BuildConfig.DEBUG) BuildConfig.DEFAULT_SERVER
+        else prefs.getString("server", BuildConfig.DEFAULT_SERVER) ?: BuildConfig.DEFAULT_SERVER
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,7 +96,9 @@ class MainActivity : AppCompatActivity() {
         swipe.setOnRefreshListener { web.reload() }
 
         findViewById<Button>(R.id.retry).setOnClickListener { firstLoadDone = false; web.loadUrl(serverUrl()) }
-        findViewById<Button>(R.id.change_server).setOnClickListener { askServer() }
+        findViewById<Button>(R.id.change_server).apply {
+            if (BuildConfig.DEBUG) setOnClickListener { askServer() } else visibility = android.view.View.GONE
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -115,6 +122,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun askServer() {
+        if (!BuildConfig.DEBUG) return
         val input = EditText(this).apply {
             setSingleLine()
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI

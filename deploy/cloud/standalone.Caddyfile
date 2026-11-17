@@ -1,0 +1,15 @@
+# Caddy riêng (docker compose --profile standalone): cùng header và giới hạn body với telecom.caddy.
+# Trước đây profile này chạy `caddy reverse-proxy` nên thiếu HSTS, nosniff, Referrer-Policy và max_size.
+{$TELECOM_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	request_body {
+		max_size 16MB
+	}
+	reverse_proxy telecom:8080
+}

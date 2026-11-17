@@ -121,7 +121,7 @@ def metrics_authorized(authorization: str, demo_mode: bool) -> bool:
         return bool(demo_mode) and os.environ.get("FRAUD_PUBLIC", "0") != "1"
     scheme, _, value = (authorization or "").partition(" ")
     if scheme.lower() == "bearer":
-        return hmac.compare_digest(value.strip(), expected)
+        return hmac.compare_digest(value.strip().encode("utf-8"), str(expected).encode("utf-8"))
     if scheme.lower() == "basic":
         import base64
 
@@ -129,7 +129,7 @@ def metrics_authorized(authorization: str, demo_mode: bool) -> bool:
             _, _, pw = base64.b64decode(value.strip(), validate=True).decode().partition(":")
         except Exception:
             return False
-        return hmac.compare_digest(pw, expected)
+        return hmac.compare_digest(pw.encode("utf-8"), str(expected).encode("utf-8"))
     return False
 
 

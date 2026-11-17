@@ -19,7 +19,7 @@ button{font:600 12px var(--display);letter-spacing:.05em;background:var(--panel)
 button.red{background:var(--red);border-color:var(--red);color:#fff}button.pri{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}button.ok{border-color:var(--green);color:var(--green)}
 button:disabled{opacity:.45;cursor:default}
 nav{display:flex;gap:6px;margin:14px 0;flex-wrap:wrap}nav button.on{border-color:var(--brand);color:var(--brand)}
-.panel{background:var(--panel);border:1px solid var(--line);padding:14px;margin-bottom:14px}
+.panel{background:var(--panel);border:1px solid var(--line);padding:14px;margin-bottom:14px;overflow-x:auto}  /* wide tables scroll on phones */
 .panel h2{font-size:12px;letter-spacing:.1em;color:var(--mut);margin:0 0 10px}
 table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mut);font-weight:600;font-size:11.5px;letter-spacing:.04em}
 th,td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}td.n,th.n{text-align:right;font-family:var(--mono)}
@@ -140,7 +140,7 @@ async function loadReports(){
       const note = prompt(b.dataset.d === 'confirm' ? 'Ghi chú xác nhận (bắt buộc ghi căn cứ):' : 'Lý do bác bỏ:');
       if (note === null) return;
       if (!note.trim()) { alert('Cần ghi căn cứ / lý do trước khi duyệt.'); return; }
-      try { await api(`/api/admin/reports/${b.dataset.k}/review`, { method: 'POST', body: JSON.stringify({ decision: b.dataset.d, note }) }); loadReports(); }
+      try { await api(`/api/admin/reports/${encodeURIComponent(b.dataset.k)}/review`, { method: 'POST', body: JSON.stringify({ decision: b.dataset.d, note }) }); loadReports(); }
       catch(e){ fail(e); }
     });
   } catch(e){ fail(e); }
@@ -152,10 +152,10 @@ async function loadPipeline(){
   try {
     const p = await api('/api/admin/pipeline');
     $('#pbody').innerHTML = Object.entries(p.last_runs).map(([job, r]) => `<tr><td class="mono">${esc(job)}</td>
-      <td class="st-${r?.status || 'warn'}">${r ? r.status : 'chưa chạy'}</td><td class="mut">${when(r?.finished_at || r?.started_at)}</td>
+      <td class="st-${esc(r?.status || 'warn')}">${r ? esc(r.status) : 'chưa chạy'}</td><td class="mut">${when(r?.finished_at || r?.started_at)}</td>
       <td class="mut mono" style="font-size:11.5px">${esc(r?.detail ? JSON.stringify(r.detail).slice(0, 180) : '')}</td>
       <td class="adm"><button data-j="${esc(job)}">CHẠY NGAY</button></td></tr>`).join('');
-    document.querySelectorAll('#pbody button').forEach(b => b.onclick = async () => { b.disabled = true; try { await api('/api/admin/pipeline/run?job=' + b.dataset.j, { method: 'POST' }); loadPipeline(); } catch(e){ fail(e); b.disabled = false; } });
+    document.querySelectorAll('#pbody button').forEach(b => b.onclick = async () => { b.disabled = true; try { await api('/api/admin/pipeline/run?job=' + encodeURIComponent(b.dataset.j), { method: 'POST' }); loadPipeline(); } catch(e){ fail(e); b.disabled = false; } });
     applyRole();
     const k = p.kpi, last = k[k.length - 1];
     $('#kpis').innerHTML = last ? [
@@ -188,11 +188,11 @@ async function loadCosts(){
       ['CPU ms / 1.000 quyết định', cm.cpu_ms_per_1k_decisions ?? '—'], ['Quyết định / giây', cm.decisions_per_s], ['RAM đỉnh (MB)', cm.rss_mb_peak]]
       .map(([l, v]) => `<div class="kpi"><b>${esc(v)}</b><span>${l}</span></div>`).join('');
     $('#cnote').textContent = c.note;
-    $('#ubody').innerHTML = c.external_usage.by_kind.length ? c.external_usage.by_kind.map(r => `<tr><td>${esc(r.kind)}</td><td>${esc(r.provider || '')}</td><td class="n">${r.units}</td><td class="n">${usd(r.cost_usd)}</td></tr>`).join('')
+    $('#ubody').innerHTML = c.external_usage.by_kind.length ? c.external_usage.by_kind.map(r => `<tr><td>${esc(r.kind)}</td><td>${esc(r.provider || '')}</td><td class="n">${esc(r.units)}</td><td class="n">${usd(r.cost_usd)}</td></tr>`).join('')
       : '<tr><td colspan="4" class="mut">Chưa có (chế độ demo không gửi SMS).</td></tr>';
     $('#ibody').innerHTML = c.infra.items.map(r => `<tr><td>${esc(r.provider)}</td><td>${esc(r.item)}</td><td class="n">${usd(r.amount_usd)}</td><td><button data-id="${esc(r.id)}">XOÁ</button></td></tr>`).join('')
       || '<tr><td colspan="4" class="mut">Chưa nhập.</td></tr>';
-    document.querySelectorAll('#ibody button').forEach(b => b.onclick = async () => { if (!confirm('Xoá khoản chi phí này?')) return; try { await api('/api/admin/costs/infra/' + b.dataset.id, { method: 'DELETE' }); loadCosts(); } catch(e){ fail(e); } });
+    document.querySelectorAll('#ibody button').forEach(b => b.onclick = async () => { if (!confirm('Xoá khoản chi phí này?')) return; try { await api('/api/admin/costs/infra/' + encodeURIComponent(b.dataset.id), { method: 'DELETE' }); loadCosts(); } catch(e){ fail(e); } });
     $('#iadd').onclick = async () => {
       try { await api('/api/admin/costs/infra', { method: 'POST', body: JSON.stringify({ month: c.infra.month, provider: $('#iprov').value, item: $('#iitem').value, amount_usd: Number($('#iamt').value) || 0 }) });
             $('#iprov').value = $('#iitem').value = ''; loadCosts(); } catch(e){ fail(e); }
@@ -207,7 +207,7 @@ async function loadOperators(){
     const rows = await api('/api/admin/operators');
     $('#obody').innerHTML = rows.map(o => `<tr><td class="mono">${esc(o.name)}</td><td>${esc(o.role_label)}</td><td>${esc(o.email || '—')}</td>
       <td>${o.has_password ? 'đã đặt' : '<span class="st-warn">chưa có</span>'}</td><td class="${o.disabled || o.suspended ? 'st-fail' : 'st-ok'}">${o.disabled ? 'đã khoá' : o.suspended ? 'tạm khoá (agent)' : 'hoạt động'}</td>
-      <td>${o.name === ME.name ? '' : `<button data-n="${esc(o.name)}" data-r="${o.role}" data-d="${o.disabled ? '0' : '1'}">${o.disabled ? 'MỞ KHOÁ' : 'KHOÁ'}</button>`}</td></tr>`).join('');
+      <td>${o.name === ME.name ? '' : `<button data-n="${esc(o.name)}" data-r="${esc(o.role)}" data-d="${o.disabled ? '0' : '1'}">${o.disabled ? 'MỞ KHOÁ' : 'KHOÁ'}</button>`}</td></tr>`).join('');
     document.querySelectorAll('#obody button').forEach(b => b.onclick = async () => {
       if (b.dataset.d === '1' && !confirm(`Khoá tài khoản "${b.dataset.n}"? Người này sẽ không đăng nhập được cho tới khi được mở khoá.`)) return;
       try { await api('/api/admin/operators', { method: 'POST', body: JSON.stringify({ name: b.dataset.n, role: b.dataset.r, disabled: b.dataset.d === '1' }) }); loadOperators(); } catch(e){ fail(e); }
@@ -231,7 +231,7 @@ function watermark(){
 function applyRole(){ document.querySelectorAll('.adm').forEach(e => e.classList.toggle('hide', ME?.role !== 'admin')); }
 (async () => {
   if (!TOKEN){ location.href = '/admin/'; return; }
-  try { ME = await api('/api/whoami'); } catch(e){ return; }
+  try { ME = await api('/api/whoami'); } catch(e){ fail(e); return; }   // never an empty page without a message
   if (ME.role === 'viewer'){ document.body.innerHTML = '<div class="wrap"><p>Vai trò Nhân viên (chỉ xem) không có quyền quản trị. <a href="/admin/">Quay lại</a></p></div>'; return; }
   $('#who').textContent = `${ME.name} · ${(ME.role_label || ME.role).toUpperCase()}`;
   applyRole(); watermark(); setInterval(watermark, 60000); show('reports');

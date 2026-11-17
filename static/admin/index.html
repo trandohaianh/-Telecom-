@@ -274,8 +274,10 @@ function holding(sel){ const el = $(sel); return !!el && (el.matches(':hover') |
 async function api(url, opts = {}){
   const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: 'Bearer ' + TOKEN } });
   if (r.status === 401){ if (ME) { ME = null; TOKEN = ''; store.set(''); } showLogin(L==='vi' ? 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.' : 'Session expired, please sign in again.'); throw new Error('401'); }
-  if (r.status === 403){ const j = await r.json(); throw new Error(j.detail || '403'); }
-  return r.json();
+  const j = await r.json().catch(() => ({}));
+  // Every non-2xx is an error (was: only 401/403), so 400/409/5xx bodies never reach render code.
+  if (!r.ok) throw new Error(typeof j.detail === 'string' ? j.detail : String(r.status));
+  return j;
 }
 function showLogin(msg){ $('#lerr').textContent = msg || ''; $('#login').classList.add('show'); setTimeout(() => $('#user').focus(), 50); }
 let useToken = false;
@@ -291,13 +293,17 @@ async function finishLogin(r){
   TOKEN = (await r.json()).session; store.set(TOKEN); $('#login').classList.remove('show'); await boot();
 }
 // Đăng nhập: gửi thông tin một lần để đổi lấy phiên; mật khẩu/token không được lưu lại trong trình duyệt.
+function netFail(){ $('#lerr').textContent = L==='vi' ? 'Không kết nối được máy chủ, thử lại sau.' : 'Cannot reach the server, try again.'; }
 $('#lform').onsubmit = async e => {
   e.preventDefault();
-  const r = useToken
-    ? await fetch('/api/login', { method: 'POST', headers: { Authorization: 'Bearer ' + $('#tok').value.trim() } })
-    : await fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' },
-                                  body: JSON.stringify({ username: $('#user').value.trim(), password: $('#pass').value }) });
-  $('#tok').value = ''; $('#pass').value = '';
+  let r;
+  try {
+    r = useToken
+      ? await fetch('/api/login', { method: 'POST', headers: { Authorization: 'Bearer ' + $('#tok').value.trim() } })
+      : await fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' },
+                                    body: JSON.stringify({ username: $('#user').value.trim(), password: $('#pass').value }) });
+  } catch(err){ netFail(); return; }
+  finally { $('#tok').value = ''; $('#pass').value = ''; }
   await finishLogin(r);
 };
 // Google cho nhân viên: chỉ vào được nếu email Google đã được admin gắn với một tài khoản vận hành.
@@ -306,10 +312,15 @@ $('#lform').onsubmit = async e => {
   if (!c.google_client_id) return;
   const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
   sc.onload = () => {
-    google.accounts.id.initialize({ client_id: c.google_client_id, ux_mode: 'popup', callback: async resp =>
-      finishLogin(await fetch('/api/login/google', { method: 'POST', headers: { 'content-type': 'application/json' },
-                                                     body: JSON.stringify({ credential: resp.credential }) })) });
-    google.accounts.id.renderButton($('#ogbtn'), { theme: 'filled_black', size: 'large', text: 'signin_with', locale: 'vi', width: 376 });
+    google.accounts.id.initialize({ client_id: c.google_client_id, ux_mode: 'popup', callback: async resp => {
+      let r;
+      try { r = await fetch('/api/login/google', { method: 'POST', headers: { 'content-type': 'application/json' },
+                                                   body: JSON.stringify({ credential: resp.credential }) }); }
+      catch(err){ netFail(); return; }
+      finishLogin(r); } });
+    // Width follows the form so the button never overflows a 360 px phone (Google allows 200-400 px).
+    const w = Math.max(200, Math.min(400, Math.floor($('#lform').clientWidth || 300)));
+    google.accounts.id.renderButton($('#ogbtn'), { theme: 'filled_black', size: 'large', text: 'signin_with', locale: 'vi', width: w });
   };
   document.head.appendChild(sc);
 })();
@@ -358,19 +369,19 @@ async function pollAgent(){
     });
   } catch(e){} }
 }
-setInterval(pollAgent, 3000);
+setInterval(() => { if (!document.hidden) pollAgent(); }, 3000);   // no polling in a hidden tab
 // Tạo HTML cho một thẻ cảnh báo, gồm quyết định, lý do, số liên quan và điểm rủi ro.
 function card(a){
   // Chuyển trạng thái fail-open thành nhãn riêng; nếu không thì dùng quyết định detector.
   // Fail-open thật (cho qua) khác với quyết định của luật dự phòng (vẫn chặn / gắn cờ khi mô hình không trả lời).
-  const fo = a.fail_open && a.decision === 'ALLOW', cls = fo ? 'FAIL' : a.decision;
+  const fo = a.fail_open && a.decision === 'ALLOW', cls = fo ? 'FAIL' : esc(a.decision);
   const fb = a.fail_open && a.decision !== 'ALLOW';
   // Tạo nhãn trực quan cho fail-open, dự phòng, hồi tố, zero-day và sự kiện được tiêm thủ công.
-  const tags = `<span class="tag ${cls}">${fo ? 'FAIL-OPEN' : a.decision}</span> ${fb ? `<span class="tag fb">${L==='vi'?'DỰ PHÒNG':'FALLBACK'}</span>` : ''} ${a.retro ? `<span class="tag retro">${L==='vi'?'HỒI TỐ':'RETRO'}</span>` : ''} ${a.zero_day ? '<span class="tag z">ZERO-DAY</span>' : ''} ${a.injected ? `<span class="tag inj">${L==='vi'?'MÔ PHỎNG':'INJECTED'}</span>` : ''}`;
+  const tags = `<span class="tag ${cls}">${fo ? 'FAIL-OPEN' : esc(a.decision)}</span> ${fb ? `<span class="tag fb">${L==='vi'?'DỰ PHÒNG':'FALLBACK'}</span>` : ''} ${a.retro ? `<span class="tag retro">${L==='vi'?'HỒI TỐ':'RETRO'}</span>` : ''} ${a.zero_day ? '<span class="tag z">ZERO-DAY</span>' : ''} ${a.injected ? `<span class="tag inj">${L==='vi'?'MÔ PHỎNG':'INJECTED'}</span>` : ''}`;
   // Hiển thị tối đa bốn mã/lý do phát hiện theo ngôn ngữ đang chọn.
   const rs = (a.reasons || []).slice(0, 4).map(r => `<li><code>${esc(r.code)}</code> ${esc(L === 'vi' ? r.vi : r.en)}</li>`).join('');
   // Trả markup của thẻ, gồm loại event, hai số liên quan, risk/anomaly và thời gian.
-  return `<div class="al ${cls}" data-id="${esc(a.event_id)}"><div class="top"><div>${tags} <b>${T[a.event_type][L==='vi'?0:1]}</b> <span class="mono" style="color:var(--mut)">${esc(a.party)} → ${esc(a.counterparty)}</span></div><span class="mono">${a.zero_day ? 'anomaly +' + a.anomaly_score.toFixed(3) : (a.risk != null ? 'risk ' + a.risk.toFixed(3) : '')} · ${esc(a.time)}</span></div><div class="act">${esc(L === 'vi' ? a.action_vi : a.action_en)}</div><ul>${rs}</ul></div>`;
+  return `<div class="al ${cls}" data-id="${esc(a.event_id)}"><div class="top"><div>${tags} <b>${esc((T[a.event_type] || [a.event_type, a.event_type])[L==='vi'?0:1])}</b> <span class="mono" style="color:var(--mut)">${esc(a.party)} → ${esc(a.counterparty)}</span></div><span class="mono">${a.zero_day && a.anomaly_score != null ? 'anomaly +' + Number(a.anomaly_score).toFixed(3) : (a.risk != null ? 'risk ' + Number(a.risk).toFixed(3) : '')} · ${esc(a.time)}</span></div><div class="act">${esc(L === 'vi' ? a.action_vi : a.action_en)}</div><ul>${rs}</ul></div>`;
 }
 // Cập nhật các KPI, trạng thái breaker và danh sách cảnh báo từ phản hồi /api/state.
 function render(s){
@@ -455,12 +466,18 @@ function pollError(e){
   bar.classList.remove('hide');
 }
 function pollOk(){ POLL_FAILS = 0; $('#pollErr').classList.add('hide'); }
-async function poll(){ if (ME) { try { render(await api('/api/state')); pollOk(); } catch(e){ pollError(e); } } setTimeout(poll, 700); }
+// Hidden tab: no polling. After failures: back off 0.7 -> 1.4 -> 2.8 ... up to 10 s.
+async function poll(){
+  if (ME && !document.hidden) { try { render(await api('/api/state')); pollOk(); } catch(e){ pollError(e); } }
+  setTimeout(poll, POLL_FAILS ? Math.min(700 * 2 ** POLL_FAILS, 10000) : 700);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) pollAgent(); });
 // Gửi yêu cầu tiêm kiểu tấn công đang chọn, rồi tổng hợp quyết định để hiển thị kết quả.
 document.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
   // Báo hiệu đang xử lý, gửi POST tới API và đọc kết quả JSON của loại tấn công đã chọn.
   $('#res').textContent = '…';
-  let r; try { r = await api('/api/inject?type=' + b.dataset.a, { method: 'POST' }); } catch(e){ $('#res').textContent = '✘ ' + e.message; return; }
+  let r; try { r = await api('/api/inject?type=' + encodeURIComponent(b.dataset.a), { method: 'POST' }); } catch(e){ $('#res').textContent = '✘ ' + e.message; return; }
+  if (!r || !Array.isArray(r.results)) { $('#res').textContent = '✘ ' + (L==='vi' ? 'Phản hồi không hợp lệ' : 'Invalid response'); return; }
   // Gộp số lượng theo cặp loại sự kiện/quyết định để tránh liệt kê từng event.
   const c = {}; r.results.forEach(x => c[x.event_type + ':' + x.decision] = (c[x.event_type + ':' + x.decision] || 0) + 1);
   // Chọn kết quả không ALLOW đầu tiên để đưa lý do phát hiện lên màn hình.
@@ -468,7 +485,7 @@ document.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
   $('#res').textContent = `${r.attack}: ${r.results.length} ${L==='vi'?'sự kiện':'events'}\n` + Object.entries(c).map(([k,v]) => `  ${k.padEnd(16)} ${v}`).join('\n') + (first ? `\n${L==='vi'?'Lý do':'Reasons'}: ` + first.reasons.map(x => x.code).join(', ') : '');
 });
 // Bật chế độ latency/error hoặc tắt chaos bằng endpoint chịu lỗi.
-document.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => { try { await api('/api/chaos?mode=' + b.dataset.c, { method: 'POST' }); } catch(e){ return; } document.querySelectorAll('[data-c]').forEach(x => x.classList.toggle('on', x === b && b.dataset.c !== 'off')); });
+document.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => { try { await api('/api/chaos?mode=' + encodeURIComponent(b.dataset.c), { method: 'POST' }); } catch(e){ $('#res').textContent = '✘ ' + e.message; return; } document.querySelectorAll('[data-c]').forEach(x => x.classList.toggle('on', x === b && b.dataset.c !== 'off')); });
 // Nhật ký thao tác: kiểm tra chuỗi + chữ ký, rồi liệt kê ai đã làm gì.
 $('#audit').onclick = async () => {
   $('#ares').textContent = '…';
@@ -501,7 +518,7 @@ function renderMetrics(){
   // Nhóm recall theo họ tấn công từ mười cửa sổ test để hiển thị mức trung bình.
   const fams = {}; r.per_window.forEach(w => Object.entries(w.by_family).forEach(([k, v]) => (fams[k] = fams[k] || []).push(v)));
   const name = Object.fromEntries(Object.entries(FRAUD_NAMES).map(([k, v]) => [k, v[vi ? 0 : 1]]));
-  $('#fam').innerHTML = '<table>' + Object.entries(fams).map(([k, v]) => { const m = v.reduce((x, y) => x + y, 0) / v.length; return `<tr><td>${name[k] || k}</td><td style="width:45%"><div class="bar"><i style="width:${m}%"></i></div></td><td class="n">${m.toFixed(1)}%</td></tr>`; }).join('') + `</table><div class="note">${vi?'Tỷ lệ sự kiện gian lận bị chặn hoặc gắn cờ. Wangiri không có trong dữ liệu huấn luyện: chỉ mô hình không giám sát bắt được.':'Share of fraud events blocked or flagged. Wangiri never appears in training: only the unsupervised model catches it.'}</div>`;
+  $('#fam').innerHTML = '<table>' + Object.entries(fams).map(([k, v]) => { const m = v.reduce((x, y) => x + y, 0) / v.length; return `<tr><td>${esc(name[k] || k)}</td><td style="width:45%"><div class="bar"><i style="width:${m}%"></i></div></td><td class="n">${m.toFixed(1)}%</td></tr>`; }).join('') + `</table><div class="note">${vi?'Tỷ lệ sự kiện gian lận bị chặn hoặc gắn cờ. Wangiri không có trong dữ liệu huấn luyện: chỉ mô hình không giám sát bắt được.':'Share of fraud events blocked or flagged. Wangiri never appears in training: only the unsupervised model catches it.'}</div>`;
   // Vẽ biểu đồ tải sau khi đã chuẩn bị các chuỗi dữ liệu cho từng cấu hình.
   // Chuẩn bị context canvas và xóa hình cũ trước khi vẽ lại biểu đồ.
   const c = $('#lt'), g = c.getContext('2d'), W = c.width, H = c.height; g.clearRect(0, 0, W, H);
@@ -548,7 +565,9 @@ async function boot(){
   if (!TOKEN){ showLogin(); return; }
   try { ME = await api('/api/whoami'); } catch(e){ return; }
   applyRole(); pollAgent();
-  try { metrics = await api('/api/metrics'); renderMetrics(); } catch(e){}
+  // Keep the previous metrics if the new payload cannot be rendered (an error body used to break
+  // renderMetrics() on every later language / theme switch).
+  try { const m = await api('/api/metrics'), prev = metrics; metrics = m; try { renderMetrics(); } catch(err){ metrics = prev; } } catch(e){}
 }
 applyLang(); boot(); poll();
 </script>

@@ -195,11 +195,27 @@ def run_job(db: AppDB, engine, job: str, trigger: str = "manual") -> dict:
     return {"job": job, "status": status, "detail": detail}
 
 
+def parse_daily_at(value: str) -> tuple[int, int]:
+    try:
+        h, m = (int(x) for x in value.strip().split(":"))
+    except ValueError:
+        raise ValueError(f"FRAUD_PIPELINE_DAILY_AT must be HH:MM, got {value!r}") from None
+    if not (0 <= h < 24 and 0 <= m < 60):
+        raise ValueError(f"FRAUD_PIPELINE_DAILY_AT must be HH:MM, got {value!r}")
+    return h, m
+
+
 class Scheduler:
     """kpi_snapshot mỗi giờ; backup + retention lúc FRAUD_PIPELINE_DAILY_AT (UTC). Chạy bù khi khởi động."""
 
     def __init__(self, db: AppDB, engine_getter):
         self.db, self.engine_getter = db, engine_getter
+        # Validate at start-up: a malformed value used to raise inside the thread and silently stop
+        # backups and retention for good.
+        self.daily_at = parse_daily_at(os.environ.get("FRAUD_PIPELINE_DAILY_AT", "02:00"))
+        self.kpi_every_s = int(os.environ.get("FRAUD_KPI_EVERY_S", "3600"))
+        if self.kpi_every_s < 60:
+            raise ValueError("FRAUD_KPI_EVERY_S must be >= 60")
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -208,8 +224,8 @@ class Scheduler:
         return r["t"] if r else None
 
     def _loop(self) -> None:
-        hourly = int(os.environ.get("FRAUD_KPI_EVERY_S", "3600"))
-        at_h, at_m = (int(x) for x in os.environ.get("FRAUD_PIPELINE_DAILY_AT", "02:00").split(":"))
+        hourly = self.kpi_every_s
+        at_h, at_m = self.daily_at
         # Chờ engine phát dữ liệu một chút trước lần snapshot đầu.
         if self._stop.wait(60):
             return

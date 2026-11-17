@@ -26,6 +26,22 @@ services:
       FRAUD_PIPELINE_DAILY_AT: ${FRAUD_PIPELINE_DAILY_AT:-02:30}
       # IP của Caddy (proxy_ip.sh). "*" tin mọi container trên mạng edge: chúng giả được X-Forwarded-For.
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
+      # Chỉ đặt =1 sau khi đã kiểm định trên lưu lượng thật có nhãn (mở chế độ enforce).
+      FRAUD_REAL_TRAFFIC_VALIDATED: ${FRAUD_REAL_TRAFFIC_VALIDATED:-0}
+      # OTP qua API SMS/brandname của nhà mạng (FRAUD_OTP_PROVIDER=sms-http). Token đặt trong volume:
+      #   docker compose cp sms_token telecom:/srv/state/secrets/sms_token
+      FRAUD_SMS_HTTP_URL: ${FRAUD_SMS_HTTP_URL:-}
+      FRAUD_SMS_HTTP_TOKEN_FILE: ${FRAUD_SMS_HTTP_TOKEN_FILE:-}
+      FRAUD_SMS_HTTP_BODY: ${FRAUD_SMS_HTTP_BODY:-}
+      FRAUD_SMS_HTTP_OK_FIELD: ${FRAUD_SMS_HTTP_OK_FIELD:-}
+      FRAUD_SMS_HTTP_OK_VALUE: ${FRAUD_SMS_HTTP_OK_VALUE:-}
+      FRAUD_SMS_BRANDNAME: ${FRAUD_SMS_BRANDNAME:-}
+      # Web Push: khoá VAPID tự sinh trong volume (/srv/state/secrets, xem Dockerfile).
+      FRAUD_PUSH: ${FRAUD_PUSH:-1}
+      FRAUD_VAPID_SUBJECT: ${FRAUD_VAPID_SUBJECT:-}
+      FRAUD_SQLITE_SYNCHRONOUS: ${FRAUD_SQLITE_SYNCHRONOUS:-FULL}
+      FRAUD_MAX_BODY_BYTES: ${FRAUD_MAX_BODY_BYTES:-1048576}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
     volumes:
       - telecom_state:/srv/state
     networks:
@@ -35,20 +51,30 @@ services:
     deploy:
       resources:
         limits: {memory: 2g}
+    logging:   # đĩa Always Free nhỏ: log container không được lớn vô hạn
+      driver: json-file
+      options: {max-size: 10m, max-file: "5"}
 
   caddy:
     profiles: [standalone]
     image: caddy:2.10-alpine
     restart: unless-stopped
     ports: ["80:80", "443:443"]
-    command: caddy reverse-proxy --from ${TELECOM_DOMAIN:?Thiếu TELECOM_DOMAIN} --to telecom:8080
+    environment:
+      TELECOM_DOMAIN: ${TELECOM_DOMAIN:?Thiếu TELECOM_DOMAIN}
     volumes:
+      - ./standalone.Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "5"}
     networks: [edge]
 
 volumes:
   telecom_state:
   caddy_data:
+  caddy_config:
 
 networks:
   edge:

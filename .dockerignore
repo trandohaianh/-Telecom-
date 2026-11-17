@@ -19,6 +19,9 @@ _stage*
 *.tar.gz
 runtime/*
 !runtime/artifacts_v22
+runtime/artifacts_v22/logs
+models
+evals
 .env
 .env.*
 **/.env

@@ -14,3 +14,4 @@ httpx>=0.27        # FastAPI TestClient in the tests
 xgboost>=2.0       # optional: only src/compare_models.py uses it
 PyJWT[crypto]>=2.10      # Google Sign-In (xác minh ID token RS256)
 prometheus-client>=0.21  # /metrics cho Grafana Cloud
+pywebpush>=2.0           # Web Push (src/push.py); tests exercise it

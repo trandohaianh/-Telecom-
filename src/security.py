@@ -79,16 +79,34 @@ def suspend(name: str):
     """Lock the account and end every session it has open right now."""
     if _session_store is not None:
         _session_store.suspend(name)
+    else:
+        # Demo mode has no durable session store; owner decision 2026-11-17: an insider lockout must still
+        # survive a restart, so record it as the account's `disabled` flag (admins unlock it in /admin/manage).
+        with _users_write_lock:
+            db = users()
+            account = db.get(name)
+            if account is not None and account.get("role") in ROLES:
+                account["disabled"] = True
+                _save_users(db)
     suspended.add(name)
     with _sessions_lock:
         for k in [k for k, s in SESSIONS.items() if s["name"] == name]:
             del SESSIONS[k]
 
 
+def _same_secret(expected, given) -> bool:
+    """Timing-safe compare that never raises: compare_digest(str, str) raises TypeError on non-ASCII
+    input, which turned a crafted Authorization header into a 500."""
+    try:
+        return hmac.compare_digest(str(expected).encode("utf-8"), str(given).encode("utf-8"))
+    except (TypeError, ValueError):
+        return False
+
+
 def user_for_token(token: str):
     """Personal credential -> user. Only accepted by /api/login, never directly by other endpoints."""
     for name, u in users().items():
-        if token and u["role"] in ROLES and not u.get("disabled") and hmac.compare_digest(u["token"], token):
+        if token and u["role"] in ROLES and not u.get("disabled") and _same_secret(u["token"], token):
             return {"name": name, "role": u["role"], "role_label": ROLE_LABEL_VI.get(u["role"], u["role"])}
     return None
 
@@ -399,7 +417,7 @@ def verify_network(body: bytes, ts: str, sig: str, key: bytes = None, clock=time
     now = clock()
     if not __import__("math").isfinite(t) or abs(now - t) > NETWORK_MAX_SKEW_S:
         return "stale timestamp"
-    if not sig or not hmac.compare_digest(sign_network(body, ts, key), sig):
+    if not sig or not _same_secret(sign_network(body, ts, key), sig):
         return "bad signature"
     with _seen_lock:
         while _seen_sigs:

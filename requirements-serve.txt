@@ -17,3 +17,5 @@ httpx==0.28.1
 PyJWT[crypto]==2.12.1
 prometheus-client==0.23.1
 pywebpush==2.0.3        # Web Push (VAPID) to subscriber PWAs; optional at runtime (push disabled if missing)
+py-vapid==1.9.6         # imported directly by src/push.py (was only a transitive dependency)
+cryptography==50.0.2    # imported directly by src/push.py (was only via PyJWT[crypto])

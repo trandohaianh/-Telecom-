@@ -64,6 +64,8 @@ def startup(engine_getter) -> None:
     _engine_getter = engine_getter
     CPU_AT_START = costs.process_cpu_seconds()
     observability.register(engine_getter, lambda: _db)
+    if not getattr(engine_getter(), "demo_mode", security.DEMO_MODE):
+        real_otp_provider(demo=False)   # fail fast: a misconfigured OTP provider must stop start-up, not 500 later
     name = security.bootstrap_admin_password()
     if name:
         print(f"  Đã đặt mật khẩu ban đầu cho tài khoản vận hành '{name}' (từ FRAUD_ADMIN_PASSWORD).")
@@ -193,7 +195,25 @@ def auth_config():
     demo = bool(getattr(eng, "demo_mode", security.DEMO_MODE))
     ids = accounts.google_client_ids()
     return {"google_client_id": ids[0] if ids else None, "demo_mode": demo,
-            "phone_verification": "demo_pool" if demo else ("otp" if accounts.otp_provider() else "unavailable")}
+            "phone_verification": "demo_pool" if demo else ("otp" if _otp_ready() else "unavailable")}
+
+
+def _otp_ready() -> bool:
+    try:
+        return real_otp_provider() is not None
+    except accounts.OtpConfigError:
+        return False
+
+
+def real_otp_provider(demo: bool | None = None):
+    """OTP provider for live mode. Owner decision 2026-11-17: the `console` provider writes the full code to
+    the server log, so it is refused outside demo mode (a log reader could take over any phone number)."""
+    provider = accounts.otp_provider()
+    if demo is None:
+        demo = bool(getattr(engine(), "demo_mode", security.DEMO_MODE))
+    if provider is not None and provider.name == "console" and not demo:
+        raise accounts.OtpConfigError("FRAUD_OTP_PROVIDER=console is only allowed with FRAUD_DEMO=1")
+    return provider
 
 
 # =========================================================================== thuê bao
@@ -223,12 +243,18 @@ def app_register(body: Credentials, request: Request):
 @router.post("/api/app/auth/login")
 def app_login(body: Credentials, request: Request):
     accounts.limiter.hit("app_login_ip", _ip(request), 30, 900)
-    accounts.limiter.hit("app_login_email", body.email, 10, 900)
+    # Only FAILED attempts count, per (account, IP) tightly and per account loosely: an attacker elsewhere
+    # can no longer lock a subscriber out by sending 10 wrong passwords every 15 minutes.
+    pair = f"{body.email}|{_ip(request)}"
+    accounts.limiter.check("app_login_email_ip", pair, 10, 900)
+    accounts.limiter.check("app_login_email", body.email, 50, 900)
     sub_id = subscribers().authenticate(body.email, body.password)
     if sub_id is None:
+        accounts.limiter.record("app_login_email_ip", pair)
+        accounts.limiter.record("app_login_email", body.email)
         _auth_event("subscriber", "login", "failed")
         raise HTTPException(401, "Email hoặc mật khẩu không đúng")
-    accounts.limiter.reset("app_login_email", body.email)
+    accounts.limiter.reset("app_login_email_ip", pair)
     _auth_event("subscriber", "login", "ok")
     return _session_response(sub_id)
 
@@ -317,7 +343,10 @@ def push_unsubscribe(body: dict, me: dict = Depends(subscriber_session)):
 
 @router.post("/api/app/phone/otp/start")
 def otp_start(body: PhoneIn, request: Request, me: dict = Depends(subscriber_session)):
-    provider = accounts.otp_provider()
+    try:
+        provider = real_otp_provider()
+    except accounts.OtpConfigError:
+        provider = None
     if provider is None:
         raise HTTPException(503, "Máy chủ chưa cấu hình gửi SMS OTP")
     phone = accounts.normalize_msisdn(body.phone)
@@ -399,12 +428,18 @@ class OperatorLogin(BaseModel):
 
 def operator_password_login(body: OperatorLogin, request: Request):
     accounts.limiter.hit("op_login_ip", _ip(request), 30, 900)
-    accounts.limiter.hit("op_login_user", body.username, 8, 900)
+    # Failed attempts only, per (user, IP) and per user (see app_login): the documented default
+    # 'viettel_admin' could otherwise be locked out indefinitely by 8 wrong passwords per 15 minutes.
+    pair = f"{body.username}|{_ip(request)}"
+    accounts.limiter.check("op_login_user_ip", pair, 8, 900)
+    accounts.limiter.check("op_login_user", body.username, 50, 900)
     out = security.login_password(body.username, body.password)
     if out is None:
+        accounts.limiter.record("op_login_user_ip", pair)
+        accounts.limiter.record("op_login_user", body.username)
         _auth_event("operator", "login", "failed")
         return None
-    accounts.limiter.reset("op_login_user", body.username)
+    accounts.limiter.reset("op_login_user_ip", pair)
     _auth_event("operator", "login", "ok")
     return out
 

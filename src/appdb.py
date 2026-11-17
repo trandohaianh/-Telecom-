@@ -11,6 +11,15 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+# Numbered migrations applied once per database, in order (see AppDB._migrate). Never edit a shipped step.
+MIGRATIONS = [
+    # 1 (2026-11-17, readiness audit): indexes for lookups that were full scans on every alert / erasure.
+    """CREATE INDEX IF NOT EXISTS ix_push_sub ON push_subscriptions(subscriber_id);
+       CREATE INDEX IF NOT EXISTS ix_guardians_guardian ON guardians(guardian);
+       CREATE INDEX IF NOT EXISTS ix_invites_guardian ON invites(guardian);
+       CREATE INDEX IF NOT EXISTS ix_usage_sub ON usage_events(subscriber_id)""",
+]
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS subscribers (
     id INTEGER PRIMARY KEY,
@@ -134,6 +143,24 @@ class AppDB:
             self._conn.execute("PRAGMA synchronous=NORMAL")
         with self._lock:
             self._conn.executescript(SCHEMA)
+            self._migrate()
+
+    def _migrate(self) -> None:
+        """Versioned migrations (PRAGMA user_version). CREATE TABLE IF NOT EXISTS never adds a column to
+        an existing database, so every later schema change goes here as a new numbered step."""
+        version = self._conn.execute("PRAGMA user_version").fetchone()[0]
+        for number, script in enumerate(MIGRATIONS, 1):
+            if number > version:
+                self._conn.execute("BEGIN IMMEDIATE")
+                try:
+                    for statement in script.split(";"):     # inside the transaction (executescript would commit)
+                        if statement.strip():
+                            self._conn.execute(statement)
+                    self._conn.execute(f"PRAGMA user_version={number}")
+                    self._conn.execute("COMMIT")
+                except BaseException:
+                    self._conn.execute("ROLLBACK")
+                    raise
 
     @contextmanager
     def tx(self):

@@ -5,6 +5,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 cd "$HERE"
 if [ ! -f .env ]; then
+  umask 077          # .env holds secrets: never world-readable, not even between cp and chmod
   cp .env.example .env
   sed -i "s|^METRICS_TOKEN=.*|METRICS_TOKEN=$(openssl rand -hex 24)|" .env
   sed -i "s|^FRAUD_ADMIN_PASSWORD=.*|FRAUD_ADMIN_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')|" .env

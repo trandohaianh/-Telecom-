@@ -8,7 +8,7 @@ Biến môi trường chính:
   FRAUD_ADMIN_PASSWORD    mật khẩu ban đầu cho tài khoản admin (đặt một lần)
   GOOGLE_CLIENT_ID        bật đăng nhập Google cho thuê bao và nhân viên (email đã gắn)
   METRICS_TOKEN           Bearer token cho Grafana Cloud đọc /metrics
-  FRAUD_OTP_PROVIDER      twilio | console  (chế độ thật: xác minh số bằng OTP SMS)
+  FRAUD_OTP_PROVIDER      twilio | sms-http  (chế độ thật: xác minh số bằng OTP SMS; console chỉ khi demo)
 """
 from __future__ import annotations
 

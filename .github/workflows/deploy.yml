@@ -8,6 +8,14 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA (40 hex) on main that CI already tested"
+        required: true
+
+# Least privilege: the job only needs to read the repository.
+permissions:
+  contents: read
 
 concurrency: {group: deploy-telecom, cancel-in-progress: false}
 
@@ -16,6 +24,8 @@ jobs:
     # Chỉ CI của một lần push lên main (không phải PR có nhánh tên main), và chỉ đúng commit CI đã chạy.
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
     runs-on: ubuntu-latest
+    # Add required reviewers to this environment (Settings > Environments) to gate production deploys.
+    environment: production
     timeout-minutes: 40
     steps:
       - name: Deploy over SSH
@@ -24,12 +34,14 @@ jobs:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_REF: ${{ github.event.workflow_run.head_sha || '' }}
+          DEPLOY_REF: ${{ github.event.workflow_run.head_sha || inputs.sha || '' }}
         run: |
           if [ -z "$HOST" ]; then echo "::warning::Chưa cấu hình DEPLOY_HOST"; exit 0; fi
           trap 'rm -f key known_hosts' EXIT
           install -m 600 /dev/null key && printf '%s\n' "$SSH_KEY" > key
           case "$DEPLOY_REF" in ''|*[!0-9a-f]*) DEPLOY_REF="" ;; esac
+          # A manual run must name a tested commit: never "whatever is at the head of main right now".
+          if [ -z "$DEPLOY_REF" ] || [ "${#DEPLOY_REF}" -ne 40 ]; then echo "::error::Cần SHA 40 ký tự của commit đã qua CI"; exit 1; fi
           # Runner mới mỗi lần: accept-new tin bất kỳ host key nào. Ghim bằng secret DEPLOY_KNOWN_HOSTS
           # (ssh-keyscan -H <host> chạy một lần từ máy tin cậy).
           if [ -n "$KNOWN_HOSTS" ]; then

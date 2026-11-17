@@ -23,8 +23,8 @@ from urllib.parse import urlparse
 logger = logging.getLogger("fraud.push")
 
 ROOT = Path(__file__).resolve().parents[1]
-KEY_FILE = Path(os.environ.get("FRAUD_VAPID_PRIVATE_KEY_FILE", ROOT / "secrets" / "vapid_private.pem"))
-SUBJECT = os.environ.get("FRAUD_VAPID_SUBJECT", "mailto:security@example.invalid")
+KEY_FILE = Path(os.environ.get("FRAUD_VAPID_PRIVATE_KEY_FILE") or ROOT / "secrets" / "vapid_private.pem")
+SUBJECT = os.environ.get("FRAUD_VAPID_SUBJECT") or "mailto:security@example.invalid"
 MIN_INTERVAL_S = 10.0          # at most one push per subscription per 10 s (bursts collapse)
 
 try:                            # optional dependency: the API works without it, push is just disabled
@@ -43,6 +43,16 @@ def available() -> bool:
 def _vapid():
     if not available():
         return None
+    try:
+        return _load_or_create_key()
+    except OSError:
+        # e.g. the image's code directory is read-only for the service user; push is then disabled (503),
+        # never a 500. Containers set FRAUD_VAPID_PRIVATE_KEY_FILE to the persistent state volume.
+        logger.warning("web push disabled: cannot read or create %s", KEY_FILE, exc_info=True)
+        return None
+
+
+def _load_or_create_key():
     if not KEY_FILE.exists():
         KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
         v = Vapid01()

@@ -53,6 +53,7 @@ from detector import Detector
 from events_io import load_events
 # verify kiểm tra tính toàn vẹn của chuỗi bằng chứng (ghi qua DurableEvidenceLog).
 from evidence import verify_in_subprocess
+import http_hardening
 # GuardedDetector bọc detector để áp dụng timeout, luật dự phòng, fail-open và circuit breaker.
 from resilience import GuardedDetector
 # Phân quyền theo vai trò, che số điện thoại cho người xem và nhật ký thao tác có chữ ký.
@@ -549,14 +550,25 @@ async def _http_metrics(request: Request, call_next):
     try:
         response = await call_next(request)
         status = response.status_code
-        # The console and the subscriber app must never be framed by another site (clickjacking).
-        response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        # Clickjacking, MIME sniffing, referrer leaks; HSTS when served over https (http_hardening.py).
+        http_hardening.apply_security_headers(response.headers, request.url.scheme)
         return response
     finally:
         if request.url.path != "/metrics":
             portal.observability.observe(request, status, started)
+
+
+# Outermost user middleware: refuse oversized bodies before any route buffers them.
+app.add_middleware(http_hardening.BodyLimitMiddleware)
+
+
+@app.exception_handler(Exception)
+async def _unhandled(request: Request, exc: Exception):
+    # Starlette's error middleware runs outside @app.middleware: without this a 500 had no security
+    # headers. The body never contains the exception text (no stack traces or internals leak).
+    response = JSONResponse({"detail": "Internal server error"}, status_code=500)
+    http_hardening.apply_security_headers(response.headers, request.url.scheme)
+    return response
 
 
 @app.get("/health/live")
@@ -771,13 +783,38 @@ def api_verify(u=Depends(require("analyst"))):
     return {"chain_valid": ok, "records": n, "first_bad_line": bad, "last_hash": last}
 
 
+def _tail_evidence(path, n, chunk=1 << 16):
+    """Last n complete JSONL rows, reading backwards from the end (was: the whole file on every call,
+    and a 500 when the writer was midway through the last line)."""
+    if not path.exists():
+        return []
+    with path.open("rb") as fh:
+        fh.seek(0, 2)
+        end = fh.tell()
+        data = b""
+        while end > 0 and data.count(b"\n") <= n:
+            start = max(0, end - chunk)
+            fh.seek(start)
+            data = fh.read(end - start) + data
+            end = start
+    rows = []
+    for line in data.split(b"\n")[::-1]:
+        if len(rows) == n:
+            break
+        try:
+            rows.append(json.loads(line))
+        except ValueError:        # empty, torn (being written) or the partial first line of the chunk
+            continue
+    return rows[::-1]
+
+
 @app.get("/api/evidence/latest")
 # Trả về tối đa n dòng log cuối cùng để client có thể xem nhanh các bằng chứng mới.
 def api_latest(n: int = 5, u=Depends(require("analyst"))):
     # Không cho tải hàng loạt: tối đa 50 bản ghi mỗi lần, số điện thoại đã che.
     n = max(1, min(n, 50))
     audit.record(u["name"], "read_evidence", n=n)
-    rows = [json.loads(x) for x in engine.evidence_path.read_text(encoding="utf-8").splitlines()[-n:]]
+    rows = _tail_evidence(engine.evidence_path, n)
     for row in rows:
         rec = row["record"]
         rec["party"], rec["counterparty"] = mask_number(rec.get("party")), mask_number(rec.get("counterparty"))
@@ -786,7 +823,7 @@ def api_latest(n: int = 5, u=Depends(require("analyst"))):
 
 @app.get("/api/audit")
 # Nhật ký thao tác: ai đã làm gì, kèm kết quả kiểm tra chuỗi hash và chữ ký của từng dòng (chỉ admin).
-def api_audit(n: int = 20, anchor_records: int | None = Query(default=None, ge=1),
+def api_audit(n: int = Query(default=20, ge=1, le=500), anchor_records: int | None = Query(default=None, ge=1),
               anchor_hash: str | None = Query(default=None, pattern="^[0-9a-f]{64}$"),
               u=Depends(require("admin"))):
     # verify.head nên được chép định kỳ ra hệ thống ngoài; gửi lại qua anchor_* để phát hiện xoá đuôi log.
@@ -1124,16 +1161,23 @@ def app_family_invite(number: str, msisdn=Depends(app_user)):
 @app.post("/api/app/family/respond")
 # Người được mời đồng ý hoặc từ chối. Người được bảo vệ có thể gỡ người giám hộ bất kỳ lúc nào (accept=false).
 def app_family_respond(guardian: str, accept: bool, msisdn=Depends(app_user)):
+    accounts.limiter.hit("family_respond", msisdn, 30, 3600)
+    if not _NUMBER_RE.match(guardian or ""):
+        raise HTTPException(404, "no pending invite from this number")   # same answer as an unknown number
     with engine.lock:
         # Chỉ chấp nhận lời mời đang chờ: không thì bất kỳ chuỗi nào cũng thành "người giám hộ" (và một inbox mới).
-        if accept and guardian not in engine.invites.get(msisdn, ()):
+        invited = guardian in engine.invites.get(msisdn, ())
+        if accept and not invited:
             raise HTTPException(404, "no pending invite from this number")
+        if not accept and not invited and guardian not in engine.guardians.get(msisdn, ()):
+            # Declining / removing something that does not exist must not create state (was: an inbox per string).
+            raise HTTPException(404, "no invite or guardian link for this number")
         engine.invites[msisdn].discard(guardian)
         if accept:
             engine.guardians[msisdn].add(guardian)
+            engine.inbox[guardian]             # the guardian's app will receive alerts from now on
         else:
             engine.guardians[msisdn].discard(guardian)
-        engine.inbox[guardian]                 # the guardian's app will receive alerts from now on
     portal.persist_family_response(msisdn, guardian, accept)
     return {"status": "linked" if accept else "removed"}
 

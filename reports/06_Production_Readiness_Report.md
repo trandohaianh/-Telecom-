@@ -271,97 +271,135 @@ docker run --rm -v "$PWD/fsync_probe.py:/tmp/p.py:ro" -v telecom_telecom_state:/
 
 ---
 
-## 8. Demo Kafka: đo thật trên laptop này (18/11/2026)
+## 8. Demo Kafka: đo thật trên laptop này, Docker Desktop so với WSL2 trực tiếp (18/11/2026)
 
-**Mục đích:** cho sự kiện Telecom đi qua Kafka (`carrier.events` → chấm điểm → `fraud.verdicts`) và đo trung thực.
+**Kết luận ngắn:**
+- **SLA p99 ≤ 30 ms: KHÔNG đạt ở bất kỳ tốc độ nào**, trên cả hai môi trường.
+- **50 000 sự kiện/s: KHÔNG đạt**. Mức cao nhất đo được là **4 240 sự kiện/s**, trên WSL, pipeline A1–A3, 4 partition.
+- Trên WSL, **p50** xuống dưới 30 ms ở 100–500 sự kiện/s, nhưng p99 vẫn từ 260 ms trở lên.
+- **Docker Desktop** chậm hơn WSL khoảng **5–7 lần về độ trễ** ở cùng tốc độ, chủ yếu vì fsync của nó mất 22 ms, so với 4–6 ms trên WSL.
 
-**Kết luận ngắn:** **SLA 30 ms KHÔNG đạt; 50 000 sự kiện/giây KHÔNG đạt** trên máy này. Cả hai đều chưa từng được đo ở đâu khác.
+> **Đính chính số đo lần đầu.** Bảng Docker công bố ở commit `d2a207f` **sai về độ trễ**. Code đo khi đó gọi `consume(num_messages=1000, timeout=0.5)`, mà lệnh này của confluent-kafka **chặn cho tới khi đủ 1 000 bản tin hoặc hết 0,5 s**. Sink cũng gọi `consume(5000, 0.2)`. Hậu quả: mỗi lô phải chờ thêm tới 0,5 s, và sink cộng thêm tới 0,2 s vào số đo. Lỗi này gây ra con số "p50 khoảng 0,85–1 s ở 50 % tải". Đã sửa: lấy bản tin đầu với `num_messages=1`, vét phần sẵn có với `timeout=0`, rồi chỉ chờ thêm đúng `max_wait`. Có test với consumer mô phỏng đúng ngữ nghĩa chặn này. Số cũ được giữ ở `deploy/kafka-demo/results/docker_v1_blocking_consume/` để đối chiếu. **Mọi bảng dưới đây đo lại bằng code đã sửa, cùng một bản code cho cả hai môi trường.**
 
-**Cách dựng** (`deploy/kafka-demo/`, `src/kafka_pipeline.py`). Không có engine thứ hai; mọi phần đều dùng lại thành phần sẵn có:
+### 8.1 Cách dựng
 
-| Phần | Dùng lại / làm mới | Chi tiết |
+**Không có engine thứ hai** (`src/kafka_pipeline.py`, `deploy/kafka-demo/`):
+- **Chấm điểm:** `scaleout.ShardedEngine` sẵn có, gồm router, N tiến trình chấm và side update chéo khoá. Số shard bằng số partition.
+- **Ghi bền:** `BackendState` (SQLite WAL, `synchronous=FULL`). **Một giao dịch, tức một fsync, cho mỗi micro-batch.**
+- **Thứ tự giao nhận:** at-least-once. Offset chỉ được commit sau khi lô đã ghi bền; bản tin gửi lại không bị chấm lần hai.
+- **Đo độ trễ đầu-cuối:** từ lúc producer **gửi** tới lúc sink **nhận** phán quyết trên `fraud.verdicts`, gồm cả thời gian chờ gom lô, linger của Kafka và chặng broker.
+- **Producer:** gửi theo lịch tuyệt đối ở tốc độ đặt trước, key = số chủ gọi, `acks=all`, idempotent.
+
+**Hai pipeline được đo** (chọn bằng `--pipeline`):
+- **`sequential`:** bản demo đầu. Lần lượt nhận, chấm, ghi bền (ghi 2 lần mỗi sự kiện: `reserve` rồi `finish`), gửi phán quyết, commit offset. Lô tối đa 1 000, chờ 5 ms.
+- **`pipelined` (A1–A3):**
+  - **A1:** chấm lô N+1 trong lúc lô N đang fsync. Một thread ghi duy nhất, xử lý FIFO, giữ tối đa 1 lô đang bay. Thread đó ghi bền, rồi gửi phán quyết, rồi commit **đúng offset của lô đó**. Kiểm trùng xem map "đang bay" trước, rồi CSDL sau qua kết nối chỉ đọc riêng, nên không phải chờ fsync và không bao giờ chấm trùng.
+  - **A2:** nhật ký ghi **một lần** mỗi sự kiện (`record_many`), bỏ nhãn chỉ có trong mô phỏng.
+  - **A3:** giới hạn lô theo ngân sách độ trễ (mặc định 10 ms), chỉ tăng lô khi tồn đọng kéo dài. Chờ 1 ms.
+
+**Môi trường đo:**
+- **Docker Desktop 29.8.0** (VM 8 GB / 8 CPU): broker `apache/kafka:3.8.0` trong container; producer, consumer và nhật ký trong container demo, ghi lên volume Docker.
+- **WSL2 trực tiếp** (Ubuntu, Python 3.12, 8 lõi): **cùng** bản Kafka 3.8.0 dạng binary, chạy trên JRE Temurin 17.0.21. Cả hai file đã kiểm SHA-512 / SHA-256 và đã xoá sau khi đo. Broker chỉ lắng nghe trên `127.0.0.1`. Mọi dữ liệu nằm trên ext4 của WSL, không dùng `/mnt/d`.
+- Chạy lần lượt, **không** song song. Mỗi lượt 50 000 sự kiện của cửa sổ test (lượt quét dùng 20 000). Stack EduDSS (Postgres) vẫn chạy nền.
+
+### 8.2 ĐÃ ĐO: fsync của đĩa ghi nhật ký
+
+| Môi trường | fsync p50 | fsync p99 |
 |---|---|---|
-| Broker | Mới, riêng cho demo | `apache/kafka:3.8.0` (KRaft, một node, ghim phiên bản), chỉ mở trên `127.0.0.1:19092`, project compose riêng `telecom-kafka-demo` |
-| Producer | Mới (mỏng) | Phát lại 50 000 sự kiện của cửa sổ test theo **lịch tuyệt đối** ở tốc độ đặt trước. Key = số chủ gọi (cùng quy tắc với `scaleout.partition_key` và `ram_online`). Mỗi bản tin mang thời điểm gửi `_sent_at`. `acks=all`, idempotent |
-| Chấm điểm | **Dùng lại** | `scaleout.ShardedEngine`: router, N tiến trình chấm, side update chéo khoá (cuộc gọi đến, IMEI, cell, farm). Số shard = số partition |
-| Ghi bền | **Dùng lại** | `BackendState` (SQLite WAL, `synchronous=FULL`). **Cả micro-batch nằm trong một giao dịch**, tức một fsync cho mỗi lô (group commit). `reserve()` chống chấm lại khi gửi lại |
-| Thứ tự giao nhận | Theo `ram_online` | At-least-once: commit offset **sau khi** lô đã ghi bền. Đã kiểm bằng test: thứ tự `COMMIT` SQL rồi mới tới commit offset |
-| Thứ tự thời gian | Mới (mỏng) | Các partition xen kẽ nhau, nên trong mỗi lô sự kiện được sắp lại theo `(ts, event_id)` trước khi chấm |
-| Đo độ trễ | Mới | Sink đọc `fraud.verdicts`. Độ trễ = lúc **nhận được phán quyết** trừ lúc **producer gửi**, nên đã gồm thời gian chờ gom lô, linger của Kafka, chấm điểm, fsync và chặng broker. **Không** phải độ trễ của riêng một lô |
+| Docker Desktop, volume `/srv/state` | **22,4 ms** | 45,0 ms |
+| WSL2 ext4, trước lượt đo | **3,8 ms** | 9,3 ms |
+| WSL2 ext4, sau lượt đo (broker cũng ghi lên cùng đĩa) | 6,1 ms | 16,5 ms |
 
-**Sửa kèm theo** (có test):
-- Tiến trình shard của `ShardedEngine` giờ gọi `det.warm_up()` trước khi báo sẵn sàng, giống server HTTP. Trước đó lô đầu tiên phải trả cả chi phí khởi tạo mô hình và biên dịch Numba.
-- Image demo đặt `FRAUD_LOG_DIR` trong volume và có `static/`, vì `config.py` tạo các thư mục này ngay khi được import.
+### 8.3 ĐÃ ĐO: thông lượng tối đa (producer gửi khoảng 20 000 sự kiện/s, vượt khả năng xử lý)
 
-### 8.1 ĐÃ ĐO trên máy này
+| Partition = shard | Docker, sequential | Docker, pipelined | **WSL, sequential** | **WSL, pipelined** |
+|---|---|---|---|---|
+| 1 | 1 975 | 2 611 | 2 577 | 3 127 |
+| 2 | 2 498 | 2 690 | 3 278 | 3 142 |
+| 4 | 2 681 | 3 507 | 3 911 | **4 240** |
 
-**Môi trường:** Docker Desktop 29.8.0 trên Windows, VM 8 GB / 8 CPU. Stack EduDSS chạy song song.
-- Container demo có giới hạn 4,5 GB; broker 1,2 GB, dùng 440 MB.
-- Mỗi lần chạy: 50 000 sự kiện; micro-batch tối đa 1 000, chờ tối đa 5 ms; nhật ký `FULL`.
+(đơn vị: sự kiện/s)
 
-**Bão hoà** (producer gửi khoảng 20 000 sự kiện/s, vượt khả năng xử lý; đo thông lượng tối đa):
+**Đọc bảng:**
+- Ở trạng thái bão hoà, lô luôn đầy khoảng 900–1 000 sự kiện. Ghi bền mỗi lô: Docker 137–180 ms, WSL 76–134 ms. Chấm điểm mỗi lô: 96–264 ms.
+- **A1–A3 tăng thông lượng** ở 4 partition: +31 % trên Docker, +8 % trên WSL. Với 1 partition tăng +32 % và +21 %. Riêng WSL ở 2 partition thì tương đương (3 142 so với 3 278, nằm trong độ nhiễu).
+- Khi bão hoà, hàng đợi dồn ứ: p99 lên 8–21 s, lag khoảng 40–46 nghìn. Đây là kỳ vọng khi gửi vượt khả năng xử lý, không phải độ trễ vận hành.
 
-| Partition = shard | Thông lượng pipeline | Ghi bền / lô | Chấm / lô | Lag tối đa | Độ trễ đầu-cuối p50 / p99 |
-|---|---|---|---|---|---|
-| 1 | **1 603** sự kiện/s | 157 ms | 348 ms | 47 000 | 14,3 s / 27,0 s (hàng đợi dồn ứ) |
-| 2 | **2 017** sự kiện/s | 170 ms | 218 ms | 45 000 | 11,0 s / 21,1 s |
-| 4 | **2 645** sự kiện/s | 159 ms | 127 ms | 45 000 | 8,4 s / 15,4 s |
+### 8.4 ĐÃ ĐO: độ trễ đầu-cuối ở khoảng 50 % thông lượng của từng cấu hình
 
-**Độ trễ ở khoảng 50 % thông lượng đo được:**
+| Môi trường / pipeline | Partition | Tốc độ gửi | p50 | p95 | p99 | Lô TB | Lag tối đa |
+|---|---|---|---|---|---|---|---|
+| Docker / sequential | 1 | 987 | 173 ms | 305 ms | 392 ms | 117 | 206 |
+| Docker / sequential | 4 | 1 340 | 184 ms | 349 ms | 754 ms | 172 | 466 |
+| Docker / pipelined | 1 | 1 305 | 368 ms | 516 ms | 619 ms | 87 | 577 |
+| Docker / pipelined | 4 | 1 753 | 672 ms | 1 167 ms | 1 303 ms | 171 | 1 608 |
+| **WSL / sequential** | 1 | 1 288 | **42 ms** | 90 ms | 182 ms | 39 | 74 |
+| WSL / sequential | 4 | 1 955 | 48 ms | 264 ms | 485 ms | 70 | 628 |
+| **WSL / pipelined** | 1 | 1 563 | **33 ms** | 185 ms | 735 ms | 18 | 794 |
+| **WSL / pipelined** | 4 | 2 120 | 95 ms | 156 ms | **191 ms** | 41 | 191 |
 
-| Partition = shard | Tốc độ gửi | Thông lượng | Độ trễ đầu-cuối p50 / p95 / p99 | Lô TB | Lag tối đa |
-|---|---|---|---|---|---|
-| 1 | 801 sự kiện/s | 774 | **1 025 / 1 604 / 1 854 ms** | 758 | 404 |
-| 2 | 1 008 sự kiện/s | 971 | **866 / 1 318 / 1 458 ms** | 833 | 517 |
-| 4 | 1 322 sự kiện/s | 1 251 | **848 / 1 193 / 1 324 ms** | 962 | 668 |
+(Đủ cả 2 partition trong `deploy/kafka-demo/results/`.)
 
-**Chất lượng và độ tin cậy:**
-- **Fail-open = 0** ở mọi lần chạy. Đường lô không có hạn chót theo từng sự kiện, nên đây là kết quả của thiết kế chứ không phải thành tích. Cái giá phải trả hiện ra ở độ trễ.
-- **Phán quyết khớp 100 %** với mốc replay trong tiến trình (`ShardedEngine`, không qua Kafka, cùng số shard) ở cả 6 lần chạy. Chỉ số chất lượng cũng giống hệt.
-- **So với chạy một tiến trình:**
-  - 1 shard: block recall **56,34 %**.
-  - 2 và 4 shard: **54,93 %**, tức 1 trên 71 sự kiện gian lận đổi từ BLOCK sang FLAG. Đây là sai khác của chính scale-out trong tiến trình, không do Kafka.
-  - any recall 94,37 % và any FPR 0,0681 % giống nhau ở mọi số shard; block FPR = 0.
+Mức "50 %" của pipeline A1–A3 cao hơn của bản tuần tự, vì nó có thông lượng tối đa cao hơn. Vì vậy so sánh công bằng là ở **cùng tốc độ gửi**, trong §8.5.
 
-### 8.2 Vì sao chưa đạt: nút thắt đo được
+### 8.5 ĐÃ ĐO: quét tốc độ thấp và lô nhỏ (pipelined, 4 partition, 20 000 sự kiện): có chỗ nào p99 ≤ 30 ms không?
 
-1. **Ghi bền (`FULL`) trên Docker Desktop.**
-   - fsync trong container mất trung bình **21 ms** (§7.2). Mỗi lô 1 000 sự kiện ghi vài MB vào WAL (payload và kết quả JSON), nên một commit mất **120–170 ms**.
-   - Group commit đã dàn chi phí fsync ra cả lô, nhưng vẫn giới hạn cả pipeline ở khoảng **6 000 sự kiện/s**, kể cả khi chấm điểm tốn 0 ms (1 000 / 0,16 s).
-   - Đây là trở ngại chính cho `FULL` trên máy này, đúng như đã ghi ở §7.
-2. **Chấm điểm trong VM dùng chung.**
-   - Với 4 shard, mỗi shard mất khoảng 0,5 ms cho mỗi sự kiện nó sở hữu (127 ms cho 250 sự kiện), so với 0,089 ms đo trong tiến trình ở `docs/SCALE_OUT.md`.
-   - Nguyên nhân: VM Docker Desktop dùng chung CPU với Windows và EduDSS, cộng chi phí truyền dữ liệu qua pipe.
-3. **Vòng lặp tuần tự:** nhận → chấm → ghi bền → gửi. Mỗi lô phải chờ lô trước xong, nên ở 50 % tải lô vẫn đầy gần 1 000 sự kiện. Thời gian chờ gom lô cộng thời gian xử lý cho ra p50 khoảng 0,85–1 s.
+| Môi trường | Tốc độ | Ngân sách lô / chờ | p50 | p95 | p99 | Lô TB | Ghi bền / lô |
+|---|---|---|---|---|---|---|---|
+| WSL | 100 | 2 ms / 0,5 ms | **22 ms** | 55 ms | 1 881 ms | 1,0 | 6,0 ms |
+| WSL | 200 | 2 ms / 0,5 ms | **26 ms** | 45 ms | 260 ms | 1,4 | 5,7 ms |
+| WSL | 200 | 5 ms / 1 ms | **24 ms** | 60 ms | 317 ms | 1,3 | 4,7 ms |
+| WSL | 500 | 5 ms / 1 ms | **30 ms** | 47 ms | 276 ms | 3,9 | 6,8 ms |
+| WSL | 1 000 | 5 ms / 1 ms | 40 ms | 131 ms | 388 ms | 10,9 | 9,4 ms |
+| WSL | 1 000 | 10 ms / 1 ms | 37 ms | 68 ms | 343 ms | 10,0 | 8,5 ms |
+| Docker | 200 | 5 ms / 1 ms | 148 ms | 222 ms | 348 ms | 8,0 | 38,3 ms |
+| Docker | 1 000 | 10 ms / 1 ms | 368 ms | 538 ms | 615 ms | 65,6 | 62,2 ms |
 
-**Hệ quả với SLA 30 ms:** đường Kafka gom lô **không** dùng được cho quyết định chặn trước khi đổ chuông trên phần cứng này. Muốn dưới 30 ms thì cùng lúc cần:
-- lô nhỏ (vài chục sự kiện);
-- fsync dưới 1 ms;
-- chấm khoảng 0,1 ms mỗi sự kiện.
+**Trả lời câu hỏi "có đạt SLA ở tốc độ nào không":**
+- **p99 ≤ 30 ms: không**, ở mọi tốc độ đã thử, trên cả hai môi trường. Thấp nhất là p99 260 ms (WSL, 200 sự kiện/s).
+- **p50 ≤ 30 ms:** đạt trên WSL ở **100, 200 và 500 sự kiện/s**. Không đạt trên Docker ở bất kỳ tốc độ nào.
+- **Đuôi p99** (vài trăm ms tới 1,9 s) xuất hiện cả khi lô chỉ có 1 sự kiện và ghi bền mất 6 ms. Vậy nó **không** đến từ nhật ký. Nguồn nhiều khả năng là các cú dừng lác đác trong VM dùng chung: lịch CPU của WSL/Windows, cùng tiến trình JVM của broker và Python trên cùng 8 lõi, các lần fsync của broker. Nguyên nhân chưa được tách riêng từng phần. Đây là việc cần làm khi đo trên máy đích.
 
-Hiện máy này không đáp ứng điều nào. Đường HTTP từng sự kiện (§7) vẫn là đường dành cho pre-ring.
+### 8.6 Chất lượng, fail-open, lag (ĐÃ ĐO)
 
-### 8.3 NGOẠI SUY cho 50 000 sự kiện/s (chưa đo, không phải cam kết)
+- **Fail-open = 0** ở mọi lượt. Đường lô không có hạn chót theo từng sự kiện, nên cái giá phải trả hiện ra ở độ trễ.
+- **Phán quyết so với replay trong tiến trình cùng số shard:** 100 % ở 31/32 lượt; **99,998 %** (1 / 50 000) ở lượt WSL pipelined 2 partition. Lý do: `ShardedEngine` áp side update của cả lô trước khi chấm, và điều này được ghi rõ trong tài liệu là "nhìn trước tối đa một lô". Nên kết quả phụ thuộc vào ranh giới lô, mà ranh giới lô do A3 tự chọn.
+- **Chỉ số chất lượng** của mọi lượt 50 000 sự kiện giống hệt replay trong tiến trình. Giữa 1 shard và từ 2 shard trở lên vẫn có 1 trên 71 sự kiện gian lận đổi BLOCK → FLAG; sai khác này đến từ scale-out trong tiến trình, không do Kafka.
+- **Lag tối đa ở khoảng 50 % tải:** WSL 74–794, Docker 206–1 608 bản tin.
 
-Chỉ là phép tính trên số đo hoặc hằng số đã biết, ghi rõ giả định:
-- **Chấm điểm:** theo `docs/SCALE_OUT.md`, khoảng 0,089 ms mỗi sự kiện sở hữu, cộng 0,0016 ms cho mỗi side update.
-  - 50 000 × 0,089 ms ≈ 4,5 giây-CPU mỗi giây, tức khoảng **5–6 lõi** chỉ để chấm.
-  - Side update tăng theo số shard: 50 000 × 0,0016 × N ms mỗi giây trên mỗi shard.
-  - Cộng router, consumer và producer: ước **8–12 lõi vật lý riêng**. Trên VM này hệ số đo được kém hơn khoảng 5 lần.
-- **Ghi bền:** với cùng định dạng bản ghi, cần ghi khoảng **8 lần nhanh hơn** mức đo ở đây (0,16 ms mỗi sự kiện → ≤ 0,02 ms). Hai hướng:
-  - mỗi instance consumer có nhật ký riêng, tức 8 nhóm partition, mỗi nhóm một SQLite trên NVMe;
-  - hoặc giảm kích thước bản ghi trong nhật ký.
+### 8.7 Docker Desktop chiếm bao nhiêu phần của nút thắt
 
-  `FULL` vẫn giữ được nếu fsync dưới 1 ms.
-- **Kafka:** một broker xử lý 50 000 bản tin nhỏ mỗi giây là chuyện bình thường. Nhưng cần ≥ 8 partition và nhiều instance consumer. Khi đó side update phải đi qua một topic riêng (thiết kế trong `docs/SCALE_OUT.md` §"Kết nối luồng"); **demo này chưa dựng phần đó**, mà chạy một consumer với N tiến trình chấm trên một máy.
-- **Kết luận ngoại suy:** 50 000 sự kiện/s là **khả thi về kiến trúc** với khoảng 8–12 lõi riêng, NVMe fsync dưới 1 ms và nhật ký tách theo nhóm partition. Nhưng **chưa được đo**, và không được công bố như kết quả.
+| So ở cùng tốc độ (pipelined, 4 partition) | Docker | WSL | Hệ số |
+|---|---|---|---|
+| 200 sự kiện/s: p50 / p99 | 148 / 348 ms | 24 / 317 ms | p50 chậm **6,2 lần**; p99 gần bằng nhau |
+| 1 000 sự kiện/s: p50 / p99 | 368 / 615 ms | 37 / 343 ms | p50 chậm **10 lần**; p99 chậm 1,8 lần |
+| Ghi bền một lô nhỏ | 38–62 ms | 5–9 ms | **khoảng 7 lần** |
+| fsync p50 | 22,4 ms | 3,8–6,1 ms | **khoảng 4–6 lần** |
+| Thông lượng tối đa (4 partition) | 3 507 sự kiện/s | 4 240 sự kiện/s | 1,2 lần |
 
-### 8.4 Việc tiếp theo nếu muốn đo lại cho đúng
+**Kết luận:**
+- **p50 / trung vị:** fsync của Docker Desktop là **nút thắt chính**. Ra khỏi Docker Desktop, p50 giảm 6–10 lần.
+- **Thông lượng tối đa:** khác biệt chỉ khoảng 20 %, vì ở đó chấm điểm và tranh CPU trong VM chiếm phần lớn.
+- **Đuôi p99:** vẫn còn cả trên WSL, nên đó là vấn đề của máy dùng chung, không riêng Docker.
 
-1. Chạy lại `deploy/kafka-demo` trên VM Linux đích. Trước tiên đo fsync trên volume trạng thái (lệnh ở §7.2).
-2. Thêm **pipelining**: chấm lô N+1 trong lúc lô N đang fsync. Đơn vị bền vẫn là một lô.
-3. Nhật ký theo nhóm partition và nhiều instance consumer, với topic side update.
-4. Chỉ công bố thông lượng và p99 đo được trên phần cứng đó, kèm lag và kết quả so tương đương.
+### 8.8 NGOẠI SUY cho 50 000 sự kiện/s (chưa đo, không phải cam kết)
 
-**Dọn dẹp:** đã `down -v` riêng project `telecom-kafka-demo` (0 container, 0 volume, 0 mạng còn lại). Docker Desktop và stack EduDSS vẫn chạy. Image `telecom-kafka-demo:local` được giữ làm cache. Số liệu gốc: `deploy/kafka-demo/results/*.json`.
+- **Chấm điểm:** khoảng 0,089 ms mỗi sự kiện sở hữu, cộng 0,0016 ms cho mỗi side update (`docs/SCALE_OUT.md`). Như vậy cần khoảng **5–6 lõi chỉ để chấm**, cộng router, consumer và producer: ước **8–12 lõi vật lý riêng**.
+- **Ghi bền với `FULL`:** phần đo được tốt nhất trên WSL khoảng 76–134 ms cho mỗi lô 1 000, tức khoảng 0,1 ms mỗi sự kiện. Mức này giới hạn **một** nhật ký ở khoảng 7,5–13 nghìn sự kiện/s nếu chấm không tốn thời gian. 50 000 sự kiện/s cần:
+  - nhiều nhật ký song song (mỗi nhóm partition một nhật ký, tức nhiều instance consumer);
+  - hoặc NVMe có fsync dưới 1 ms cùng bản ghi gọn hơn nữa.
+- **Mở rộng ngang:** cần topic side update giữa các instance (thiết kế ở `docs/SCALE_OUT.md`). **Demo chưa dựng phần này**; nó chạy một consumer với N tiến trình chấm trên một máy.
+- **SLA 30 ms cho đường Kafka:** chỉ khả thi khi **p99** của cả chuỗi (fsync + chấm + broker) nằm dưới khoảng 20 ms. Muốn biết thì phải đo trên máy riêng, không đo trên laptop dùng chung. Đường chặn trước khi đổ chuông nên tiếp tục đi qua HTTP từng sự kiện (§7).
 
+### 8.9 Còn lại
+
+1. Đo `deploy/kafka-demo` trên VM Linux đích: fsync của volume (lệnh ở §7.2), broker và consumer trên lõi riêng. Mỗi cấu hình chạy ≥ 3 lần × ≥ 5 phút, báo trung vị kèm khoảng dao động.
+2. Tách nguồn đuôi p99: đo GC của Python, độ trễ ghi của broker, thời gian chờ lịch CPU.
+3. Nhiều instance consumer, mỗi instance một nhật ký, cùng topic side update.
+
+**Dọn dẹp:**
+- Docker: `down -v` riêng project `telecom-kafka-demo`, không còn container hay volume nào.
+- WSL: đã dừng broker (không còn tiến trình Java, cổng 9092/9093 đã trống) và xoá `~/kafka-wsl` (Kafka, JRE, dữ liệu).
+- Docker Desktop và EduDSS vẫn chạy.
+
+**Số liệu gốc:** `deploy/kafka-demo/results/{docker,wsl,docker_v1_blocking_consume}/`.

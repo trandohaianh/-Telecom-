@@ -1,0 +1,19 @@
+stopped
+fsync_ms p50 22.383 p99 45.049 (docker volume /srv/state)
+docker_sequential_sat_p1 rc=0 1975 {'p50': 11373.184, 'p95': 20289.867, 'p99': 21208.581} batch 1000.0 journal 137.04 score 264.12 lag 46000 fo 0 eq 100.0
+docker_sequential_sat_p2 rc=0 2498 {'p50': 8835.897, 'p95': 15766.273, 'p99': 16395.778} batch 1000.0 journal 146.51 score 162.27 lag 44000 fo 0 eq 100.0
+docker_sequential_sat_p4 rc=0 2681 {'p50': 8179.168, 'p95': 14405.365, 'p99': 14843.892} batch 1000.0 journal 162.96 score 112.07 lag 44000 fo 0 eq 100.0
+docker_sequential_lat_p1 rc=0 965 {'p50': 172.791, 'p95': 304.66, 'p99': 391.89} batch 116.8 journal 66.25 score 39.92 lag 206 fo 0 eq 100.0
+docker_sequential_lat_p2 rc=0 1215 {'p50': 189.924, 'p95': 331.787, 'p99': 451.613} batch 163.4 journal 79.5 score 35.6 lag 369 fo 0 eq 100.0
+docker_sequential_lat_p4 rc=0 1296 {'p50': 184.23, 'p95': 349.424, 'p99': 754.079} batch 172.4 journal 83.01 score 26.86 lag 466 fo 0 eq 100.0
+docker_pipelined_sat_p1 rc=0 2611 {'p50': 7905.82, 'p95': 14933.678, 'p99': 15613.899} batch 892.9 journal 150.02 score 240.97 lag 43949 fo 0 eq 100.0
+docker_pipelined_sat_p2 rc=0 2690 {'p50': 8607.682, 'p95': 14395.199, 'p99': 14820.742} batch 877.2 journal 171.17 score 199.97 lag 42781 fo 0 eq 100.0
+docker_pipelined_sat_p4 rc=0 3507 {'p50': 6280.01, 'p95': 10276.589, 'p99': 10483.119} batch 892.9 journal 180.42 score 104.02 lag 40401 fo 0 eq 100.0
+docker_pipelined_lat_p1 rc=0 1261 {'p50': 367.739, 'p95': 516.031, 'p99': 619.375} batch 87.3 journal 60.81 score 32.48 lag 577 fo 0 eq 100.0
+docker_pipelined_lat_p2 rc=0 1288 {'p50': 450.495, 'p95': 644.37, 'p99': 825.308} batch 100.8 journal 68.77 score 25.84 lag 758 fo 0 eq 100.0
+docker_pipelined_lat_p4 rc=0 1655 {'p50': 672.375, 'p95': 1167.297, 'p99': 1302.73} batch 171.2 journal 86.42 score 29.95 lag 1608 fo 0 eq 100.0
+docker_sweep_r200 rc=0 198 {'p50': 148.438, 'p95': 221.674, 'p99': 348.04} batch 8.0 journal 38.28 score 4.02 lag 68 fo 0 eq 100.0
+docker_sweep_r1000 rc=0 941 {'p50': 368.202, 'p95': 537.735, 'p99': 614.53} batch 65.6 journal 62.16 score 14.02 lag 343 fo 0 eq 100.0
+down -v done
+
+[exited with code 0]

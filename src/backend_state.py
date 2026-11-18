@@ -1,6 +1,7 @@
 """Durable state for one local inference owner; SQLite is not a distributed feature store."""
 from __future__ import annotations
 
+import contextlib
 from contextlib import contextmanager
 
 import hashlib
@@ -215,6 +216,52 @@ class BackendState:
             if row[1] != digest:
                 raise EventConflict("event_id already belongs to different content for this operation")
         return row[0], json.loads(row[2]) if row[2] else None
+
+    # ---- batched journal for streaming consumers (Kafka demo, A2: one write per event instead of two)
+    def lookup_many(self, kind, events, db=None):
+        """{event_id: stored result} for identities already journalled; EventConflict on different content.
+
+        db: an extra read connection to the same file. In WAL mode it reads the last COMMITTED state without
+        taking self.lock, so a consumer can deduplicate while another thread's transaction is being fsynced.
+        """
+        found = {}
+        ids = [str(ev["event_id"]) for ev in events]
+        digests = {str(ev["event_id"]): hashlib.sha256(_json(ev).encode("utf-8")).hexdigest() for ev in events}
+        conn = db if db is not None else self.db
+        with (contextlib.nullcontext() if db is not None else self.lock):
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                rows = conn.execute(f"SELECT event_id,digest,result FROM events WHERE kind=? AND event_id IN "
+                                       f"({','.join('?' * len(chunk))})", (kind, *chunk)).fetchall()
+                for event_id, digest, result in rows:
+                    if digest != digests[event_id]:
+                        raise EventConflict("event_id already belongs to different content for this operation")
+                    found[event_id] = json.loads(result) if result else None
+        return found
+
+    def record_many(self, kind, events, results):
+        """Insert completed (event, result) rows in ONE statement batch; the caller owns the transaction.
+
+        reserve() + finish() write every row twice (INSERT, then UPDATE of the result and the partial
+        evidence index). A streaming consumer that already deduplicated with lookup_many() writes once.
+        """
+        now = time.time()
+        rows = []
+        for ev, result in zip(events, results):
+            payload = _json(ev)
+            rows.append((kind, str(ev["event_id"]), hashlib.sha256(payload.encode("utf-8")).hexdigest(), payload,
+                         _json(result), now))
+        ids = [r[1] for r in rows]
+        seqs = {}
+        with self.lock:
+            self.db.executemany("INSERT INTO events(kind,event_id,digest,payload,result,received) VALUES (?,?,?,?,?,?)",
+                                rows)
+            # Real sequence numbers (AUTOINCREMENT may skip values, so they are read back, not computed).
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                seqs.update(self.db.execute(f"SELECT event_id,seq FROM events WHERE kind=? AND event_id IN "
+                                            f"({','.join('?' * len(chunk))})", (kind, *chunk)).fetchall())
+        return [seqs[i] for i in ids]
 
     def event_payload(self, kind, event_id):
         """Read one journal identity without scanning, reserving or modifying it."""

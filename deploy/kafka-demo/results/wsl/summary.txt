@@ -1,0 +1,22 @@
+fsync_ms p50 3.824 p99 9.281 (journal disk /home/tran_do_hai_anh/kafka-wsl/state)
+sequential_sat_p1 rc=0 2577 {'p50': 8237.58, 'p95': 15867.587, 'p99': 16421.457} batch 1000.0 journal 76.52 score 250.16 lag 44000 fo 0 eq 100.0
+sequential_sat_p2 rc=0 3278 {'p50': 6696.841, 'p95': 11802.959, 'p99': 12175.783} batch 1000.0 journal 76.35 score 158.8 lag 42000 fo 0 eq 100.0
+sequential_sat_p4 rc=0 3911 {'p50': 5555.863, 'p95': 9055.936, 'p99': 9394.933} batch 1000.0 journal 83.71 score 95.88 lag 41000 fo 0 eq 100.0
+sequential_lat_p1 rc=0 1271 {'p50': 42.27, 'p95': 90.453, 'p99': 181.525} batch 39.2 journal 10.98 score 12.3 lag 74 fo 0 eq 100.0
+sequential_lat_p2 rc=0 1609 {'p50': 78.907, 'p95': 317.891, 'p99': 565.433} batch 86.8 journal 26.46 score 16.92 lag 569 fo 0 eq 100.0
+sequential_lat_p4 rc=0 1912 {'p50': 48.012, 'p95': 264.17, 'p99': 484.633} batch 70.0 journal 15.77 score 11.08 lag 628 fo 0 eq 100.0
+pipelined_sat_p1 rc=0 3127 {'p50': 6855.591, 'p95': 12642.234, 'p99': 13042.741} batch 877.2 journal 96.35 score 206.68 lag 42650 fo 0 eq 100.0
+pipelined_sat_p2 rc=0 3142 {'p50': 6583.997, 'p95': 12441.182, 'p99': 12804.303} batch 892.9 journal 128.14 score 183.09 lag 41879 fo 0 eq 100.0
+pipelined_sat_p4 rc=0 4240 {'p50': 5409.555, 'p95': 8524.299, 'p99': 8727.026} batch 892.9 journal 134.49 score 110.45 lag 40368 fo 0 eq 100.0
+pipelined_lat_p1 rc=0 1536 {'p50': 33.093, 'p95': 185.103, 'p99': 735.434} batch 17.6 journal 6.54 score 8.63 lag 794 fo 0 eq 100.0
+pipelined_lat_p2 rc=0 1543 {'p50': 52.169, 'p95': 116.295, 'p99': 544.291} batch 19.3 journal 9.95 score 7.01 lag 168 fo 0 eq 99.998
+pipelined_lat_p4 rc=0 2065 {'p50': 94.929, 'p95': 155.732, 'p99': 191.44} batch 41.0 journal 16.35 score 9.17 lag 191 fo 0 eq 100.0
+sweep_r100_budget2_wait0.5 rc=0 100 {'p50': 22.141, 'p95': 55.376, 'p99': 1881.16} batch 1.0 journal 6.0 score 1.56 lag 145 fo 0 eq 100.0
+sweep_r200_budget2_wait0.5 rc=0 199 {'p50': 25.548, 'p95': 44.579, 'p99': 260.203} batch 1.4 journal 5.71 score 1.78 lag 43 fo 0 eq 100.0
+sweep_r200_budget5_wait1 rc=0 199 {'p50': 24.217, 'p95': 60.463, 'p99': 316.847} batch 1.3 journal 4.7 score 1.71 lag 84 fo 0 eq 100.0
+sweep_r500_budget5_wait1 rc=0 496 {'p50': 29.813, 'p95': 46.703, 'p99': 276.003} batch 3.9 journal 6.77 score 2.68 lag 104 fo 0 eq 100.0
+sweep_r1000_budget5_wait1 rc=0 985 {'p50': 39.7, 'p95': 130.625, 'p99': 388.228} batch 10.9 journal 9.39 score 4.35 lag 191 fo 0 eq 100.0
+sweep_r1000_budget10_wait1 rc=0 984 {'p50': 37.0, 'p95': 68.485, 'p99': 342.635} batch 10.0 journal 8.5 score 4.16 lag 294 fo 0 eq 100.0
+fsync_ms p50 6.136 p99 16.507 (journal disk /home/tran_do_hai_anh/kafka-wsl/state)
+
+[exited with code 0]

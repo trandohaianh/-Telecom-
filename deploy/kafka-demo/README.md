@@ -22,10 +22,20 @@ docker compose -p telecom-kafka-demo -f deploy/kafka-demo/docker-compose.yml --p
 ```
 
 Tham số của `bench`:
+- `--pipeline sequential|pipelined`: `sequential` là bản demo đầu. `pipelined` (mặc định) là A1–A3: chấm lô N+1 trong lúc lô N đang fsync; nhật ký ghi một lần mỗi sự kiện; lô co giãn theo `--budget-ms` (tắt bằng `--fixed-batch`);
 - `--partitions N`: số partition của topic, và mặc định cũng là số shard chấm điểm (`--shards` để đặt khác);
 - `--rate`: tốc độ gửi mục tiêu (sự kiện/giây);
 - `--batch` / `--wait-ms`: kích thước micro-batch tối đa / thời gian chờ tối đa sau sự kiện đầu tiên.
 
 Broker là `apache/kafka:3.8.0` (KRaft, một node), chỉ mở cổng trên `127.0.0.1:19092`.
 
-Kết quả đo ngày 18/11/2026 nằm trong `results/`. Phân tích: `reports/06_Production_Readiness_Report.md` §8.
+Kết quả đo ngày 18/11/2026 nằm trong `results/`:
+- `docker/`: Docker Desktop;
+- `wsl/`: WSL2 trực tiếp, với Kafka 3.8.0 dạng binary;
+- `docker_v1_blocking_consume/`: lần đo đầu, **sai về độ trễ** vì `consume()` bị chặn.
+
+Phân tích: `reports/06_Production_Readiness_Report.md` §8.
+
+Chạy không cần Docker (như lượt đo WSL): khởi động Kafka KRaft lắng nghe trên `127.0.0.1:9092`, rồi chạy
+`python -B src/kafka_pipeline.py bench --bootstrap 127.0.0.1:9092 --state-dir ~/state ...`.
+Đặt `--state-dir` trên ext4, **không** đặt trên `/mnt/<ổ>`, vì fsync qua drvfs rất chậm.

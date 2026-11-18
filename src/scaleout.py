@@ -56,6 +56,9 @@ def _worker(index: int, n: int, conn, warm_events: list[dict], threads: str) -> 
             prime(det.fs, [ev])
         else:
             det.fs.observe_foreign(ev, owns)
+    # Same warm-up as the HTTP server (models + Numba JIT on zero rows, no feature-store state): without it
+    # the first scored batch of every shard also paid model initialisation and compilation.
+    det.warm_up()
     conn.send(("ready", index))
     while True:
         message = conn.recv()

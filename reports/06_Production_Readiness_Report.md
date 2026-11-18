@@ -268,3 +268,100 @@ docker run --rm -v "$PWD/fsync_probe.py:/tmp/p.py:ro" -v telecom_telecom_state:/
 - **Đã sẵn sàng:** build, chạy, bảo mật, dữ liệu sau khi khởi động lại, cấu hình demo. Đã kiểm bằng Docker thật.
 - **Còn chặn go-live:** đo SLA trên phần cứng đích có fsync dưới 1 ms (giữ `FULL`).
 - **Chế độ enforce:** vẫn khoá đúng thiết kế, cho tới khi có kiểm định trên lưu lượng thật.
+
+---
+
+## 8. Demo Kafka: đo thật trên laptop này (18/11/2026)
+
+**Mục đích:** cho sự kiện Telecom đi qua Kafka (`carrier.events` → chấm điểm → `fraud.verdicts`) và đo trung thực.
+
+**Kết luận ngắn:** **SLA 30 ms KHÔNG đạt; 50 000 sự kiện/giây KHÔNG đạt** trên máy này. Cả hai đều chưa từng được đo ở đâu khác.
+
+**Cách dựng** (`deploy/kafka-demo/`, `src/kafka_pipeline.py`). Không có engine thứ hai; mọi phần đều dùng lại thành phần sẵn có:
+
+| Phần | Dùng lại / làm mới | Chi tiết |
+|---|---|---|
+| Broker | Mới, riêng cho demo | `apache/kafka:3.8.0` (KRaft, một node, ghim phiên bản), chỉ mở trên `127.0.0.1:19092`, project compose riêng `telecom-kafka-demo` |
+| Producer | Mới (mỏng) | Phát lại 50 000 sự kiện của cửa sổ test theo **lịch tuyệt đối** ở tốc độ đặt trước. Key = số chủ gọi (cùng quy tắc với `scaleout.partition_key` và `ram_online`). Mỗi bản tin mang thời điểm gửi `_sent_at`. `acks=all`, idempotent |
+| Chấm điểm | **Dùng lại** | `scaleout.ShardedEngine`: router, N tiến trình chấm, side update chéo khoá (cuộc gọi đến, IMEI, cell, farm). Số shard = số partition |
+| Ghi bền | **Dùng lại** | `BackendState` (SQLite WAL, `synchronous=FULL`). **Cả micro-batch nằm trong một giao dịch**, tức một fsync cho mỗi lô (group commit). `reserve()` chống chấm lại khi gửi lại |
+| Thứ tự giao nhận | Theo `ram_online` | At-least-once: commit offset **sau khi** lô đã ghi bền. Đã kiểm bằng test: thứ tự `COMMIT` SQL rồi mới tới commit offset |
+| Thứ tự thời gian | Mới (mỏng) | Các partition xen kẽ nhau, nên trong mỗi lô sự kiện được sắp lại theo `(ts, event_id)` trước khi chấm |
+| Đo độ trễ | Mới | Sink đọc `fraud.verdicts`. Độ trễ = lúc **nhận được phán quyết** trừ lúc **producer gửi**, nên đã gồm thời gian chờ gom lô, linger của Kafka, chấm điểm, fsync và chặng broker. **Không** phải độ trễ của riêng một lô |
+
+**Sửa kèm theo** (có test):
+- Tiến trình shard của `ShardedEngine` giờ gọi `det.warm_up()` trước khi báo sẵn sàng, giống server HTTP. Trước đó lô đầu tiên phải trả cả chi phí khởi tạo mô hình và biên dịch Numba.
+- Image demo đặt `FRAUD_LOG_DIR` trong volume và có `static/`, vì `config.py` tạo các thư mục này ngay khi được import.
+
+### 8.1 ĐÃ ĐO trên máy này
+
+**Môi trường:** Docker Desktop 29.8.0 trên Windows, VM 8 GB / 8 CPU. Stack EduDSS chạy song song.
+- Container demo có giới hạn 4,5 GB; broker 1,2 GB, dùng 440 MB.
+- Mỗi lần chạy: 50 000 sự kiện; micro-batch tối đa 1 000, chờ tối đa 5 ms; nhật ký `FULL`.
+
+**Bão hoà** (producer gửi khoảng 20 000 sự kiện/s, vượt khả năng xử lý; đo thông lượng tối đa):
+
+| Partition = shard | Thông lượng pipeline | Ghi bền / lô | Chấm / lô | Lag tối đa | Độ trễ đầu-cuối p50 / p99 |
+|---|---|---|---|---|---|
+| 1 | **1 603** sự kiện/s | 157 ms | 348 ms | 47 000 | 14,3 s / 27,0 s (hàng đợi dồn ứ) |
+| 2 | **2 017** sự kiện/s | 170 ms | 218 ms | 45 000 | 11,0 s / 21,1 s |
+| 4 | **2 645** sự kiện/s | 159 ms | 127 ms | 45 000 | 8,4 s / 15,4 s |
+
+**Độ trễ ở khoảng 50 % thông lượng đo được:**
+
+| Partition = shard | Tốc độ gửi | Thông lượng | Độ trễ đầu-cuối p50 / p95 / p99 | Lô TB | Lag tối đa |
+|---|---|---|---|---|---|
+| 1 | 801 sự kiện/s | 774 | **1 025 / 1 604 / 1 854 ms** | 758 | 404 |
+| 2 | 1 008 sự kiện/s | 971 | **866 / 1 318 / 1 458 ms** | 833 | 517 |
+| 4 | 1 322 sự kiện/s | 1 251 | **848 / 1 193 / 1 324 ms** | 962 | 668 |
+
+**Chất lượng và độ tin cậy:**
+- **Fail-open = 0** ở mọi lần chạy. Đường lô không có hạn chót theo từng sự kiện, nên đây là kết quả của thiết kế chứ không phải thành tích. Cái giá phải trả hiện ra ở độ trễ.
+- **Phán quyết khớp 100 %** với mốc replay trong tiến trình (`ShardedEngine`, không qua Kafka, cùng số shard) ở cả 6 lần chạy. Chỉ số chất lượng cũng giống hệt.
+- **So với chạy một tiến trình:**
+  - 1 shard: block recall **56,34 %**.
+  - 2 và 4 shard: **54,93 %**, tức 1 trên 71 sự kiện gian lận đổi từ BLOCK sang FLAG. Đây là sai khác của chính scale-out trong tiến trình, không do Kafka.
+  - any recall 94,37 % và any FPR 0,0681 % giống nhau ở mọi số shard; block FPR = 0.
+
+### 8.2 Vì sao chưa đạt: nút thắt đo được
+
+1. **Ghi bền (`FULL`) trên Docker Desktop.**
+   - fsync trong container mất trung bình **21 ms** (§7.2). Mỗi lô 1 000 sự kiện ghi vài MB vào WAL (payload và kết quả JSON), nên một commit mất **120–170 ms**.
+   - Group commit đã dàn chi phí fsync ra cả lô, nhưng vẫn giới hạn cả pipeline ở khoảng **6 000 sự kiện/s**, kể cả khi chấm điểm tốn 0 ms (1 000 / 0,16 s).
+   - Đây là trở ngại chính cho `FULL` trên máy này, đúng như đã ghi ở §7.
+2. **Chấm điểm trong VM dùng chung.**
+   - Với 4 shard, mỗi shard mất khoảng 0,5 ms cho mỗi sự kiện nó sở hữu (127 ms cho 250 sự kiện), so với 0,089 ms đo trong tiến trình ở `docs/SCALE_OUT.md`.
+   - Nguyên nhân: VM Docker Desktop dùng chung CPU với Windows và EduDSS, cộng chi phí truyền dữ liệu qua pipe.
+3. **Vòng lặp tuần tự:** nhận → chấm → ghi bền → gửi. Mỗi lô phải chờ lô trước xong, nên ở 50 % tải lô vẫn đầy gần 1 000 sự kiện. Thời gian chờ gom lô cộng thời gian xử lý cho ra p50 khoảng 0,85–1 s.
+
+**Hệ quả với SLA 30 ms:** đường Kafka gom lô **không** dùng được cho quyết định chặn trước khi đổ chuông trên phần cứng này. Muốn dưới 30 ms thì cùng lúc cần:
+- lô nhỏ (vài chục sự kiện);
+- fsync dưới 1 ms;
+- chấm khoảng 0,1 ms mỗi sự kiện.
+
+Hiện máy này không đáp ứng điều nào. Đường HTTP từng sự kiện (§7) vẫn là đường dành cho pre-ring.
+
+### 8.3 NGOẠI SUY cho 50 000 sự kiện/s (chưa đo, không phải cam kết)
+
+Chỉ là phép tính trên số đo hoặc hằng số đã biết, ghi rõ giả định:
+- **Chấm điểm:** theo `docs/SCALE_OUT.md`, khoảng 0,089 ms mỗi sự kiện sở hữu, cộng 0,0016 ms cho mỗi side update.
+  - 50 000 × 0,089 ms ≈ 4,5 giây-CPU mỗi giây, tức khoảng **5–6 lõi** chỉ để chấm.
+  - Side update tăng theo số shard: 50 000 × 0,0016 × N ms mỗi giây trên mỗi shard.
+  - Cộng router, consumer và producer: ước **8–12 lõi vật lý riêng**. Trên VM này hệ số đo được kém hơn khoảng 5 lần.
+- **Ghi bền:** với cùng định dạng bản ghi, cần ghi khoảng **8 lần nhanh hơn** mức đo ở đây (0,16 ms mỗi sự kiện → ≤ 0,02 ms). Hai hướng:
+  - mỗi instance consumer có nhật ký riêng, tức 8 nhóm partition, mỗi nhóm một SQLite trên NVMe;
+  - hoặc giảm kích thước bản ghi trong nhật ký.
+
+  `FULL` vẫn giữ được nếu fsync dưới 1 ms.
+- **Kafka:** một broker xử lý 50 000 bản tin nhỏ mỗi giây là chuyện bình thường. Nhưng cần ≥ 8 partition và nhiều instance consumer. Khi đó side update phải đi qua một topic riêng (thiết kế trong `docs/SCALE_OUT.md` §"Kết nối luồng"); **demo này chưa dựng phần đó**, mà chạy một consumer với N tiến trình chấm trên một máy.
+- **Kết luận ngoại suy:** 50 000 sự kiện/s là **khả thi về kiến trúc** với khoảng 8–12 lõi riêng, NVMe fsync dưới 1 ms và nhật ký tách theo nhóm partition. Nhưng **chưa được đo**, và không được công bố như kết quả.
+
+### 8.4 Việc tiếp theo nếu muốn đo lại cho đúng
+
+1. Chạy lại `deploy/kafka-demo` trên VM Linux đích. Trước tiên đo fsync trên volume trạng thái (lệnh ở §7.2).
+2. Thêm **pipelining**: chấm lô N+1 trong lúc lô N đang fsync. Đơn vị bền vẫn là một lô.
+3. Nhật ký theo nhóm partition và nhiều instance consumer, với topic side update.
+4. Chỉ công bố thông lượng và p99 đo được trên phần cứng đó, kèm lag và kết quả so tương đương.
+
+**Dọn dẹp:** đã `down -v` riêng project `telecom-kafka-demo` (0 container, 0 volume, 0 mạng còn lại). Docker Desktop và stack EduDSS vẫn chạy. Image `telecom-kafka-demo:local` được giữ làm cache. Số liệu gốc: `deploy/kafka-demo/results/*.json`.
+

@@ -72,7 +72,7 @@ def test_farm_feature_is_exact_under_scale_out():
     assert max(x["farm_cell_sims_1h"] for x in expected) >= 2
     for n in (2, 3):
         stores = [FeatureStore() for _ in range(n)]
-        owns = [(lambda s: lambda m: shard_of_key(m, n) == s)(s) for s in range(n)]
+        owns = [(lambda s: lambda m: shard_of_key(m, n) == s)(s) for s in range(n)]  # noqa: B023
         got = []
         for ev in events:
             owner = shard_of(ev, n)

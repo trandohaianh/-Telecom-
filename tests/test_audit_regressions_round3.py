@@ -6,8 +6,8 @@ import json
 import re
 from pathlib import Path
 
-import security
 import observability
+import security
 
 ROOT = Path(__file__).resolve().parents[1]
 USERS = {"boss": {"role": "admin", "token": "t", "sign_key": "aa" * 32}}
@@ -69,6 +69,7 @@ def test_reordering_between_two_trunks_is_no_longer_unscored():
 
 def test_party_frontiers_survive_checkpoint_and_v1_checkpoints_stay_strict():
     import json as _json
+
     from ingest_guard import ADMITTED, LATE, IngestGuard
     g = IngestGuard(allowed_lateness_s=120.0)
     g.admit(_call(2000, "84900000001", "A"))
@@ -86,6 +87,7 @@ def test_party_frontiers_survive_checkpoint_and_v1_checkpoints_stay_strict():
 
 def test_feature_store_stays_causal_and_restorable_under_bounded_disorder():
     import json as _json
+
     from feature_store import FeatureStore
     fs = FeatureStore()
     victim = "84900000099"

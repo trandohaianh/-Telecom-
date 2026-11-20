@@ -3,10 +3,9 @@ import json
 import unittest
 
 import pandas as pd
-
 from distributed_stream import entity_partition, event_records, state_records
-from test_stateful_stream import event, reference
 from stateful_stream import CALL_FEATURES
+from test_stateful_stream import event, reference
 
 
 class Record(dict):
@@ -57,8 +56,9 @@ class PersistentKernelTests(unittest.TestCase):
 
 class PersistentContractTests(unittest.TestCase):
     def test_manifest_namespace_and_configuration_binding(self):
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
         from distributed_stream import DistributedCallStream
         with tempfile.TemporaryDirectory() as directory:
             checkpoint = Path(directory)
@@ -104,6 +104,7 @@ class DistributedIntegerCapacityValidationTests(unittest.TestCase):
     def test_non_integer_capacities_rejected_before_checkpoint_creation(self):
         import tempfile
         from pathlib import Path
+
         from distributed_stream import DistributedCallStream
 
         invalid_settings = (
@@ -112,7 +113,7 @@ class DistributedIntegerCapacityValidationTests(unittest.TestCase):
             ("retain_snapshots", 3),
         )
         source = {"bootstrap": "test", "topic": "integer-validation"}
-        for name, valid in invalid_settings:
+        for name, _valid in invalid_settings:
             for invalid in (1.5, 2.0, True):
                 with self.subTest(name=name, invalid=invalid), tempfile.TemporaryDirectory() as directory:
                     root = Path(directory)

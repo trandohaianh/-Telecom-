@@ -1,0 +1,4 @@
+# Công cụ phát triển (không vào image). Cài:  pip install -r requirements-dev.txt
+ruff==0.17.6          # lint + format Python (cấu hình: pyproject.toml)
+pre-commit==4.7.0     # hook trước commit (cấu hình: .pre-commit-config.yaml)
+pip-tools==7.7.0      # sinh requirements-serve.lock có hash:  pip-compile --generate-hashes ...

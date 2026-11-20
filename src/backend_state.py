@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import contextlib
-from contextlib import contextmanager
-
 import hashlib
 import json
 import math
@@ -11,6 +9,7 @@ import os
 import sqlite3
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 

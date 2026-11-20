@@ -1,10 +1,11 @@
 """Authenticated production boundary for the RAM-first online policy gate."""
 from __future__ import annotations
+
 import asyncio
-from contextlib import asynccontextmanager, suppress
-from dataclasses import asdict
 import hmac
 import os
+from contextlib import asynccontextmanager, suppress
+from dataclasses import asdict
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field

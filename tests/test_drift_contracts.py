@@ -57,6 +57,7 @@ def test_nonfinite_scores_are_quality_alerts_not_apparent_allow_traffic():
 
 def test_shadow_cli_passes_only_scored_call_features_segments_and_event_times(tmp_path, monkeypatch):
     import json
+
     import shadow_run
     events = [dict(event_id="one", event_type="CALL", ts=100.0, caller="A", callee="B", label=0),
               dict(event_id="late", event_type="CALL", ts=90.0, caller="A", callee="B", label=0)]

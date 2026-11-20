@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import AsyncExitStack, asynccontextmanager
 import logging
+from contextlib import AsyncExitStack, asynccontextmanager
 
 log = logging.getLogger(__name__)
 

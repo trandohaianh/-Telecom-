@@ -9,20 +9,27 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import shutil
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from event_contract import (
+    fsync_directory,
+    json_safe,
+    order_key,
+    payload_hash,
+    require_checkpoint_namespace,
+    validate_call,
+)
+
 from feature_store import CALL_FEATURES, FeatureStore
-from event_contract import (fsync_directory, json_safe, order_key, payload_hash, validate_call,
-                            require_checkpoint_namespace)
 
 
 class StatefulCallStream:

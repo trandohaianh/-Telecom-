@@ -2,19 +2,18 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import uuid
+from pathlib import Path
 
 import pandas as pd
+from event_contract import json_safe
 from kafka import KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
-
-from stateful_stream import StatefulCallStream, CALL_FEATURES
 from make_sample import reference_features
-from event_contract import json_safe
+from stateful_stream import CALL_FEATURES, StatefulCallStream
 
 
 def main():

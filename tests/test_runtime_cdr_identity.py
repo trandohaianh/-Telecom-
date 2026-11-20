@@ -1,7 +1,7 @@
 """Completed CDR identities survive cross-link validation, cache eviction and restart."""
 import asyncio
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -87,7 +87,7 @@ def seed_completed_legacy_pair(directory):
 
 def test_legacy_contradictory_completed_pairs_retry_from_cache_eviction_and_restart(tmp_path):
     original_setup, conflicting_cdr = seed_completed_legacy_pair(tmp_path)
-    for restart in range(2):
+    for _restart in range(2):
         runtime, state, detector = create_runtime(tmp_path, cache_capacity=1)
         try:
             before = state.journal_after(0)

@@ -7,8 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     KAFKA_DEMO_STATE=/srv/state FRAUD_SQLITE_SYNCHRONOUS=FULL
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
 WORKDIR /srv/app
-COPY requirements-serve.txt deploy/kafka-demo/requirements-kafka.txt ./
-RUN python -m pip install --no-cache-dir -r requirements-serve.txt -r requirements-kafka.txt && python -m pip check
+COPY requirements-serve.lock deploy/kafka-demo/requirements-kafka.txt ./
+RUN python -m pip install --no-cache-dir --require-hashes -r requirements-serve.lock     && python -m pip install --no-cache-dir -r requirements-kafka.txt && python -m pip check
 COPY src ./src
 COPY static ./static
 COPY runtime/artifacts_v22 ./runtime/artifacts_v22

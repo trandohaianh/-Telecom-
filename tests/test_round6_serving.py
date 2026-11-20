@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 
-
 from backend_state import BackendState
 
 ROOT = Path(__file__).resolve().parents[1]

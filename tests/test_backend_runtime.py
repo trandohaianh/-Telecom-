@@ -295,9 +295,10 @@ def test_pending_voice_observation_recovery_never_enters_synthetic_detector(tmp_
 
 
 def test_noncausal_rescore_never_learns_deny_or_notifies_as_confirmed_fraud(tmp_path):
-    from agent import OpsAgent
-    from collections import deque, defaultdict, Counter
+    from collections import Counter, defaultdict, deque
     from types import SimpleNamespace
+
+    from agent import OpsAgent
     detector = FakeDetector()
     guarded = GuardedDetector(detector, budget_ms=1000)
     guarded.chaos_error = True
@@ -331,8 +332,9 @@ def test_formatted_phone_numbers_remain_masked(number):
 
 
 def test_review_only_retro_does_not_reach_subscribers_or_group_tracking():
+    from collections import defaultdict, deque
+
     import server
-    from collections import deque, defaultdict
     engine = server.LiveEngine.__new__(server.LiveEngine)
     engine.lock = threading.RLock()
     engine.alerts = deque(maxlen=60)
@@ -392,8 +394,9 @@ def test_checkpoint_pins_model_before_loading_feature_state(tmp_path):
 
 
 def test_fail_open_and_public_api_use_loaded_bundle_provenance(tmp_path, monkeypatch):
-    import server
     from fastapi.testclient import TestClient
+
+    import server
     detector = FakeDetector()
     detector.model_version = "loaded-new-version"
     detector.model_manifest = {"status": "verified", "manifest_sha256": "1234"}
@@ -505,8 +508,9 @@ def test_runtime_uses_full_precise_deadline_without_waiting_for_slow_model(tmp_p
 
 
 def test_completed_work_returns_without_an_extra_loop_turn_before_deadline(tmp_path, monkeypatch):
-    import backend_runtime as module
     from concurrent.futures import Future
+
+    import backend_runtime as module
     runtime, state, _ = make_runtime(tmp_path)
     original_wait = module.await_precise_deadline
     waits = []

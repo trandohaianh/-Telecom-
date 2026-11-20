@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 def main():
@@ -41,8 +41,9 @@ def main():
             print(f"    {user['role']:<8} {name:<14} {user['token']}")
     print(f"  Network HMAC key file: {NETWORK_KEY_FILE}")
     # Import native numerical modules before starting the asynchronous server on Windows.
-    from server import app
     import uvicorn
+
+    from server import app
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning",
                 loop="precise_event_loop:uvicorn_loop_factory")
 

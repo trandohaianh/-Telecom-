@@ -9,17 +9,17 @@ shard of a low-latency store (e.g. Redis / Aerospike) keyed exactly like a Kafka
 """
 from __future__ import annotations
 
-import copy
-from contextlib import contextmanager
 import bisect
+import copy
 import heapq
 import math
 import re
 import time
 from collections import defaultdict, deque
+from contextlib import contextmanager
 
 from config import local_hour
-from data_generator import GATEWAY_TACS, OFFICIAL_DOMAINS, PROTECTED_CLI, REGISTERED_CELLS, BRAND_SENDERS
+from data_generator import BRAND_SENDERS, GATEWAY_TACS, OFFICIAL_DOMAINS, PROTECTED_CLI, REGISTERED_CELLS
 
 # Các hằng số thời gian xác định window 1 phút, 10 phút, 1 giờ và 24 giờ cho feature.
 H1, M10, M1, D1 = 3600.0, 600.0, 60.0, 86400.0

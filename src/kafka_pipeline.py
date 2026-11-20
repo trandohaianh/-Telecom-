@@ -452,6 +452,7 @@ def _producer_proc(bootstrap, events, rate, out):
 
 def bench(args) -> dict:
     import multiprocessing as mp
+
     from confluent_kafka import Consumer, Producer
     _bundle_env()
     import evaluate

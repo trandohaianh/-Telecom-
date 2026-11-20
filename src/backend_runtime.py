@@ -8,21 +8,21 @@ from __future__ import annotations
 import asyncio
 import collections
 import copy
-import math
-import os
 import hashlib
 import json
+import math
+import os
 import queue
 import threading
 import time
 from concurrent.futures import Future
 from dataclasses import dataclass
 
-from backend_state import BackendState, EventConflict
 from backend_model_identity import loaded_model_identity
+from backend_state import BackendState, EventConflict
 from config import MODEL_VERSION
 from ingest_guard import ADMITTED, IngestGuard
-from resilience import fail_open_result, RescoreStateRestoreError
+from resilience import RescoreStateRestoreError, fail_open_result
 
 REQUIRED = {
     "CALL": ("event_id", "ts", "caller", "callee", "cell_id", "imei", "origin_trunk", "network"),
@@ -693,7 +693,7 @@ class InferenceRuntime:
                 legacy = dict(event, schema_version="voice-acoustic-v1")
                 previous = self.state.lookup_completed("OBSERVATION", legacy)
                 if previous is None:
-                    raise EventConflict("legacy audio observation is incomplete; explicit recovery is required")
+                    raise EventConflict("legacy audio observation is incomplete; explicit recovery is required") from None
                 return previous
         previous = await asyncio.to_thread(lookup)
         return dict(previous, duplicate=True) if previous is not None else None
@@ -777,7 +777,7 @@ class InferenceRuntime:
             finally:
                 self._owner_busy_since = 0.0
                 self._last_owner_progress = time.perf_counter()
-                for work in works:
+                for _ in works:
                     self.queue.task_done()
             # Under steady traffic the queue is never empty for 100 ms, so idle-only draining
             # starved the rescore queue until it silently dropped its oldest fail-open events.

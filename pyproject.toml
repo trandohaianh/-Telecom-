@@ -1,0 +1,43 @@
+# Cấu hình công cụ dùng chung (không đóng gói dự án thành package). Chạy:
+#   ruff check .          # lint
+#   ruff format .         # format
+# Phiên bản công cụ ghim trong requirements-dev.txt; hook trong .pre-commit-config.yaml; CI job "lint".
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests", "evals"]
+extend-exclude = [
+    "backup_tfd-v2.0", ".codex_backups", "backups", "logs", "runtime", "data", "secrets",
+    "android", "docs/build", "edu_dss",   # edu_dss: tách sang nhánh/repo riêng (edudss-standalone)
+]
+
+[tool.ruff.lint]
+# Lỗi thật trước, phong cách sau: pyflakes, lỗi cú pháp/runtime, bugbear, thứ tự import, lỗi pylint mức E.
+select = ["F", "E4", "E7", "E9", "B", "I", "PLE"]
+ignore = [
+    "B008",   # Depends()/Query()/Header() trong tham số mặc định là cách viết chuẩn của FastAPI
+    "B905",   # zip(strict=...): phần lớn là cặp cùng độ dài theo cấu trúc; không bắt buộc toàn repo
+    "E701",   # nhiều lệnh trên một dòng: phong cách cũ của repo, không phải lỗi
+    "E702",
+    "E731",   # gán lambda: dùng có chủ đích cho hàm ngắn cục bộ
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Script/test chèn sys.path trước khi import mã nguồn
+"evals/*.py" = ["E402"]
+"spark/*.py" = ["E402"]
+"tests/*.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "accounts", "agent", "appdb", "backend_evidence", "backend_runtime", "backend_state", "build_dataset",
+    "carrier_bridge", "commercial_registry", "compare_models", "config", "costs", "data_generator", "detector",
+    "drift", "evaluate", "events_io", "evidence", "fast_iforest", "feature_store", "gc_tuning", "http_hardening",
+    "ingest_guard", "kafka_pipeline", "observability", "ops_pipeline", "portal", "push", "reason_codes",
+    "resilience", "scaleout", "security", "server", "statistical_reporting", "textnorm", "train", "voice_api",
+    "voice_model", "voice_pipeline",
+]
+
+[tool.ruff.format]
+quote-style = "preserve"

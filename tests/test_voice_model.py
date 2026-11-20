@@ -1,15 +1,15 @@
 import csv
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from voice_model import RealVoiceModel, calibrate, fpr_upper, feature_vector
-from voice_pipeline import analyze_wav
-from train_voice import train, validate_manifest
 from test_voice_pipeline import tone, wav_bytes
+from train_voice import train, validate_manifest
+from voice_model import RealVoiceModel, calibrate, feature_vector, fpr_upper
+from voice_pipeline import analyze_wav
 
 
 def records():

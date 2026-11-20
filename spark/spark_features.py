@@ -9,11 +9,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pyspark
-from pyspark.sql import SparkSession, Window, functions as F, types as T
+from pyspark.sql import SparkSession, Window
+from pyspark.sql import functions as F
+from pyspark.sql import types as T
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent / "src"
@@ -45,6 +47,7 @@ def add_features(df, partitions=8):
 
 def run_batch(spark, events_csv, out, *, engine="distributed", partitions=8):
     from event_contract import validate_call
+
     from feature_store import CALL_FEATURES, FeatureStore
     data = spark.read.csv(str(events_csv), header=True, schema=EVENT_SCHEMA, enforceSchema=False)
     validated = data.rdd.map(lambda row: validate_call(row.asDict())).filter(lambda row: row is not None)

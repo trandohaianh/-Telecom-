@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import bisect
-from collections import Counter, defaultdict
 import math
+from collections import Counter, defaultdict
 
 from statistical_reporting import fpr_report, wilson
 

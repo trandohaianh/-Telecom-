@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def read(rel):
-    from _pages import page_source        # HTML + the page's local .js files (scripts moved out for the CSP)
+    from _pages import page_source  # HTML + the page's local .js files (scripts moved out for the CSP)
     return page_source(rel)
 
 
@@ -310,6 +310,7 @@ def test_android_release_cannot_be_pointed_at_another_server():
 # =========================================================================== dry run Docker thật (17/11/2026)
 def test_demo_evidence_rotates_and_both_chains_stay_valid(tmp_path):
     import time as _t
+
     from backend_evidence import DurableEvidenceLog
     from backend_state import BackendState
     from evidence import verify

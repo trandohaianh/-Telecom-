@@ -13,10 +13,9 @@ import pytest
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
 
-import drift                                                    # noqa: E402
-from feature_store import FeatureStore                          # noqa: E402
-from ingest_guard import (ADMITTED, DUPLICATE, LATE, ActionLedger,  # noqa: E402
-                          IngestGuard, event_key)
+import drift  # noqa: E402
+from feature_store import FeatureStore  # noqa: E402
+from ingest_guard import ADMITTED, DUPLICATE, LATE, ActionLedger, IngestGuard, event_key  # noqa: E402
 
 
 def call(ts, caller="84900000001", callee="84900000002", eid=None, **kw):

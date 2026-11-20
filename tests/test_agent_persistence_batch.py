@@ -1,14 +1,14 @@
 """A burst of proposals must not rewrite the full SQLite snapshot per proposal."""
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+import security
 from agent import OpsAgent
 from backend_state import BackendState
-import security
-from test_agent_privacy import FakeEngine, USERS, hit
+from test_agent_privacy import USERS, FakeEngine, hit
 
 
 class CountingState(BackendState):

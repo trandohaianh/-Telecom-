@@ -8,9 +8,9 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from detector import Detector
 from feature_store import FeatureStore
 from ingest_guard import ADMITTED, DUPLICATE, LATE, IngestGuard, event_key
-from detector import Detector
 
 
 def call(ts, eid="call", **extra):
@@ -212,6 +212,7 @@ def test_policy_failure_rolls_back_harvest_memory_and_audio_state():
 
 def test_three_real_calls_keep_exact_serving_features_through_feedback_export(tmp_path):
     import csv
+
     from backend_state import BackendState
     from feature_store import CALL_FEATURES
     from shadow_feedback import build_feedback

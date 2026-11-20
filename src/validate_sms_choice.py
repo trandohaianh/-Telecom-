@@ -49,7 +49,7 @@ VARIANTS = 10   # random rewrites per phishing message and perturbation
 
 # ------------------------------------------------------------------ step 3: perturbations
 URL_RE = re.compile(r"https?://\S+")
-SPLIT_SEPS = [".", "-", " ", "_", "​"]          # ​ = zero-width space, invisible on the phone
+SPLIT_SEPS = [".", "-", " ", "_", "\u200b"]          # ​ = zero-width space, invisible on the phone
 LEET_NEW = str.maketrans({"a": "4", "t": "7", "g": "9", "b": "8", "o": "0", "i": "1", "e": "3"})
 TEENCODE = {"tai khoan": "tk", "quy khach": "qk", "khong": "ko", "duoc": "dc", "ngay": "ngayy", "truy cap": "vao",
             "xac thuc": "xthuc", "thong bao": "tb", "ban": "b", "cua": "of", "nhan": "nhanh tay nhan"}
@@ -134,7 +134,7 @@ def stress_sets(fraud: pd.DataFrame):
                 if meta is not None:
                     row.update(meta)
                     if meta["url_unofficial"] == 0.0:
-                        row["text"] = URL_RE.sub(lambda _: f"https://drive.google.com/{r.randint(1000, 99999)}", row["text"])
+                        row["text"] = URL_RE.sub(lambda _: f"https://drive.google.com/{r.randint(1000, 99999)}", row["text"])  # noqa: B023
                 rows.append(row)
             sets[(ch, name)] = pd.DataFrame(rows)
     return sets

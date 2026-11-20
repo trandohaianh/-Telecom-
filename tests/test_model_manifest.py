@@ -6,11 +6,17 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from model_manifest import (MODEL_ARTIFACTS, TRAIN_FEATURES, validate_dataset_manifest,
-                            validate_model_manifest, write_dataset_manifest, write_model_manifest)
+import train
+from model_manifest import (
+    MODEL_ARTIFACTS,
+    TRAIN_FEATURES,
+    validate_dataset_manifest,
+    validate_model_manifest,
+    write_dataset_manifest,
+    write_model_manifest,
+)
 from statistical_reporting import threshold_validation
 from train import calibration_frame, calibration_report
-import train
 
 
 def bundle(path):

@@ -63,7 +63,7 @@ class BodyLimitMiddleware:
         self.app = app
         self.max_bytes = max_body_bytes() if max_bytes is None else max_bytes
         if large_bytes is None:
-            from voice_api import MAX_BODY_BYTES as large_bytes   # signed WAV upload (base64)
+            from voice_api import MAX_BODY_BYTES as large_bytes  # signed WAV upload (base64)
         self.large_bytes = large_bytes
 
     def _limit(self, path: str) -> int:

@@ -13,57 +13,73 @@ from __future__ import annotations
 # collections cung cấp bộ đếm và hàng đợi có giới hạn cho trạng thái dashboard.
 import asyncio
 import collections
-import os
-from pathlib import Path
+
 # contextlib tạo lifespan (khởi động / tắt) cho FastAPI.
 import contextlib
+
 # gc dùng để dọn rác và đóng băng các đối tượng dùng chung trước khi stream chạy.
 # json đọc các file số liệu đã lưu và giải mã bản ghi bằng chứng.
 import json
-import re
+import os
+
 # queue chuyển các sự kiện thử tấn công từ request API sang thread xử lý.
 import queue
+import re
+
+# secrets tạo token phiên cho app thuê bao.
+import secrets
+
 # threading chạy luồng giả lập song song với máy chủ web.
 import threading
+
 # time đo thời gian, tạo mốc sự kiện và hiển thị thời gian trên cảnh báo.
 import time
+
 # Future cho phép request chờ thread nền xử lý xong sự kiện được tiêm.
 from concurrent.futures import Future
+from pathlib import Path
 
 # NumPy tính phân vị độ trễ từ mẫu được giữ trong bộ đệm.
 import numpy as np
-# secrets tạo token phiên cho app thuê bao.
-import secrets
+
 # FastAPI định nghĩa ứng dụng và lỗi HTTP; JSONResponse trả JSON trực tiếp.
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-# Nạp cấu hình đường dẫn và giới hạn SLA của hệ thống.
-from config import DATA_DIR, LOG_DIR, MODEL_DIR, SLA_TIER1_MS, SLA_TIER2_MS, STATIC_DIR
-from backend_state import BackendState, EventConflict
-from backend_model_identity import loaded_model_identity
-from backend_runtime import InferenceRuntime, REQUIRED, validate_event
-from backend_evidence import DurableEvidenceLog
-# TrafficSimulator tạo các sự kiện tấn công nhân tạo cho các nút demo; PROTECTED_CLI là số tổng đài chính thức.
-from data_generator import PROTECTED_CLI, TrafficSimulator
-# Detector trích xuất đặc trưng và chấm điểm sự kiện bằng các mô hình đã huấn luyện.
-from detector import Detector
-# Hàm load_events đọc các tệp sự kiện đã tạo trước.
-from events_io import load_events
-# verify kiểm tra tính toàn vẹn của chuỗi bằng chứng (ghi qua DurableEvidenceLog).
-from evidence import verify_in_subprocess
-import http_hardening
-# GuardedDetector bọc detector để áp dụng timeout, luật dự phòng, fail-open và circuit breaker.
-from resilience import GuardedDetector
 # Phân quyền theo vai trò, che số điện thoại cho người xem và nhật ký thao tác có chữ ký.
 import accounts
-import security
-from security import DEMO_MODE, AuditLog, mask_imei, mask_number, require, verify_audit
-# AI agent vận hành: giám sát và đề xuất, con người quyết định.
-from agent import OpsAgent
+import http_hardening
+
 # Tài khoản thuê bao, quản trị, chi phí, pipeline vận hành và /metrics.
 import portal
+import security
+
+# AI agent vận hành: giám sát và đề xuất, con người quyết định.
+from agent import OpsAgent
+from backend_evidence import DurableEvidenceLog
+from backend_model_identity import loaded_model_identity
+from backend_runtime import REQUIRED, InferenceRuntime, validate_event
+from backend_state import BackendState, EventConflict
+
+# Nạp cấu hình đường dẫn và giới hạn SLA của hệ thống.
+from config import DATA_DIR, LOG_DIR, MODEL_DIR, SLA_TIER1_MS, SLA_TIER2_MS, STATIC_DIR
+
+# TrafficSimulator tạo các sự kiện tấn công nhân tạo cho các nút demo; PROTECTED_CLI là số tổng đài chính thức.
+from data_generator import PROTECTED_CLI, TrafficSimulator
+
+# Detector trích xuất đặc trưng và chấm điểm sự kiện bằng các mô hình đã huấn luyện.
+from detector import Detector
+
+# Hàm load_events đọc các tệp sự kiện đã tạo trước.
+from events_io import load_events
+
+# verify kiểm tra tính toàn vẹn của chuỗi bằng chứng (ghi qua DurableEvidenceLog).
+from evidence import verify_in_subprocess
+
+# GuardedDetector bọc detector để áp dụng timeout, luật dự phòng, fail-open và circuit breaker.
+from resilience import GuardedDetector
+from security import DEMO_MODE, AuditLog, mask_imei, mask_number, require, verify_audit
 
 # Tốc độ phát sự kiện mẫu trên giao diện; đây là tốc độ demo, không phải năng lực cực đại của engine.
 DEMO_RATE = 300          # sự kiện/giây hiển thị trên dashboard; engine đạt khoảng 15k/s mỗi lõi
@@ -482,7 +498,7 @@ class LiveEngine:
         try:
             self.inject_q.put_nowait((evs, fut))
         except queue.Full:
-            raise HTTPException(503, "demo injection queue is full")
+            raise HTTPException(503, "demo injection queue is full") from None
         # Chờ tối đa 10 giây; timeout sẽ báo lỗi thay vì giả vờ injection thành công.
         res = fut.result(timeout=10)
         # Chỉ trả các trường cần thiết để giao diện thống kê và hiển thị lý do.
@@ -650,7 +666,7 @@ async def api_login(request: Request, authorization: str = Header(default="")):
         try:
             body = portal.OperatorLogin(**(await request.json()))
         except Exception:
-            raise HTTPException(422, "username and password required")
+            raise HTTPException(422, "username and password required") from None
         out = portal.operator_password_login(body, request)
     else:
         out = security.login(security.bearer(authorization))
@@ -727,9 +743,9 @@ def api_agent_decide(pid: str, decision: str | None = None, note: str = "", body
     try:
         return engine.agent.decide(pid, u["name"], decision == "approve", note.strip()[:300])
     except KeyError:
-        raise HTTPException(404, "unknown proposal")
+        raise HTTPException(404, "unknown proposal") from None
     except ValueError as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409, str(exc)) from exc
 
 
 @app.get("/api/metrics")
@@ -868,7 +884,7 @@ async def network_request(request: Request):
     try:
         ev = validate_event(json.loads(body), "CDR" if request.url.path.endswith("/cdr") else "VERDICT")
     except (ValueError, TypeError, RecursionError) as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     # Yêu cầu đã ký trong ±30 s đồng hồ thật, nên mốc sự kiện kiểu Unix không thể ở xa trong tương lai.
     # Một mốc như vậy sẽ đẩy watermark của IngestGuard và làm mọi sự kiện thật sau đó thành LATE (không chấm).
     # Mốc < 1e9 là đồng hồ giả lập (demo/kiểm thử bắt đầu từ 0) nên không so với đồng hồ thật.
@@ -891,7 +907,7 @@ async def network_verdict(request: Request):
     try:
         result = await engine.submit_event(ev)
     except EventConflict as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409, str(exc)) from exc
     action = result["decision"] if (engine.network_mode == "enforce" and result.get("ingest") == "ADMITTED"
                                       and result.get("actionable") and not result.get("duplicate")) else "NONE"
     # These fields are already JSON-native. Returning the response directly avoids
@@ -921,7 +937,7 @@ async def network_cdr(request: Request):
     try:
         result = await engine.runtime.submit("CDR", ev, budget_ms=SLA_TOTAL_NETWORK_MS)
     except EventConflict as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409, str(exc)) from exc
     if result.get("pending"):
         return JSONResponse(result, status_code=202)
     if not result.get("ok"):
@@ -944,7 +960,7 @@ async def record_voice_observation(event, result):
     try:
         return await engine.record_observation(event, result)
     except EventConflict as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409, str(exc)) from exc
 
 
 async def lookup_voice_observation(event):
@@ -953,10 +969,11 @@ async def lookup_voice_observation(event):
     try:
         return await engine.runtime.lookup_observation(event)
     except EventConflict as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409, str(exc)) from exc
 
 
-from voice_api import create_voice_router
+from voice_api import create_voice_router  # noqa: E402
+
 app.include_router(create_voice_router(submit_event=submit_voice_event,
                                       mode=lambda: engine.network_mode if engine else "shadow",
                                       record_observation=record_voice_observation,

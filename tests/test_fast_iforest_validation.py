@@ -1,9 +1,11 @@
 """Native Isolation Forest inputs and degenerate training sets."""
-from pathlib import Path
 import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 from sklearn.ensemble import IsolationForest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import fast_iforest
 from fast_iforest import FastIForest

@@ -31,3 +31,13 @@ android/app/build/
 android/.idea/
 spark/_checkpoint_*/
 spark/.review-backup-*/
+
+# Bí mật cục bộ: mọi .env thật (chỉ commit *.env.example), khoá, và tài liệu Word cá nhân
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+*.key
+*.pem
+*.docx

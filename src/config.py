@@ -1,6 +1,6 @@
 """Central configuration for the Telecom Fraud Detection MVP (v2)."""
-from pathlib import Path
 import os
+from pathlib import Path
 
 # ROOT là thư mục gốc của dự án v2, dùng làm cơ sở tính các đường dẫn data/models/logs/static.
 ROOT = Path(__file__).resolve().parents[1]

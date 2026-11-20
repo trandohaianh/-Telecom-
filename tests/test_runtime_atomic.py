@@ -5,13 +5,12 @@ No trained model is needed: counted feature state isolates persistence and concu
 from __future__ import annotations
 
 import asyncio
-from contextlib import contextmanager
 import json
-from pathlib import Path
 import sqlite3
 import sys
 import threading
-
+from contextlib import contextmanager
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from backend_runtime import InferenceRuntime

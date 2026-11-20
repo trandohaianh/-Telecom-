@@ -89,6 +89,7 @@ def test_numbers_rotating_over_several_devices_are_one_group(agent):
 
 def test_incremental_chain_check_only_reads_new_lines(tmp_path):
     import json
+
     from evidence import EvidenceLog, verify_incremental
     p = tmp_path / "ev.jsonl"
     log = EvidenceLog(p, sample_allow_every=1)
@@ -188,6 +189,7 @@ def test_mask_imei_keeps_only_the_device_model():
 @pytest.fixture()
 def client(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
+
     import server
     monkeypatch.setattr(security, "_users_cache", USERS)
     monkeypatch.setattr(server, "audit", security.AuditLog(tmp_path / "audit.jsonl", user_db=USERS))

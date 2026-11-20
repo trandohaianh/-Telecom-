@@ -1,15 +1,14 @@
 """Network HMAC key caching keeps file reads out of the HTTP verification path."""
+import sys
+import threading
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-import sys
-import threading
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import security
-
 
 KEY = bytes(range(32))
 ROTATED_KEY = bytes(reversed(range(32)))

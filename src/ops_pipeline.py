@@ -122,8 +122,8 @@ def kpi_snapshot(db: AppDB, engine) -> tuple[str, dict]:
 
 
 def backup(db: AppDB, engine) -> tuple[str, dict]:
-    from config import LOG_DIR
     import security
+    from config import LOG_DIR
 
     keep = int(os.environ.get("FRAUD_BACKUP_KEEP", "7"))
     root = Path(os.environ.get("FRAUD_BACKUP_DIR", str(LOG_DIR / "backups")))

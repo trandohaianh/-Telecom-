@@ -14,8 +14,8 @@ import numpy as np
 from build_dataset import make_window
 from config import DATA_DIR, SLA_FEATURE_STORE_MS, SLA_TIER1_MS, SLA_TIER2_MS
 from detector import Detector
-from events_io import load_events
 from evaluation_contracts import call_session_metrics, session_outcomes
+from events_io import load_events
 from statistical_reporting import wilson
 
 RANK = {"ALLOW": 0, "FLAG": 1, "BLOCK": 2}

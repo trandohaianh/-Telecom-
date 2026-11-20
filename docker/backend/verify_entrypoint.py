@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-from importlib.metadata import version
 import json
 import os
-from pathlib import Path
 import platform
 import sys
+from importlib.metadata import version
+from pathlib import Path
 
 PACKAGES = ("numpy", "pandas", "scikit-learn", "lightgbm", "scipy", "numba",
             "fastapi", "uvicorn", "joblib", "httpx")

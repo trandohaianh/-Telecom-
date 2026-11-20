@@ -27,10 +27,10 @@ SRC = HERE.parent / "src"
 sys.path.insert(0, str(SRC))
 
 import pandas as pd  # noqa: E402
+from event_contract import json_safe, validate_call
 
 from data_generator import TrafficSimulator  # noqa: E402
 from feature_store import CALL_FEATURES, FeatureStore  # noqa: E402
-from event_contract import json_safe, validate_call
 
 # Các cột của sự kiện CALL mà Spark sẽ đọc. Giữ đúng tên như generator sinh ra.
 EVENT_COLS = ["event_id", "event_type", "ts", "caller", "callee", "cell_id", "imei",

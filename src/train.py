@@ -51,8 +51,7 @@ def floor(th, kind):
     return {k: max(v, FLOORS[kind].get(k, 0.0)) for k, v in th.items()}
 
 
-from textnorm import normalize as strip_accents  # fast Vietnamese accent folding (shared with runtime)
-
+from textnorm import normalize as strip_accents  # fast Vietnamese accent folding (shared with runtime)  # noqa: E402
 
 # Probabilities never exceed 1.0, so this threshold disables an action while staying finite (JSON-safe).
 BLOCK_DISABLED = float(np.nextafter(1.0, np.inf))

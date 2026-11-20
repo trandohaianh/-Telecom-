@@ -6,18 +6,25 @@ filesystem; this is distributed full-snapshot state, not an incremental state AP
 """
 from __future__ import annotations
 
-from collections import deque
-from functools import partial
-from itertools import groupby
 import json
 import math
-from pathlib import Path
 import shutil
 import tempfile
 import time
+from collections import deque
+from functools import partial
+from itertools import groupby
+from pathlib import Path
 
-from event_contract import (EVENT_FIELDS, fsync_directory, json_safe, order_key, payload_hash, validate_call,
-                            require_checkpoint_namespace)
+from event_contract import (
+    EVENT_FIELDS,
+    fsync_directory,
+    json_safe,
+    order_key,
+    payload_hash,
+    require_checkpoint_namespace,
+    validate_call,
+)
 
 
 def classify_record(record):
@@ -54,8 +61,8 @@ def event_records(record, entity):
 
 
 def entity_partition(records, *, entity, watermark, metadata_ttl_s):
-    from feature_store import FarmCellWindow, FeatureStore
     from data_generator import REGISTERED_CELLS
+    from feature_store import FarmCellWindow, FeatureStore
     for key, group in groupby(records, key=lambda record: record[0][0]):
         store = FeatureStore() if entity == "subscriber" else None
         links = {}
@@ -198,6 +205,7 @@ class DistributedCallStream:
     @staticmethod
     def _feature_schema():
         from pyspark.sql import types as T
+
         from feature_store import CALL_FEATURES
         return T.StructType([T.StructField(key, T.DoubleType()) for key in CALL_FEATURES])
 
@@ -238,7 +246,9 @@ class DistributedCallStream:
 
     def _process(self, frame, batch_id, *, flush):
         from pyspark import StorageLevel
-        from pyspark.sql import functions as F, types as T
+        from pyspark.sql import functions as F
+        from pyspark.sql import types as T
+
         from feature_store import CALL_FEATURES
         started = time.perf_counter()
         target = self.root / f"{'flush' if flush else 'batch'}-{batch_id:020d}"

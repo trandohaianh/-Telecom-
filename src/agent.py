@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import collections
 import contextlib
-import uuid
 import threading
 import time
+import uuid
 
 from security import mask_imei, mask_number
 

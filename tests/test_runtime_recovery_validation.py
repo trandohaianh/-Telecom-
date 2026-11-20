@@ -1,10 +1,12 @@
 """Invalid inputs cannot poison the inference owner; failed rollback requires recovery."""
 import asyncio
 import json
-from pathlib import Path
 import sys
 import threading
+from pathlib import Path
+
 import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from backend_runtime import validate_event
 from test_backend_runtime import call, make_runtime
@@ -31,9 +33,10 @@ def test_invalid_operation_is_rejected_before_enqueue():
 
 
 def test_signed_overflow_returns_400_before_engine(monkeypatch):
+    from fastapi.testclient import TestClient
+
     import security
     import server
-    from fastapi.testclient import TestClient
     key = bytes.fromhex("5a" * 32)
     monkeypatch.setattr(security, "network_key", lambda: key)
     monkeypatch.setattr(server, "engine", None)
@@ -142,6 +145,7 @@ def test_retro_callback_failure_applies_backpressure_before_rescore(tmp_path):
 
 def test_replay_publishes_in_chunks_before_bounded_retro_overflows(tmp_path):
     from collections import deque
+
     from backend_runtime import InferenceRuntime
     from backend_state import BackendState
     from resilience import GuardedDetector

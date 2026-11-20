@@ -214,6 +214,7 @@ def test_new_owner_of_a_number_does_not_inherit_history(env, monkeypatch):  # no
 # =========================================================================== giọng nói
 def test_voice_upload_rejects_oversized_declared_length_before_reading():
     from fastapi import FastAPI
+
     import voice_api
     app = FastAPI()
     app.include_router(voice_api.create_voice_router(model=None, asr=None))

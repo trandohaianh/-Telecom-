@@ -10,13 +10,12 @@ from contextlib import suppress
 from urllib.parse import quote, urlsplit, urlunsplit
 
 import grpc
-from redis.exceptions import RedisError
-
 from ram_online.core import OnlineGate, OnlineUnavailable, PolicyStore, make_client, snapshot_is_fresh
 from ram_online.production import FailOpenGate
-from .tls_config import server_credentials
+from redis.exceptions import RedisError
 
 from . import telecom_pb2, telecom_pb2_grpc
+from .tls_config import server_credentials
 
 
 def policy_url() -> str:

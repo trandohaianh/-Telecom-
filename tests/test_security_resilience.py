@@ -68,6 +68,7 @@ def test_mask_number_hides_the_middle():
 @pytest.fixture()
 def client(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
+
     import server
     monkeypatch.setattr(security, "_users_cache", USERS)
     monkeypatch.setattr(server, "audit", security.AuditLog(tmp_path / "audit.jsonl", user_db=USERS))
@@ -116,7 +117,7 @@ def test_sessions_expire_after_idle_time_and_absolute_ttl():
         assert security.session_user(sid, clock=lambda: t[0]) is None           # idle too long
         sid, *_ = security.login("t-analyst", clock=lambda: 0.0)
         for k in range(1, 20):                                                  # active all day...
-            assert security.session_user(sid, clock=lambda: k * 1500.0) is not None or k * 1500 > security.SESSION_TTL_S
+            assert security.session_user(sid, clock=lambda: k * 1500.0) is not None or k * 1500 > security.SESSION_TTL_S  # noqa: B023
         assert security.session_user(sid, clock=lambda: security.SESSION_TTL_S + 1.0) is None   # ...but not past 8 h
     finally:
         security._users_cache = monkey_users

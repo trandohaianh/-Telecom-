@@ -1,12 +1,13 @@
 import asyncio
-from pathlib import Path
 import sys
 import threading
 import time
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-import http_loadtest
 import pytest
+
+import http_loadtest
 
 
 @pytest.mark.parametrize("strategy", ["thread_sleep", "asyncio_sleep"])

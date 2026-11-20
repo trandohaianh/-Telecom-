@@ -35,7 +35,8 @@ for _city, (_lat, _lon) in CITIES.items():
         REGISTERED_CELLS[f"{_city}-{_i:04d}"] = (_lat + _rng.uniform(-0.15, 0.15), _lon + _rng.uniform(-0.15, 0.15))
 
 # Danh sách số nóng ngân hàng và cơ quan mà cuộc gọi giả mạo cố gắng sao chép.
-from config import LOCAL_UTC_OFFSET_S, local_hour
+from config import LOCAL_UTC_OFFSET_S, local_hour  # noqa: E402
+
 SIM_DAY0_S = 86400.0   # simulated day 0 starts at local midnight of 1970-01-02 (Unix-style seconds)
 
 PROTECTED_CLI = ["1900545413", "1800599928", "02439741234", "1900558868", "02838221234", "113"]  # bank / agency hotlines

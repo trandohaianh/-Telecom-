@@ -11,6 +11,7 @@ import os
 import sys
 from time import get_clock_info, perf_counter
 
+
 class _PreciseClock:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

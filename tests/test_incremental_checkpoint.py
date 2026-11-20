@@ -5,7 +5,6 @@ Run: python -B -m pytest -q tests/test_incremental_checkpoint.py
 import json
 import random
 
-
 from feature_store import FeatureStore
 from ingest_guard import IngestGuard
 
@@ -68,6 +67,7 @@ def test_guard_delta_carries_only_new_keys_and_restores_equal():
 def _submit(rt, ev):
     import time as _t
     from concurrent.futures import Future
+
     from backend_runtime import Work
     seq, _ = rt.state.reserve("VERDICT", ev)
     work = Work(seq, "VERDICT", ev, _t.perf_counter() + 10, _t.perf_counter(), Future())
@@ -77,8 +77,8 @@ def _submit(rt, ev):
 
 def test_runtime_recovers_from_base_plus_deltas(tmp_path):
     """End to end: periodic checkpoints become deltas, and a fresh runtime recovers identical features."""
-    from backend_state import BackendState
     from backend_runtime import InferenceRuntime
+    from backend_state import BackendState
     from resilience import GuardedDetector
 
     class Det:

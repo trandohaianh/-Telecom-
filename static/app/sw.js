@@ -18,7 +18,7 @@ self.addEventListener('fetch', e => {
 
 // Web Push (VAPID): payload chỉ có tiêu đề + một dòng hành động, KHÔNG có số điện thoại hay nội dung SMS.
 self.addEventListener('push', e => {
-  let d = {};
+  let d;
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
   e.waitUntil(self.registration.showNotification(d.title || 'Cảnh báo lừa đảo', {
     body: d.body || 'Mở app để xem chi tiết.', icon: 'icon.svg', badge: 'icon.svg', tag: d.tag || 'fraud-alert',

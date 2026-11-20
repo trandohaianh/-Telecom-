@@ -2,17 +2,17 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import AsyncExitStack, suppress
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
-import signal
 import asyncio
 import json
 import os
+import signal
 import time
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import AsyncExitStack, suppress
+from functools import partial
 
 from .core import PolicyStore, normalize_phone, run
-from .resources import owned_redis, close_async
+from .resources import close_async, owned_redis
 
 WINDOW_LUA = """
 local ts = tonumber(ARGV[1])

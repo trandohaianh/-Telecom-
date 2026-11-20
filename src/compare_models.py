@@ -34,8 +34,15 @@ from build_dataset import make_window, replay
 from config import DATA_DIR, TARGET_BLOCK_FPR, TARGET_FLAG_FPR
 from evaluate import wilson
 from feature_store import AUDIO_FEATURES, CALL_FEATURES
-from train import (ANOMALY_FEATURES, ANOMALY_FLAG_FPR, CALL_FLAG_FPR, SIGNALLING_FRAUD, segment_of, sms_matrix,
-                   threshold_for_fpr)
+from train import (
+    ANOMALY_FEATURES,
+    ANOMALY_FLAG_FPR,
+    CALL_FLAG_FPR,
+    SIGNALLING_FRAUD,
+    segment_of,
+    sms_matrix,
+    threshold_for_fpr,
+)
 
 try:
     import xgboost as xgb

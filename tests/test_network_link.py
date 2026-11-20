@@ -40,6 +40,7 @@ def test_tampered_body_stale_time_and_wrong_key_are_refused():
 @pytest.fixture()
 def client(monkeypatch):
     from fastapi.testclient import TestClient
+
     import server
     monkeypatch.setattr(security, "network_key", lambda: KEY)
     return TestClient(server.app)

@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 
 def main():

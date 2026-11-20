@@ -204,8 +204,8 @@ def markdown(report: dict, fails: list[str], regs: list[str], deltas: dict) -> s
         lines += ["", "## Phục vụ HTTP (tiến trình thật, yêu cầu ký HMAC)", "",
                   "| EPS chào | EPS xong | p50 | p95 | p99 | ≤30ms % | fail-open | client shed |", "|---:|---:|---:|---:|---:|---:|---:|---:|"]
         for r in report["serving"]["runs"]:
-            l = r["latency_ms"]
-            lines.append(f"| {r['offered_rate_eps']} | {r['completed_eps']} | {l['p50']} | {l['p95']} | {l['p99']} | "
+            lat = r["latency_ms"]
+            lines.append(f"| {r['offered_rate_eps']} | {r['completed_eps']} | {lat['p50']} | {lat['p95']} | {lat['p99']} | "
                          f"{r['scored_within_http_30ms_pct']} | {r['fail_open']} | {r['client_shed']} |")
     if gates_info.get("advisory_misses"):
         lines += ["", "## Chỉ tiêu chất lượng chưa đạt (cảnh báo, không chặn)", ""] + [f"- {f}" for f in gates_info["advisory_misses"]]

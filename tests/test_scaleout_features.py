@@ -39,7 +39,7 @@ def test_sharded_features_equal_single_process():
     expected = [_features(single, ev) for ev in events]
     for n in (2, 3, 5):
         stores = [FeatureStore() for _ in range(n)]
-        owns = [(lambda s: lambda m: shard_of_key(m, n) == s)(s) for s in range(n)]
+        owns = [(lambda s: lambda m: shard_of_key(m, n) == s)(s) for s in range(n)]  # noqa: B023
         got = [None] * len(events)
         for i, ev in enumerate(events):
             owner = shard_of(ev, n)

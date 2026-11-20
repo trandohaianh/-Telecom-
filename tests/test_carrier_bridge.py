@@ -1,10 +1,10 @@
 """Carrier bridge: mapping, signing, retry/dead-letter policy, Kafka at-least-once, end-to-end into the API."""
 import asyncio
-from datetime import datetime, timezone
 import io
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx

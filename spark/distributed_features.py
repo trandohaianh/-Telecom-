@@ -80,6 +80,7 @@ def add_distributed_features(frame, partitions: int = 8):
     """
     from pyspark.rdd import portable_hash
     from pyspark.sql import types as T
+
     from feature_store import CALL_FEATURES
 
     def sorted_by_entity(rdd):

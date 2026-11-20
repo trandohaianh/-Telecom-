@@ -2,17 +2,17 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
 import hashlib
 import math
 import re
 import time
 import uuid
+from dataclasses import dataclass, field
 
 import redis.asyncio as redis
+from redis.asyncio.retry import Retry
 from redis.backoff import NoBackoff
 from redis.exceptions import RedisError
-from redis.asyncio.retry import Retry
 
 
 class OnlineUnavailable(RuntimeError):

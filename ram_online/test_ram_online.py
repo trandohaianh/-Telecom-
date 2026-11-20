@@ -3,10 +3,13 @@ import json
 import os
 import time
 import uuid
+
 import pytest
+
 from ram_online.core import BloomFilter, OnlineGate, OnlineUnavailable, PolicyStore, Snapshot, make_client, run
 from ram_online.production import CallDecision
 from ram_online.streaming import SlidingWindowDetector, process_kafka_message
+
 
 def test_call_decision_exposes_unknown_for_fail_open_and_exact_allow_block():
     assert CallDecision(True, "unavailable", "hidden", "policy_unavailable").status == "UNKNOWN"

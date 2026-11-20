@@ -1,8 +1,8 @@
 """Physical audio contracts and API domain separation; generated tones are fixtures, not accuracy evidence."""
 import io
-from pathlib import Path
 import sys
 import wave
+from pathlib import Path
 
 import numpy as np
 import pytest

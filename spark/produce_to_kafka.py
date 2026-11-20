@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import time
+from pathlib import Path
 
 from event_contract import json_safe, validate_call
 
@@ -27,6 +27,7 @@ def replay(rows, producer, topic, *, rate=0.0, speed=0.0,
 
 def main():
     import json
+
     import pandas as pd
     from kafka import KafkaProducer
     parser = argparse.ArgumentParser()

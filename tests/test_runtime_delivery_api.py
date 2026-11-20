@@ -3,9 +3,12 @@ import sys
 import time
 from pathlib import Path
 from types import SimpleNamespace
+
 import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import security
+
 
 @pytest.mark.parametrize("mode,duplicate,actionable,expected", [
     ("enforce", False, True, "BLOCK"),
@@ -14,8 +17,9 @@ import security
     ("shadow", False, True, "NONE"),
 ])
 def test_public_recommendation_requires_fresh_actionable_delivery(monkeypatch, mode, duplicate, actionable, expected):
-    import server
     from fastapi.testclient import TestClient
+
+    import server
     key = bytes.fromhex("b7" * 32)
     result = dict(decision="BLOCK", ingest="ADMITTED", duplicate=duplicate,
                   actionable=actionable, scored=True, scored_before_deadline=actionable and not duplicate,
@@ -40,8 +44,10 @@ def test_public_recommendation_requires_fresh_actionable_delivery(monkeypatch, m
 def test_readiness_detects_stalled_owner_without_waiting_for_sqlite_lock(monkeypatch, tmp_path):
     import asyncio
     import threading
-    import server
+
     from fastapi.testclient import TestClient
+
+    import server
     from test_backend_runtime import FakeDetector, call, make_runtime
     gate, started = threading.Event(), threading.Event()
     runtime, state, _ = make_runtime(tmp_path, FakeDetector(gate=gate, started=started),
@@ -69,8 +75,10 @@ def test_readiness_detects_stalled_owner_without_waiting_for_sqlite_lock(monkeyp
 @pytest.mark.parametrize("maintenance_error", [False, True])
 def test_readiness_detects_stalled_rescore_and_recovers(monkeypatch, tmp_path, maintenance_error):
     import threading
-    import server
+
     from fastapi.testclient import TestClient
+
+    import server
     from test_backend_runtime import make_runtime
     gate, started = threading.Event(), threading.Event()
     runtime, state, _ = make_runtime(tmp_path, start=False, owner_stall_after_s=.03)

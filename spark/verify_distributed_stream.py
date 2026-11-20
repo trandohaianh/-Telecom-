@@ -4,16 +4,15 @@ The controller and every keyed state transition run on Spark workers; only the
 verification step collects the final bounded feature output for comparison.
 """
 import argparse
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import pandas as pd
-
-from spark_features import HERE, SRC, EVENT_SCHEMA
 from event_contract import json_safe, validate_call
 from make_sample import reference_features
+from spark_features import EVENT_SCHEMA, HERE, SRC
 from test_stateful_stream import event
 
 
@@ -58,8 +57,8 @@ def main():
         print(f"PASS: {len(frame)} events,27/27 features,persistent per-key Spark state,two process starts")
         print(f"ARTIFACTS={out}")
         return
-    from pyspark.sql import functions as F
     from distributed_stream import DistributedCallStream
+    from pyspark.sql import functions as F
     spark = spark_session()
     checkpoint = out / "checkpoint"
     source = {"input": str(out / "events.csv"), "test": "distributed-v1"}

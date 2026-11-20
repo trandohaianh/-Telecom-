@@ -1,11 +1,10 @@
 """Malformed CALL quarantine and Spark checkpoint ownership regressions."""
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pandas as pd
-
 from distributed_stream import DistributedCallStream, classify_record
 from event_contract import EVENT_FIELDS, validate_call
 from stateful_stream import StatefulCallStream

@@ -2,9 +2,12 @@ import asyncio
 import sys
 import time
 from pathlib import Path
+
 import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import precise_event_loop as clocks
+
 
 def test_precise_selector_timer_does_not_fire_early():
     loop = clocks.PreciseSelectorEventLoop()

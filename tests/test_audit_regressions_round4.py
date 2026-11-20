@@ -25,7 +25,7 @@ CALL = {"event_type": "CALL", "caller": "84961234567", "callee": "84351234567", 
 
 def _src(*parts):
     if parts[0] == "static" and parts[-1].endswith(".html"):
-        from _pages import page_source    # HTML + the page's local .js files (scripts moved out for the CSP)
+        from _pages import page_source  # HTML + the page's local .js files (scripts moved out for the CSP)
         return page_source("/".join(parts))
     return (ROOT.joinpath(*parts)).read_text(encoding="utf-8")
 
@@ -33,7 +33,9 @@ def _src(*parts):
 # =========================================================================== bảo mật (N1–N10)
 def test_voice_upload_has_a_total_read_deadline(monkeypatch):
     import asyncio
+
     from fastapi import HTTPException
+
     import voice_api
     monkeypatch.setattr(voice_api, "UPLOAD_READ_TIMEOUT_S", 0.2)
     router = voice_api.create_voice_router(model=None, asr=None)
@@ -203,7 +205,8 @@ def test_drift_counts_model_decision_when_delivery_expired():
 
 def test_kafka_future_timestamp_is_retried_not_dead_lettered():
     import asyncio
-    from ram_online.streaming import EventFromFuture, POISON_ERRORS, _is_poison
+
+    from ram_online.streaming import POISON_ERRORS, EventFromFuture, _is_poison
     assert not issubclass(EventFromFuture, POISON_ERRORS) and not _is_poison(EventFromFuture("x"))
     _ = asyncio
 
@@ -221,6 +224,7 @@ def test_first_seen_and_device_links_stay_causal_under_reordering():
 
 def test_checkpoint_count_trigger_and_legacy_frontier_validation():
     import inspect
+
     from backend_runtime import InferenceRuntime
     from ingest_guard import IngestGuard
     assert inspect.signature(InferenceRuntime.__init__).parameters["checkpoint_every"].default >= 100_000
@@ -258,6 +262,7 @@ def test_reveal_reason_is_accepted_in_the_body(env):  # noqa: F811
 # =========================================================================== ML (M2–M9)
 def test_block_threshold_is_bounded_by_clopper_pearson():
     from scipy.stats import beta
+
     from train import BLOCK_DISABLED, threshold_for_fpr_bound
     rng = np.random.default_rng(0)
     neg = rng.random(105_427)

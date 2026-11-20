@@ -1,6 +1,8 @@
 """Minimal async gRPC client; use channel credentials in production."""
 import asyncio
+
 import grpc
+
 from telecom_grpc import telecom_pb2, telecom_pb2_grpc
 
 

@@ -1,8 +1,8 @@
 """Regressions for rescore rollback and acknowledged evidence-tail integrity."""
-from collections import deque
-from pathlib import Path
 import json
 import sys
+from collections import deque
+from pathlib import Path
 
 import pytest
 

@@ -5,21 +5,21 @@ import asyncio
 import base64
 import binascii
 import contextlib
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 import security
 from voice_model import RealVoiceModel
-from voice_pipeline import AudioValidationError, MAX_WAV_BYTES, SCHEMA_VERSION, LocalWhisperASR, analyze_wav
+from voice_pipeline import MAX_WAV_BYTES, SCHEMA_VERSION, AudioValidationError, LocalWhisperASR, analyze_wav
 
 MAX_BODY_BYTES = 4 * ((MAX_WAV_BYTES + 2) // 3) + 65536
 

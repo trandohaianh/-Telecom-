@@ -11,7 +11,6 @@ import time
 from evidence import GENESIS, verify
 
 
-
 def _env_seconds(name, default, lo, hi):
     """Finite float from the environment within [lo, hi]; anything else is a configuration error."""
     import math

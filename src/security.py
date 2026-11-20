@@ -14,7 +14,6 @@ device (asymmetric signatures), and the chain head is anchored periodically in t
 """
 from __future__ import annotations
 
-from collections import OrderedDict
 import hashlib
 import hmac
 import json
@@ -22,6 +21,7 @@ import os
 import secrets
 import threading
 import time
+from collections import OrderedDict
 from pathlib import Path
 
 from fastapi import Header, HTTPException

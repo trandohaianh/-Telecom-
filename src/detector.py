@@ -17,8 +17,8 @@ import numpy as np
 import reason_codes as rc
 from config import MODEL_DIR, MODEL_VERSION
 from fast_iforest import FastIForest
-from model_manifest import validate_model_manifest
 from feature_store import AUDIO_FEATURES, CALL_FEATURES, PROTECTED, SMS_META_FEATURES, FeatureStore
+from model_manifest import validate_model_manifest
 
 # ACTIONS ánh xạ cặp (event_type, decision) sang nhãn tiếng Việt/Anh để UI và operator hiểu hành động.
 ACTIONS = {
@@ -35,7 +35,7 @@ ACTIONS = {
 }
 
 
-from textnorm import normalize as _strip
+from textnorm import normalize as _strip  # noqa: E402
 
 # Một luồng cho mỗi lần chấm điểm. Mặc định LightGBM / Numba dùng MỌI nhân cho từng lô nhỏ và các luồng chờ quay vòng:
 # server demo 300 sự kiện/giây từng chiếm ~4,2 nhân CPU, làm cả máy chậm và đo tải sai. Mở rộng bằng nhiều tiến trình

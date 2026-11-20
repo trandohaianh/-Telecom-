@@ -34,8 +34,9 @@ def main() -> None:
     from security import network_key
 
     network_key()  # tạo khoá HMAC liên kết nhà mạng nếu chưa có (không in ra)
-    from server import app  # noqa: F401  (nạp thư viện số trước khi chạy loop)
     import uvicorn
+
+    from server import app  # noqa: F401  (nạp thư viện số trước khi chạy loop)
 
     uvicorn.run("server:app", host=os.environ.get("HOST", "0.0.0.0"), port=int(os.environ.get("PORT", "8080")),
                 log_level=os.environ.get("LOG_LEVEL", "warning"), proxy_headers=True,

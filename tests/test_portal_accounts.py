@@ -156,7 +156,7 @@ def test_reports_and_family_persist_to_database(env):
     b = _register(c, "fam2@example.com")
     na = c.post("/api/app/phone/claim-demo", headers=a).json()["msisdn"]
     nb = c.post("/api/app/phone/claim-demo", headers=b).json()["msisdn"]
-    assert c.post(f"/api/app/report?number=0987654321&reason=gia%20danh%20cong%20an", headers=a).status_code == 200
+    assert c.post("/api/app/report?number=0987654321&reason=gia%20danh%20cong%20an", headers=a).status_code == 200
     assert c.post(f"/api/app/family/invite?number={nb}", headers=a).status_code == 200
     assert c.post(f"/api/app/family/respond?guardian={na}&accept=true", headers=b).status_code == 200
     db = portal.db()

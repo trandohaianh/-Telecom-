@@ -37,13 +37,13 @@ def run_replicated(n: int, events, warm):
 
     dets = [Detector() for _ in range(n)]
     for s, det in enumerate(dets):
-        owns = (lambda s: lambda msisdn: shard_of({"caller": msisdn}, n) == s)(s)
+        owns = (lambda s: lambda msisdn: shard_of({"caller": msisdn}, n) == s)(s)  # noqa: B023
         for ev in warm:
             if shard_of(ev, n) == s:
                 prime(det.fs, [ev])
             else:
                 det.fs.observe_foreign(ev, owns)
-    owns_fns = [(lambda s: lambda msisdn: shard_of({"caller": msisdn}, n) == s)(s) for s in range(n)]
+    owns_fns = [(lambda s: lambda msisdn: shard_of({"caller": msisdn}, n) == s)(s) for s in range(n)]  # noqa: B023
     results = [None] * len(events)
     pending = [[] for _ in range(n)]
 

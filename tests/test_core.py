@@ -136,6 +136,7 @@ def test_fast_iforest_matches_sklearn():
     # Khi dữ liệu/model sẵn có, so sánh scorer tối ưu với IsolationForest chuẩn.
     import joblib
     import pandas as pd
+
     from fast_iforest import FastIForest
     # Tải model đã lưu và mẫu validation để kiểm tra nhiều điểm đầu vào thực tế.
     z = joblib.load(ROOT / "models" / "tier1_zero_day_iforest.joblib")
@@ -190,7 +191,7 @@ def test_benchmark_meets_block_fpr_target():
     assert b["dataset"]["fraud_rate_pct"] <= 0.15
     # FPR block trên 10 cửa sổ (500.000 sự kiện) phải thấp hơn 0,01%.
     assert b["replicates_10x50k"]["block_fpr_pct"] < 0.01          # < 0.01 % over 500k events
-    for et, v in b["latency_single_event"].items():
+    for _et, v in b["latency_single_event"].items():
         # Feature store phải đạt p99 dưới 10 ms và quyết định nằm trong SLA theo loại sự kiện.
         assert v["feature_store_ms"]["p99"] < 10.0
         assert v["decision_ms"]["p99"] < v["budget_ms"]

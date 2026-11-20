@@ -6,7 +6,6 @@ import base64
 import io
 import json
 import os
-from pathlib import Path
 import socket
 import sqlite3
 import subprocess
@@ -14,15 +13,15 @@ import sys
 import tempfile
 import time
 import wave
+from pathlib import Path
 
 import httpx
 import numpy as np
 
 from evidence import verify
-from http_loadtest import (parse_rates, run_http, validate_output_destination,
-                           validate_run_parameters)
-from security import sign_network, network_timestamp
-from precise_event_loop import run_async, clock_description
+from http_loadtest import parse_rates, run_http, validate_output_destination, validate_run_parameters
+from precise_event_loop import clock_description, run_async
+from security import network_timestamp, sign_network
 
 ROOT = Path(__file__).resolve().parents[1]
 

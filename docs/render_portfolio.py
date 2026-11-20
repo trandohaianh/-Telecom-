@@ -1,8 +1,8 @@
 """Render the product portfolio Markdown to polished DOCX and PDF files."""
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 from xml.sax.saxutils import escape
 
 from docx import Document
@@ -18,9 +18,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import (PageBreak, Paragraph, Preformatted, SimpleDocTemplate,
-                                Spacer, Table, TableStyle)
-
+from reportlab.platypus import PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "PORTFOLIO_THREE_SYSTEMS.md"

@@ -7,20 +7,20 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from collections import Counter
 import json
 import math
-from numbers import Integral
-from pathlib import Path
 import sys
 import time
 import uuid
+from collections import Counter
+from numbers import Integral
+from pathlib import Path
 
 import httpx
 import numpy as np
 
-from security import sign_network, network_timestamp
 from precise_event_loop import run_async
+from security import network_timestamp, sign_network
 
 DEADLINE_MS = 30.0
 ARRIVAL_PACING = "thread_sleep" if sys.platform == "win32" else "asyncio_sleep"

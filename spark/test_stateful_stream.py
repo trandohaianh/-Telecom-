@@ -2,18 +2,17 @@
 import contextlib
 import io
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pandas as pd
-
-from stateful_stream import StatefulCallStream, CALL_FEATURES
-from feature_store import FeatureStore
 from compare_features import compare
-from distributed_features import (subscriber_records, subscriber_partition,
-                                  imei_partition, cell_partition, event_order)
+from distributed_features import cell_partition, event_order, imei_partition, subscriber_partition, subscriber_records
 from produce_to_kafka import replay
+from stateful_stream import CALL_FEATURES, StatefulCallStream
+
+from feature_store import FeatureStore
 
 SOURCE = {"bootstrap": "test", "topic": "ordered-v2"}
 

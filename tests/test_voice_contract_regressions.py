@@ -1,10 +1,10 @@
 """Regression contracts for real-WAV delivery, cancellation and numeric safety."""
 import asyncio
 import io
-from pathlib import Path
 import sys
 import threading
 import wave
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -13,11 +13,11 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import security
+from test_voice_api import KEY, packet, send
+from test_voice_pipeline import tone, wav_bytes
 from voice_api import VoiceService, _metadata, create_voice_router
 from voice_model import DOMAIN, RealVoiceModel, feature_vector
 from voice_pipeline import REAL_FEATURES, SCHEMA_VERSION, analyze_wav
-from test_voice_api import KEY, packet, send
-from test_voice_pipeline import tone, wav_bytes
 
 
 class BlockModel:
@@ -420,6 +420,7 @@ def test_shutdown_configuration_requires_a_positive_finite_timeout(timeout):
 @pytest.mark.parametrize("now", [.02, .03])
 def test_voice_delivery_deadline_uses_precise_clock_even_if_wall_clock_is_coarse(monkeypatch, now):
     from types import SimpleNamespace
+
     import voice_api
     model = BlockModel()
     service = VoiceService(model=model, mode=lambda: "enforce")

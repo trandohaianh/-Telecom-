@@ -1,16 +1,15 @@
 """Real Spark shuffle parity check; writes only below an isolated output directory."""
 import argparse
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import pandas as pd
-from pyspark.sql import SparkSession
-
-from spark_features import HERE, SRC, run_batch
-from make_sample import reference_features
-from test_stateful_stream import event
 from compare_features import compare, load
 from event_contract import json_safe, validate_call
+from make_sample import reference_features
+from pyspark.sql import SparkSession
+from spark_features import HERE, SRC, run_batch
+from test_stateful_stream import event
 
 
 def main():

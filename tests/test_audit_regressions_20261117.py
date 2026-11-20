@@ -165,6 +165,7 @@ def test_periodic_compaction_drops_expired_window_state_but_respects_rescore_hor
 def test_stereo_audio_without_caller_channel_abstains():
     import io
     import wave
+
     from voice_model import RealVoiceModel as VoiceModel
     from voice_pipeline import analyze_wav
     t = np.arange(16000) / 16000

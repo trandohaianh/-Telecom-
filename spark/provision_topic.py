@@ -2,6 +2,7 @@
 import argparse
 import os
 
+
 def main():
     from kafka.admin import KafkaAdminClient, NewTopic
     from kafka.errors import TopicAlreadyExistsError

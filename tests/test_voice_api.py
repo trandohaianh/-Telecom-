@@ -1,9 +1,9 @@
 import asyncio
 import base64
 import json
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI, HTTPException
@@ -11,9 +11,9 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import security
+from test_voice_pipeline import tone, wav_bytes
 from voice_api import VoiceService, create_voice_router
 from voice_pipeline import analyze_wav
-from test_voice_pipeline import tone, wav_bytes
 
 KEY = bytes.fromhex("f1" * 32)
 
@@ -131,7 +131,7 @@ def test_durable_old_enforce_result_cannot_override_shadow_or_changed_model(monk
             return {"decision": "FLAG", "score": .8, "reason": "fixture", "recommended_action": "FLAG"}
     for mode in ("shadow", "enforce"):
         app = FastAPI()
-        app.include_router(create_voice_router(model=Model(), mode=lambda: mode, record_observation=old_result))
+        app.include_router(create_voice_router(model=Model(), mode=lambda: mode, record_observation=old_result))  # noqa: B023
         with TestClient(app) as client:
             response = send(client, packet(event_id="DURABLE-" + mode))
             assert response.status_code == 200

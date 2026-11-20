@@ -61,10 +61,12 @@ Ngoài checklist, đợt này còn sửa các lỗi trong reports/06 §4 không 
 - Script báo lỗi khi `secrets/`, `.env*` (trừ `.env.example`), `*.key`, `*.pem`, `*.p12`, `*.pfx` hay `*.docx` bị track hoặc stage.
 - Nó chạy trong pre-commit và trong job CI `lint`.
 
-Ba file `.docx` đã có trong lịch sử git từ trước được liệt kê trong `ALLOWED_LEGACY` (xem §12):
+Ba file `.docx` từng được track đã được **bỏ track** (`git rm --cached`) theo lựa chọn của chủ dự án:
 - `docs/PORTFOLIO_THREE_SYSTEMS.docx`
 - `docs/Telecom_Fraud_Report_v2_EN.docx`
 - `docs/Telecom_Fraud_Report_v2_VI.docx`
+
+File vẫn nằm trên đĩa, nhưng các commit cũ vẫn chứa chúng (lịch sử không bị viết lại). `ALLOWED_LEGACY` trong script giờ để trống.
 
 ## 5. .env.example không chứa khoá bí mật
 
@@ -220,8 +222,6 @@ Repo là git cục bộ, chưa có remote. Trước khi push sẽ:
 
 ## 12. Việc còn mở (cần chủ dự án)
 
-1. **Ba file `.docx` đã nằm trong lịch sử git** (liệt kê ở §4). Trước khi push lần đầu cần chọn một trong hai cách:
-   - (a) chỉ bỏ track (`git rm --cached`), file vẫn còn trong lịch sử;
-   - (b) viết lại lịch sử để xoá hẳn. Cách này làm được vì chưa có remote, nhưng đổi mã hash của mọi commit.
+1. **Ba file `.docx`:** đã bỏ track. Chúng vẫn còn trong các commit cũ; muốn xoá hẳn thì phải viết lại lịch sử trước lần push đầu tiên.
 2. **Tên repo GitHub trống** để push. Sẽ push khi nhận được, không force-push.
 3. **Tách tiếp `backend_runtime.py`:** nên làm như một thay đổi riêng, có đo lại SLA (xem §8).

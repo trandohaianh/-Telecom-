@@ -1,9 +1,8 @@
 """Fail when a secret or personal file is tracked (or staged) in git.
 
 Blocks: anything under secrets/, .env / .env.* (except .env.example), private keys (*.key, *.pem)
-and Word documents (*.docx). Files already in history before this guard existed are listed in
-ALLOWED_LEGACY so the check can be turned on without rewriting history; remove an entry once the
-file is untracked.
+and Word documents (*.docx). ALLOWED_LEGACY lists files that may stay tracked despite a blocked
+pattern; it is empty (the three report .docx files were untracked, they remain in old history).
 
 Run:  python tools/check_tracked_secrets.py            (all tracked files, used by CI)
       python tools/check_tracked_secrets.py FILE...    (given files, used by pre-commit)
@@ -17,11 +16,7 @@ import sys
 from pathlib import PurePosixPath
 
 BLOCKED = ("secrets/*", "*/secrets/*", "*.key", "*.pem", "*.docx", "*.p12", "*.pfx")
-ALLOWED_LEGACY = {
-    "docs/PORTFOLIO_THREE_SYSTEMS.docx",
-    "docs/Telecom_Fraud_Report_v2_EN.docx",
-    "docs/Telecom_Fraud_Report_v2_VI.docx",
-}
+ALLOWED_LEGACY: set[str] = set()
 
 
 def is_blocked(path: str) -> bool:

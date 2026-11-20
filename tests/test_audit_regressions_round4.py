@@ -121,7 +121,8 @@ def test_deploy_fails_closed_without_pinned_host_key_or_proxy():
     assert "StrictHostKeyChecking=accept-new" not in wf and "::error::" in wf
     proxy = _src("deploy", "cloud", "proxy_ip.sh")
     assert 'echo "*"' not in proxy and "exit 1" in proxy
-    assert "FORWARDED_ALLOW_IPS:-127.0.0.1" in _src("deploy", "cloud", "docker-compose.yml")
+    # 20/11/2026: default is now the own Caddy's STATIC IP (fixed subnet), still never "*" (fail-closed)
+    assert "FORWARDED_ALLOW_IPS:-${TELECOM_CADDY_IP:-172.29.10.2}" in _src("deploy", "cloud", "docker-compose.yml")
     assert 'os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1")' in _src("serve.py")
 
 

@@ -1,0 +1,13 @@
+# Tuỳ chọn dùng chung VM với FieldOps: Telecom nối vào mạng "edge" của Caddy FieldOps thay vì chạy Caddy riêng.
+# Chỉ chạy service telecom:  ... -f docker-compose.yml -f docker-compose.edge.yml up -d --build --no-deps telecom
+# FORWARDED_ALLOW_IPS phải là IP của Caddy FieldOps trên "edge" (deploy.sh/setup.sh lấy bằng proxy_ip.sh).
+services:
+  telecom:
+    networks:
+      edge:
+        aliases: [telecom]
+
+networks:
+  edge:
+    external: true
+    name: edge

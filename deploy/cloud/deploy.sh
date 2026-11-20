@@ -31,6 +31,14 @@ if [ "${SKIP_PREDEPLOY_BACKUP:-0}" != "1" ] && sudo docker ps --format '{{.Names
     exit 3
   fi
 fi
-proxy_ip="$(bash ./proxy_ip.sh)"   # dừng (set -e) nếu không tìm thấy Caddy
-FORWARDED_ALLOW_IPS="$proxy_ip" sudo -E docker compose --env-file .env up -d --build telecom
+MODE="${TELECOM_PROXY_MODE:-own}"
+if [ "$MODE" = own ]; then
+  # HTTPS riêng (mặc định): Caddy của Telecom có IP tĩnh, FORWARDED_ALLOW_IPS cố định trong compose.
+  sudo docker compose --env-file .env up -d --build
+elif [ "$MODE" = edge ]; then
+  proxy_ip="$(bash ./proxy_ip.sh)"   # dừng (set -e) nếu không tìm thấy Caddy của FieldOps
+  FORWARDED_ALLOW_IPS="$proxy_ip" sudo -E docker compose --env-file .env -f docker-compose.yml -f docker-compose.edge.yml     up -d --build --no-deps telecom
+else
+  echo "TELECOM_PROXY_MODE phải là own hoặc edge" >&2; exit 2
+fi
 bash ./smoke.sh "https://$TELECOM_DOMAIN"

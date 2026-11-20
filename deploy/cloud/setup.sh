@@ -16,8 +16,9 @@ if [ ! -f .env ]; then
 fi
 set -a; source .env; set +a
 [ -n "${TELECOM_DOMAIN:-}" ] || { echo "Thiếu TELECOM_DOMAIN trong .env"; exit 1; }
-
-sudo docker network inspect edge >/dev/null 2>&1 || sudo docker network create edge
+# own (mặc định): Caddy riêng của Telecom, HTTPS độc lập. edge: dùng chung Caddy của FieldOps (tiết kiệm 1 VM).
+MODE="${TELECOM_PROXY_MODE:-own}"
+case "$MODE" in own|edge) ;; *) echo "TELECOM_PROXY_MODE phải là own hoặc edge" >&2; exit 2 ;; esac
 
 if [ -n "${DUCKDNS_TOKEN:-}" ] && [[ "$TELECOM_DOMAIN" == *.duckdns.org ]]; then
   sub="${TELECOM_DOMAIN%.duckdns.org}"
@@ -30,17 +31,20 @@ if [ -n "${DUCKDNS_TOKEN:-}" ] && [[ "$TELECOM_DOMAIN" == *.duckdns.org ]]; then
   ( crontab -l 2>/dev/null | grep -v -e "domains=${sub}&" -e "# duckdns:${sub}\$" ; echo "$line" ) | crontab -
 fi
 
-if sudo docker ps --format '{{.Names}}' | grep -q '^fieldops-caddy-1$'; then
+if [ "$MODE" = own ]; then
+  # Caddy riêng có IP tĩnh trên mạng "proxy": FORWARDED_ALLOW_IPS cố định trong compose, không phụ thuộc
+  # việc FieldOps tạo lại Caddy của họ.
+  sudo docker compose --env-file .env up -d --build
+else
+  sudo docker ps --format '{{.Names}}' | grep -q '^fieldops-caddy-1$'     || { echo "TELECOM_PROXY_MODE=edge nhưng không thấy Caddy của FieldOps (fieldops-caddy-1)." >&2; exit 1; }
+  sudo docker network inspect edge >/dev/null 2>&1 || sudo docker network create edge
   # Caddy chung của FieldOps: thêm site cho Telecom rồi reload (không gián đoạn FieldOps).
   sudo mkdir -p /opt/edge/sites
   sed "s|__DOMAIN__|${TELECOM_DOMAIN}|" telecom.caddy | sudo tee /opt/edge/sites/telecom.caddy >/dev/null
   sudo docker exec fieldops-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
-else
-  echo "Không thấy Caddy của FieldOps → chạy Caddy riêng (profile standalone)."
-  sudo docker compose --env-file .env --profile standalone up -d --no-deps caddy
+  # Telecom chỉ tin X-Forwarded-For từ đúng Caddy (rate limit theo IP không bị container khác giả).
+  proxy_ip="$(bash "$HERE/proxy_ip.sh")"   # dừng (set -e) nếu không tìm thấy Caddy
+  FORWARDED_ALLOW_IPS="$proxy_ip" sudo -E docker compose --env-file .env -f docker-compose.yml -f docker-compose.edge.yml     up -d --build --no-deps telecom
 fi
-# Telecom chỉ tin X-Forwarded-For từ đúng Caddy (rate limit theo IP không bị container khác giả).
-proxy_ip="$(bash "$HERE/proxy_ip.sh")"   # dừng (set -e) nếu không tìm thấy Caddy
-FORWARDED_ALLOW_IPS="$proxy_ip" sudo -E docker compose --env-file .env up -d --build telecom
 bash "$HERE/smoke.sh" "https://${TELECOM_DOMAIN}" || echo "Cảnh báo: smoke test thất bại" >&2
 echo "Xong: app thuê bao https://${TELECOM_DOMAIN}/app/ · vận hành https://${TELECOM_DOMAIN}/admin/"

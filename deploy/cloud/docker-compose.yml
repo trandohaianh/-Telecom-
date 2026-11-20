@@ -1,6 +1,9 @@
-# Telecom Fraud Shield trên cùng VM với FieldOps (Oracle Always Free).
-# HTTPS do Caddy chung ("edge") lo: setup.sh ghi file site vào /opt/edge/sites rồi reload Caddy.
-# Chưa có Caddy của FieldOps? Chạy kèm Caddy riêng:  docker compose --profile standalone up -d
+# Telecom Fraud Shield: MẶC ĐỊNH có HTTPS riêng (Caddy của chính dự án, standalone.Caddyfile), triển khai
+# độc lập, không phụ thuộc FieldOps (quyết định 20/11/2026: "mỗi dự án tự có HTTPS").
+#   docker compose --env-file .env up -d --build            # Telecom + Caddy riêng (cổng 80/443)
+# Tuỳ chọn tiết kiệm: dùng chung VM và Caddy "edge" của FieldOps (Caddy đó đã giữ cổng 80/443):
+#   docker compose --env-file .env -f docker-compose.yml -f docker-compose.edge.yml up -d --build --no-deps telecom
+# setup.sh / deploy.sh chọn theo TELECOM_PROXY_MODE=own|edge (mặc định own).
 name: telecom
 
 services:
@@ -24,8 +27,9 @@ services:
       SMS_COST_USD: ${SMS_COST_USD:-0.08}
       FRAUD_BACKUP_KEEP: ${FRAUD_BACKUP_KEEP:-7}
       FRAUD_PIPELINE_DAILY_AT: ${FRAUD_PIPELINE_DAILY_AT:-02:30}
-      # IP của Caddy (proxy_ip.sh). "*" tin mọi container trên mạng edge: chúng giả được X-Forwarded-For.
-      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
+      # Chỉ tin X-Forwarded-For từ đúng Caddy. Chế độ own: IP TĨNH của Caddy riêng (không đổi khi tạo lại
+      # container). Chế độ edge: deploy.sh truyền IP Caddy của FieldOps (proxy_ip.sh). Không bao giờ "*".
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-${TELECOM_CADDY_IP:-172.29.10.2}}
       # Chỉ đặt =1 sau khi đã kiểm định trên lưu lượng thật có nhãn (mở chế độ enforce).
       FRAUD_REAL_TRAFFIC_VALIDATED: ${FRAUD_REAL_TRAFFIC_VALIDATED:-0}
       # OTP qua API SMS/brandname của nhà mạng (FRAUD_OTP_PROVIDER=sms-http). Token đặt trong volume:
@@ -48,7 +52,7 @@ services:
       - telecom_state:/srv/state
     networks:
       default: {}
-      edge:
+      proxy:
         aliases: [telecom]
     deploy:
       resources:
@@ -58,7 +62,6 @@ services:
       options: {max-size: 10m, max-file: "5"}
 
   caddy:
-    profiles: [standalone]
     image: caddy:2.10-alpine
     restart: unless-stopped
     ports: ["80:80", "443:443"]
@@ -68,10 +71,13 @@ services:
       - ./standalone.Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      proxy:
+        ipv4_address: ${TELECOM_CADDY_IP:-172.29.10.2}
+    depends_on: [telecom]
     logging:
       driver: json-file
       options: {max-size: 10m, max-file: "5"}
-    networks: [edge]
 
 volumes:
   telecom_state:
@@ -79,6 +85,8 @@ volumes:
   caddy_config:
 
 networks:
-  edge:
-    external: true
-    name: edge
+  # Mạng riêng giữa Caddy và Telecom, subnet cố định để Caddy có IP tĩnh (FORWARDED_ALLOW_IPS ở trên).
+  proxy:
+    ipam:
+      config:
+        - subnet: ${TELECOM_PROXY_SUBNET:-172.29.10.0/24}

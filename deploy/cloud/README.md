@@ -1,4 +1,4 @@
-# Triển khai Telecom Fraud Shield (miễn phí, chung VM với FieldOps)
+# Triển khai Telecom Fraud Shield (HTTPS riêng; tuỳ chọn chung VM với FieldOps)
 
 Image chạy `serve.py`. Bản công khai **phát lại lưu lượng mạng mô phỏng** (`FRAUD_DEMO=1`) vì chưa có
 lưu lượng nhà mạng thật. Mọi người dùng đều đi qua tài khoản thật; chế độ đăng nhập demo ẩn danh đã tắt.
@@ -11,8 +11,17 @@ lưu lượng nhà mạng thật. Mọi người dùng đều đi qua tài kho�
 
 ## Cài lên VM (≈15 phút)
 
-Yêu cầu: VM đã cài FieldOps theo `deploy/cloud/README.md` của repo FieldOps. Telecom dùng chung
-Docker, mạng `edge` và Caddy HTTPS. Nếu chưa có FieldOps, script tự chạy một Caddy riêng.
+Yêu cầu: một VM Linux có Docker và cổng 80/443 trống. Telecom **tự có HTTPS**: compose chạy kèm Caddy
+riêng (`standalone.Caddyfile`, chứng chỉ Let's Encrypt tự cấp) và không phụ thuộc dự án nào khác.
+
+### Chọn chế độ HTTPS (`TELECOM_PROXY_MODE` trong `.env`)
+
+| Chế độ | Khi nào | Cách chạy | Proxy tin cậy |
+|---|---|---|---|
+| `own` (**mặc định**) | VM riêng, hoặc VM chưa có ai giữ cổng 80/443 | `docker compose --env-file .env up -d --build` (Telecom + Caddy riêng) | IP **tĩnh** của Caddy riêng (`TELECOM_CADDY_IP`, mặc định 172.29.10.2) trên mạng `proxy` (`TELECOM_PROXY_SUBNET`). Không đổi khi tạo lại container |
+| `edge` (tuỳ chọn, tiết kiệm) | Chạy chung VM với FieldOps, mà Caddy của FieldOps đã giữ 80/443 | `setup.sh` / `deploy.sh` thêm site vào `/opt/edge/sites`, reload Caddy FieldOps, rồi chạy `-f docker-compose.yml -f docker-compose.edge.yml up -d --no-deps telecom` | IP Caddy FieldOps trên mạng `edge`, lấy lúc deploy bằng `proxy_ip.sh` |
+
+Chế độ `own` cũng xử lý lỗi cũ "IP proxy đổi khi FieldOps tạo lại Caddy". Trước đây IP được chụp lúc deploy, nên một lần FieldOps tạo lại Caddy là mọi người dùng chung một IP và rate limit trở thành giới hạn chung.
 
 1. **DuckDNS**: tạo thêm 1 subdomain (VD `laichan-demo`) trỏ về IP của VM.
 2. **Google Sign-In** (tuỳ chọn): trong OAuth client đang dùng cho FieldOps, thêm
@@ -22,7 +31,7 @@ Docker, mạng `edge` và Caddy HTTPS. Nếu chưa có FieldOps, script tự ch�
    git clone <repo-telecom> ~/telecom
    bash ~/telecom/deploy/cloud/setup.sh      # lần 1: tạo .env (tự sinh METRICS_TOKEN, mật khẩu admin)
    nano ~/telecom/deploy/cloud/.env          # điền TELECOM_DOMAIN, GOOGLE_CLIENT_ID, FRAUD_ADMIN_EMAIL
-   bash ~/telecom/deploy/cloud/setup.sh      # lần 2: build, chạy, nối vào Caddy, smoke test
+   bash ~/telecom/deploy/cloud/setup.sh      # lần 2: build, chạy (Caddy riêng hoặc edge), smoke test
    ```
 4. Đăng nhập `/admin/` bằng `viettel_admin` và `FRAUD_ADMIN_PASSWORD` trong `.env`. Sau đó vào
    **Quản trị → Tài khoản nhân viên** để đổi mật khẩu và tạo tài khoản cho người khác.

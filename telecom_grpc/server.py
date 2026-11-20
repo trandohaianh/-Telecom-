@@ -1,4 +1,5 @@
 """Async gRPC edge for the existing fail-open, version-guarded policy gate."""
+
 from __future__ import annotations
 
 import asyncio
@@ -42,7 +43,7 @@ class CallPolicyService(telecom_pb2_grpc.CallPolicyServicer):
             decision = await self.gate.check_call_allowed(request.phone_number)
         except ValueError as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
-        status = (telecom_pb2.ALLOW if decision.allowed else telecom_pb2.BLOCK)
+        status = telecom_pb2.ALLOW if decision.allowed else telecom_pb2.BLOCK
         if decision.policy_status != "known":
             status = telecom_pb2.UNKNOWN
         return telecom_pb2.CheckCallReply(
@@ -58,6 +59,7 @@ class CallPolicyService(telecom_pb2_grpc.CallPolicyServicer):
 
 class TelecomDecisionService(telecom_pb2_grpc.TelecomDecisionServicer):
     """Compatibility API with explicit UNKNOWN/fail-open and policy version."""
+
     def __init__(self, gate: FailOpenGate, bloom_max_staleness_ms: float | None = None):
         self.gate = gate
         if bloom_max_staleness_ms is None:
@@ -77,11 +79,13 @@ class TelecomDecisionService(telecom_pb2_grpc.TelecomDecisionServicer):
             # a local Bloom-negative ALLOW. Keep disabled until the operator has
             # accepted and bounded snapshot propagation delay.
             snapshot = self.gate.gate.snapshot
-            if (os.getenv("TELECOM_BLOOM_FAST_ALLOW", "0") == "1"
-                    and snapshot is not None
-                    and snapshot_is_fresh(snapshot, self.bloom_max_staleness_ms)
-                    and re.fullmatch(r"\+[1-9][0-9]{7,14}", request.phone_number)
-                    and request.phone_number not in snapshot.bloom):
+            if (
+                os.getenv("TELECOM_BLOOM_FAST_ALLOW", "0") == "1"
+                and snapshot is not None
+                and snapshot_is_fresh(snapshot, self.bloom_max_staleness_ms)
+                and re.fullmatch(r"\+[1-9][0-9]{7,14}", request.phone_number)
+                and request.phone_number not in snapshot.bloom
+            ):
                 return telecom_pb2.CallResponse(
                     allowed=True,
                     policy_version=snapshot.manifest,
@@ -96,8 +100,7 @@ class TelecomDecisionService(telecom_pb2_grpc.TelecomDecisionServicer):
         if decision.policy_status != "known":
             status = telecom_pb2.CallResponse.UNKNOWN
         else:
-            status = (telecom_pb2.CallResponse.ALLOW if decision.allowed
-                      else telecom_pb2.CallResponse.BLOCK)
+            status = telecom_pb2.CallResponse.ALLOW if decision.allowed else telecom_pb2.CallResponse.BLOCK
         return telecom_pb2.CallResponse(
             allowed=decision.allowed,
             policy_version=version,
@@ -111,11 +114,15 @@ async def serve() -> None:
     timeout_ms = float(os.getenv("REDIS_SOCKET_TIMEOUT_MS", "10"))
     if not 0 < timeout_ms <= 10:
         raise RuntimeError("REDIS_SOCKET_TIMEOUT_MS must be in (0, 10]")
-    redis_client = make_client(redis_url, max_connections=int(os.getenv("REDIS_POOL_SIZE", "256")), io_timeout=timeout_ms / 1000)
+    redis_client = make_client(
+        redis_url, max_connections=int(os.getenv("REDIS_POOL_SIZE", "256")), io_timeout=timeout_ms / 1000
+    )
     builder = make_client(redis_url, max_connections=2, io_timeout=1.0)
-    gate = OnlineGate(PolicyStore(redis_client, os.getenv("POLICY_NAMESPACE", "telecom-policy")),
-                      budget_ms=float(os.getenv("ONLINE_BUDGET_MS", "25")),
-                      max_inflight=int(os.getenv("MAX_INFLIGHT", "1024")))
+    gate = OnlineGate(
+        PolicyStore(redis_client, os.getenv("POLICY_NAMESPACE", "telecom-policy")),
+        budget_ms=float(os.getenv("ONLINE_BUDGET_MS", "25")),
+        max_inflight=int(os.getenv("MAX_INFLIGHT", "1024")),
+    )
     fail_open = FailOpenGate(gate)
 
     async def refresh():
@@ -130,11 +137,15 @@ async def serve() -> None:
             await asyncio.sleep(float(os.getenv("BLOOM_REFRESH_SECONDS", "10")))
 
     refresh_task = asyncio.create_task(refresh(), name="bloom-refresh")
-    server = grpc.aio.server(options=[
-        ("grpc.so_reuseport", 1), ("grpc.max_concurrent_rpcs", int(os.getenv("MAX_GRPC_RPCS", "2048"))),
-        ("grpc.keepalive_time_ms", 30000), ("grpc.keepalive_timeout_ms", 5000),
-        ("grpc.http2.max_pings_without_data", 0),
-    ])
+    server = grpc.aio.server(
+        options=[
+            ("grpc.so_reuseport", 1),
+            ("grpc.max_concurrent_rpcs", int(os.getenv("MAX_GRPC_RPCS", "2048"))),
+            ("grpc.keepalive_time_ms", 30000),
+            ("grpc.keepalive_timeout_ms", 5000),
+            ("grpc.http2.max_pings_without_data", 0),
+        ]
+    )
     telecom_pb2_grpc.add_CallPolicyServicer_to_server(CallPolicyService(fail_open), server)
     telecom_pb2_grpc.add_TelecomDecisionServicer_to_server(TelecomDecisionService(fail_open), server)
     # mTLS is required unless an explicitly local-only insecure listener is selected.

@@ -14,6 +14,7 @@ is the source of the events.
 
 Run:  python src/shadow_run.py   ->  data/shadow_report.json
 """
+
 # Nạp bộ đếm và các thành phần để chấm điểm shadow, chống trùng và kiểm tra drift.
 from __future__ import annotations
 
@@ -40,7 +41,7 @@ def main(batch=256):
     results = []
     for i in range(0, len(events), batch):
         # Chấm lần lượt từng lô để giới hạn kích thước xử lý trong bộ nhớ.
-        results += det.process(events[i:i + batch])
+        results += det.process(events[i : i + batch])
 
     # Xác nhận shadow chỉ mô phỏng hành động, tuyệt đối không thi hành enforcement.
     enforced = [r for r in results if r.get("enforced")]
@@ -62,19 +63,27 @@ def main(batch=256):
         fam = ev.get("fraud_type") or ("CLEAN" if label == 0 else "FRAUD")
         by_family[fam][r["decision"]] += 1
         acted = r["decision"] != "ALLOW"
-        agree["true_positive" if (acted and label) else
-              "false_positive" if (acted and not label) else
-              "false_negative" if (not acted and label) else "true_negative"] += 1
+        agree[
+            "true_positive"
+            if (acted and label)
+            else "false_positive"
+            if (acted and not label)
+            else "false_negative"
+            if (not acted and label)
+            else "true_negative"
+        ] += 1
         # Lưu risk/đặc trưng chỉ cho CALL đã chấm điểm để dùng kiểm tra drift.
         if r["event_type"] == "CALL" and r.get("scored", True):
             scores.append(r["risk"])
             call_times.append(float(ev["ts"]))
             ef = r.get("evidence_features", {})
-            segments.append("foreign" if ef.get("caller_foreign") == 1 else
-                            ("trunk" if ef.get("origin_bank_trunk") == 1 or ef.get("cli_protected") == 1 else "domestic"))
+            segments.append(
+                "foreign"
+                if ef.get("caller_foreign") == 1
+                else ("trunk" if ef.get("origin_bank_trunk") == 1 or ef.get("cli_protected") == 1 else "domestic")
+            )
             for f in WATCHED:
                 feats[f].append(ef.get(f, float("nan")))
-
 
     # Tính quy mô hợp lệ/gian lận từ các nhóm đúng sai đã đếm.
     n_legit = agree["false_positive"] + agree["true_negative"]
@@ -107,18 +116,36 @@ def main(batch=256):
     if baseline_path.exists():
         base = drift.load(baseline_path)
         report["drift"] = drift.evaluate_drift(
-            base, feats, scores=scores, segments=segments, event_times=call_times,
-            as_of_ts=max((float(ev["ts"]) for ev, _ in scored_pairs), default=None))
+            base,
+            feats,
+            scores=scores,
+            segments=segments,
+            event_times=call_times,
+            as_of_ts=max((float(ev["ts"]) for ev, _ in scored_pairs), default=None),
+        )
         report["drift"]["scope"] = "all scored CALL events in the window"
 
     # Lưu báo cáo và in tóm tắt các quyết định giả định cùng đánh giá drift nếu có.
     (DATA_DIR / "shadow_report.json").write_text(json.dumps(report, indent=1, ensure_ascii=False))
-    print(json.dumps({k: report[k] for k in ("mode", "enforced_actions", "would_have", "if_enforced")},
-                     indent=1, ensure_ascii=False))
+    print(
+        json.dumps(
+            {k: report[k] for k in ("mode", "enforced_actions", "would_have", "if_enforced")},
+            indent=1,
+            ensure_ascii=False,
+        )
+    )
     if "drift" in report:
         d = report["drift"]
-        print("drift:", d["recommendation"], "| max feature PSI", d["max_feature_psi"],
-              "| noise floor", d.get("null_psi_max"), "| bands", d.get("band_shares"))
+        print(
+            "drift:",
+            d["recommendation"],
+            "| max feature PSI",
+            d["max_feature_psi"],
+            "| noise floor",
+            d.get("null_psi_max"),
+            "| bands",
+            d.get("band_shares"),
+        )
 
 
 if __name__ == "__main__":

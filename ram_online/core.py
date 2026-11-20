@@ -1,4 +1,5 @@
 """Version-guarded local Bloom + exact Redis membership. Python >=3.11."""
+
 from __future__ import annotations
 
 import asyncio
@@ -97,13 +98,19 @@ return changed
 """
 
 
-def make_client(url: str, max_connections=32, io_timeout=.003):
+def make_client(url: str, max_connections=32, io_timeout=0.003):
     # No hidden command retries or health-check PING on the request path.
     return redis.Redis.from_url(
-        url, decode_responses=True, max_connections=max_connections,
-        socket_connect_timeout=io_timeout, socket_timeout=io_timeout,
-        retry=Retry(NoBackoff(), 0), retry_on_timeout=False,
-        health_check_interval=0, socket_keepalive=True, protocol=2,
+        url,
+        decode_responses=True,
+        max_connections=max_connections,
+        socket_connect_timeout=io_timeout,
+        socket_timeout=io_timeout,
+        retry=Retry(NoBackoff(), 0),
+        retry_on_timeout=False,
+        health_check_interval=0,
+        socket_keepalive=True,
+        protocol=2,
     )
 
 
@@ -133,23 +140,22 @@ class PolicyStore:
 
     async def initialize_empty_policy(self):
         """Explicit provisioning only. Never call automatically after data loss."""
-        await self.client.eval(INITIALIZE_LUA, 2, self.manifest_key,
-                               self.deny_key, uuid.uuid4().hex)
+        await self.client.eval(INITIALIZE_LUA, 2, self.manifest_key, self.deny_key, uuid.uuid4().hex)
 
     async def set_blocked(self, phone, blocked=True):
         phone = normalize_phone(phone)
         if type(blocked) is not bool:
             raise ValueError("blocked must be a bool")
-        result = await self.client.eval(UPDATE_LUA, 2, self.manifest_key,
-            self.deny_key, phone, "1" if blocked else "0", uuid.uuid4().hex)
+        result = await self.client.eval(
+            UPDATE_LUA, 2, self.manifest_key, self.deny_key, phone, "1" if blocked else "0", uuid.uuid4().hex
+        )
         if result == -1:
             raise OnlineUnavailable("policy missing or inconsistent; restore it")
         return bool(result)
 
 
 class OnlineGate:
-    def __init__(self, policy: PolicyStore, capacity=1_000_000,
-                 error_rate=1e-4, budget_ms=5.0, max_inflight=32):
+    def __init__(self, policy: PolicyStore, capacity=1_000_000, error_rate=1e-4, budget_ms=5.0, max_inflight=32):
         if not math.isfinite(budget_ms) or budget_ms <= 0:
             raise ValueError("positive finite budget required")
         if type(max_inflight) is not int or max_inflight <= 0:
@@ -198,13 +204,18 @@ class OnlineGate:
                 raise OnlineOverloaded("decision deadline exceeded before Redis")
             async with asyncio.timeout(remaining):
                 result = await self.policy.client.eval(
-                    CHECK_LUA, 2, self.policy.manifest_key, self.policy.deny_key,
-                    manifest, "1" if maybe else "0", phone)
+                    CHECK_LUA, 2, self.policy.manifest_key, self.policy.deny_key, manifest, "1" if maybe else "0", phone
+                )
             if (time.perf_counter() - started) * 1000 >= self.budget_ms:
                 raise OnlineUnavailable("decision arrived after the original deadline")
-            if (not isinstance(result, (list, tuple)) or len(result) != 2
-                    or type(result[0]) is not int or result[0] not in (0, 1)
-                    or not isinstance(result[1], str) or not result[1]):
+            if (
+                not isinstance(result, (list, tuple))
+                or len(result) != 2
+                or type(result[0]) is not int
+                or result[0] not in (0, 1)
+                or not isinstance(result[1], str)
+                or not result[1]
+            ):
                 raise OnlineUnavailable("policy missing or inconsistent")
             return result[0] == 0, result[1]
         except (RedisError, TimeoutError) as exc:
@@ -216,15 +227,20 @@ class OnlineGate:
         allowed, _ = await self.check_call_allowed_with_version(phone_number)
         return allowed
 
+
 def run(coroutine):
     """Use a process-local precise loop for the 5ms timer on Windows."""
     import sys
+
     base = asyncio.ProactorEventLoop if sys.platform == "win32" else asyncio.SelectorEventLoop
+
     class PreciseLoop(base):
         def __init__(self):
             super().__init__()
             self._clock_resolution = time.get_clock_info("perf_counter").resolution
+
         def time(self):
             return time.perf_counter()
+
     with asyncio.Runner(loop_factory=PreciseLoop) as runner:
         return runner.run(coroutine)

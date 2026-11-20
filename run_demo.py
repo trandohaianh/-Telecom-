@@ -1,4 +1,5 @@
 """Start the demonstration dashboard. Prefer the rebuilt v2.2 bundle when available."""
+
 from __future__ import annotations
 
 import argparse
@@ -17,7 +18,9 @@ def main():
     artifact_dir = args.artifact_dir
     if artifact_dir is None:
         candidate = root / "runtime" / "artifacts_v22"
-        if (candidate / "models" / "manifest.json").is_file() and (candidate / "data" / "dataset_manifest.json").is_file():
+        if (candidate / "models" / "manifest.json").is_file() and (
+            candidate / "data" / "dataset_manifest.json"
+        ).is_file():
             artifact_dir = candidate
     if artifact_dir is not None:
         artifact_dir = artifact_dir.resolve()
@@ -30,6 +33,7 @@ def main():
         os.environ.setdefault(name, "1")
     sys.path.insert(0, str(root / "src"))
     from security import NETWORK_KEY_FILE, load_users, network_key
+
     network_key()
     print("Telecom Fraud Shield")
     print(f"  Dashboard: http://localhost:{args.port}")
@@ -44,8 +48,10 @@ def main():
     import uvicorn
 
     from server import app
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning",
-                loop="precise_event_loop:uvicorn_loop_factory")
+
+    uvicorn.run(
+        app, host=args.host, port=args.port, log_level="warning", loop="precise_event_loop:uvicorn_loop_factory"
+    )
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 These cover the failures a file replay can never produce: the same event arriving twice, an event
 arriving after its window has moved on, and a process that dies and has to come back.
 """
+
 # Nạp JSON/path và pytest, thêm mã nguồn vào sys.path để import các mô-đun đang kiểm thử.
 import json
 import sys
@@ -20,9 +21,19 @@ from ingest_guard import ADMITTED, DUPLICATE, LATE, ActionLedger, IngestGuard, e
 
 def call(ts, caller="84900000001", callee="84900000002", eid=None, **kw):
     # Tạo sự kiện CALL hợp lệ mặc định, cho phép ghi đè trường để dựng ca kiểm thử.
-    ev = {"event_id": eid, "event_type": "CALL", "ts": float(ts), "caller": caller, "callee": callee,
-          "cell_id": "HN-0001", "imei": "353325093735030", "origin_trunk": "LOCAL", "network": "VoLTE",
-          "caller_age_days": 900.0, "duration_s": 30.0}
+    ev = {
+        "event_id": eid,
+        "event_type": "CALL",
+        "ts": float(ts),
+        "caller": caller,
+        "callee": callee,
+        "cell_id": "HN-0001",
+        "imei": "353325093735030",
+        "origin_trunk": "LOCAL",
+        "network": "VoLTE",
+        "caller_age_days": 900.0,
+        "duration_s": 30.0,
+    }
     ev.update(kw)
     return ev
 
@@ -33,7 +44,7 @@ def test_redelivered_event_is_rejected():
     g = IngestGuard()
     ev = call(1000.0, eid="E123")
     assert g.admit(ev) == ADMITTED
-    assert g.admit(dict(ev)) == DUPLICATE          # a retry: identical content, same id
+    assert g.admit(dict(ev)) == DUPLICATE  # a retry: identical content, same id
     assert g.stats[DUPLICATE] == 1
 
 
@@ -51,7 +62,7 @@ def test_duplicate_does_not_move_the_feature_store():
 
     # Gửi mỗi event hai lần nhưng chỉ cập nhật store khi guard cho phép.
     for ev in events:
-        for delivery in (ev, dict(ev)):            # every event redelivered once
+        for delivery in (ev, dict(ev)):  # every event redelivered once
             if g.admit(delivery) == ADMITTED:
                 fs_dirty.call_features(delivery)
     guarded = fs_dirty.call_features(call(1010.0, eid="probe2"))
@@ -68,10 +79,10 @@ def test_without_the_guard_duplicates_inflate_the_counters():
     for i in range(5):
         ev = call(1000.0 + i, eid=f"E{i}")
         fs.call_features(ev)
-        fs.call_features(dict(ev))                 # redelivery reaches the store
+        fs.call_features(dict(ev))  # redelivery reaches the store
     # Năm cuộc gọi lặp đôi cộng probe tạo tổng 11 cuộc trong cửa sổ.
     probe = fs.call_features(call(1010.0, eid="probe"))
-    assert probe["calls_1m"] == 11                 # 5 calls counted twice, plus the probe
+    assert probe["calls_1m"] == 11  # 5 calls counted twice, plus the probe
 
 
 def test_derived_key_when_the_feed_has_no_event_id():
@@ -91,7 +102,7 @@ def test_dedup_index_is_bounded_by_event_time():
     for i in range(200):
         g.admit(call(1000.0 + i, eid=f"E{i}"))
     # Sau các mốc tăng dần, số khóa còn giữ xấp xỉ cửa sổ TTL cộng biên.
-    assert g._seen and len(g._seen) <= 62          # only the TTL window is retained
+    assert g._seen and len(g._seen) <= 62  # only the TTL window is retained
 
 
 # ---------------------------------------------------------------- watermark / lateness
@@ -99,7 +110,7 @@ def test_out_of_order_inside_grace_is_rejected_without_an_upstream_reorder_buffe
     # Sự kiện đến trễ nhưng vẫn nằm trong hạn cho phép phải được chấp nhận.
     g = IngestGuard(allowed_lateness_s=120.0)
     g.admit(call(2000.0, eid="A"))
-    assert g.admit(call(1950.0, eid="B")) == LATE     # 50 s behind: inside the allowance
+    assert g.admit(call(1950.0, eid="B")) == LATE  # 50 s behind: inside the allowance
 
 
 def test_event_later_than_the_allowance_is_marked_late():
@@ -127,7 +138,7 @@ def test_a_replayed_decision_is_executed_once():
     r = {"event_id": "E1", "decision": "BLOCK", "ts": 100.0}
     # Kiểm tra kết quả thi hành, số callback và bộ đếm quyết định bị triệt tiêu.
     assert ledger.execute(r, fired.append) is True
-    assert ledger.execute(dict(r), fired.append) is False     # the same block, replayed
+    assert ledger.execute(dict(r), fired.append) is False  # the same block, replayed
     assert len(fired) == 1
     assert ledger.suppressed == 1
 
@@ -138,7 +149,7 @@ def test_a_different_decision_on_the_same_event_still_runs():
     fired = []
     ledger.execute({"event_id": "E1", "decision": "FLAG", "ts": 1.0}, fired.append)
     ledger.execute({"event_id": "E1", "decision": "BLOCK", "ts": 2.0}, fired.append)
-    assert len(fired) == 2                                    # escalation is not a duplicate
+    assert len(fired) == 2  # escalation is not a duplicate
 
 
 # ---------------------------------------------------------------- checkpoint / restore
@@ -176,7 +187,7 @@ def test_checkpoint_round_trip_keeps_pending_cdrs(tmp_path):
     # Sau restore, số cuộc đã hoàn tất và tỷ lệ cuộc ngắn phải phản ánh CDR 2 giây.
     after = restored.call_features(call(1100.0, eid="E2"))
     assert after["completed_calls_seen"] == 1
-    assert after["short_call_ratio"] == pytest.approx(1.0)     # the 2 s call is remembered as short
+    assert after["short_call_ratio"] == pytest.approx(1.0)  # the 2 s call is remembered as short
 
 
 def test_checkpoint_rejects_an_unknown_version(tmp_path):
@@ -191,6 +202,7 @@ def test_checkpoint_rejects_an_unknown_version(tmp_path):
 def test_psi_is_zero_for_the_same_distribution():
     # Hai mẫu cùng phân phối chuẩn phải có PSI dưới ngưỡng cần theo dõi.
     import random
+
     rng = random.Random(1)
     ref = [rng.gauss(0, 1) for _ in range(5000)]
     cur = [rng.gauss(0, 1) for _ in range(5000)]
@@ -200,6 +212,7 @@ def test_psi_is_zero_for_the_same_distribution():
 def test_psi_detects_a_shifted_distribution():
     # Dịch phân phối hiện tại mạnh phải đẩy PSI tới ngưỡng cảnh báo.
     import random
+
     rng = random.Random(2)
     ref = [rng.gauss(0, 1) for _ in range(5000)]
     cur = [rng.gauss(2.5, 1) for _ in range(5000)]
@@ -209,6 +222,7 @@ def test_psi_detects_a_shifted_distribution():
 def test_drift_report_recommends_nothing_when_traffic_is_stable():
     # Dữ liệu hiện tại ổn định so với baseline phải không đề xuất hành động.
     import random
+
     rng = random.Random(3)
     feats = {f"f{i}": [rng.gauss(0, 1) for _ in range(3000)] for i in range(4)}
     base = drift.build_baseline(feats, scores=[rng.random() for _ in range(3000)])
@@ -220,6 +234,7 @@ def test_drift_report_recommends_nothing_when_traffic_is_stable():
 def test_drift_report_recommends_retraining_when_everything_moves():
     # Khi mọi đặc trưng và score dịch chuyển, báo cáo phải cảnh báo và khuyến nghị huấn luyện lại.
     import random
+
     rng = random.Random(4)
     feats = {f"f{i}": [rng.gauss(0, 1) for _ in range(3000)] for i in range(4)}
     scores = [rng.random() * 0.2 for _ in range(3000)]
@@ -235,6 +250,7 @@ def test_drift_baseline_stores_no_raw_rows():
     """The baseline ships with the model, so it must not carry subscriber data."""
     # Tạo baseline từ dữ liệu ngẫu nhiên và kiểm tra chỉ lưu thống kê tổng hợp.
     import random
+
     rng = random.Random(5)
     base = drift.build_baseline({"calls_1m": [rng.gauss(0, 1) for _ in range(500)]})
     # Không cho phép chứa hàng/mẫu thô; đặc trưng chỉ gồm cạnh bin và tỷ trọng.
@@ -247,8 +263,9 @@ def test_band_shares_are_used_instead_of_a_psi_on_the_raw_score():
     """A PSI on this score is meaningless, so the baseline must carry bands, not score bins."""
     # Tạo score lệch mạnh cùng ngưỡng để kiểm tra baseline sử dụng dải quyết định.
     import random
+
     rng = random.Random(6)
-    scores = [rng.random() ** 8 for _ in range(4000)]          # heavily concentrated near zero
+    scores = [rng.random() ** 8 for _ in range(4000)]  # heavily concentrated near zero
     th = {"block": 0.9, "flag": 0.5}
     base = drift.build_baseline({"f": [rng.gauss(0, 1) for _ in range(4000)]}, scores=scores, thresholds=th)
     # Xác nhận baseline có tỷ trọng theo dải, không lưu PSI score thô.
@@ -260,12 +277,12 @@ def test_band_shares_are_used_instead_of_a_psi_on_the_raw_score():
 def test_a_collapsed_block_band_asks_for_a_human():
     # Khi tỷ trọng dải BLOCK co mạnh, cần yêu cầu người vận hành điều tra.
     import random
+
     rng = random.Random(7)
     feats = {"f": [rng.gauss(0, 1) for _ in range(3000)]}
     th = {"block": 0.9, "flag": 0.5}
     base = drift.build_baseline(feats, scores=[0.95] * 300 + [0.1] * 2700, thresholds=th)
-    rep = drift.evaluate_drift(base, {"f": [rng.gauss(0, 1) for _ in range(3000)]},
-                               scores=[0.95] * 5 + [0.1] * 2995)
+    rep = drift.evaluate_drift(base, {"f": [rng.gauss(0, 1) for _ in range(3000)]}, scores=[0.95] * 5 + [0.1] * 2995)
     # Xác nhận phát hiện dịch chuyển dải BLOCK và đề xuất INVESTIGATE.
     assert rep["block_band_moved"] is True
     assert rep["recommendation"] == drift.INVESTIGATE
@@ -275,6 +292,7 @@ def test_the_noise_floor_is_recorded_with_the_baseline():
     """Thresholds are only meaningful next to the metric's own noise."""
     # Xác nhận baseline lưu phân phối PSI nền để diễn giải ngưỡng drift có xét nhiễu.
     import random
+
     rng = random.Random(8)
     base = drift.build_baseline({f"f{i}": [rng.gauss(0, 1) for _ in range(4000)] for i in range(3)})
     # Có các phép đo null PSI và cực đại vẫn dưới ngưỡng theo dõi.

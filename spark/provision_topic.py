@@ -1,4 +1,5 @@
 """Create an explicitly named ordered-demo topic, without changing existing topics."""
+
 import argparse
 import os
 
@@ -6,6 +7,7 @@ import os
 def main():
     from kafka.admin import KafkaAdminClient, NewTopic
     from kafka.errors import TopicAlreadyExistsError
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--bootstrap", default=os.environ.get("KAFKA_BOOTSTRAP", "localhost:29092"))
     parser.add_argument("--topic", default="telecom.events.ordered.v2")
@@ -26,6 +28,7 @@ def main():
         print(f"topic={args.topic} partitions={actual}; existing configuration was not changed")
     finally:
         admin.close()
+
 
 if __name__ == "__main__":
     main()

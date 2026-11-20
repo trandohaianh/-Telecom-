@@ -1,4 +1,5 @@
 """Network HMAC key caching keeps file reads out of the HTTP verification path."""
+
 import sys
 import threading
 from collections import OrderedDict
@@ -116,10 +117,18 @@ def test_explicit_rotation_accepts_new_signatures_and_rejects_old_key(key_file):
     assert security.network_key() == ROTATED_KEY
     timestamp = "1000"
     new_body, old_body = b"new-key-request", b"old-key-request"
-    assert security.verify_network(new_body, timestamp,
-        security.sign_network(new_body, timestamp, ROTATED_KEY), clock=lambda: 1000) is None
-    assert security.verify_network(old_body, timestamp,
-        security.sign_network(old_body, timestamp, KEY), clock=lambda: 1000) == "bad signature"
+    assert (
+        security.verify_network(
+            new_body, timestamp, security.sign_network(new_body, timestamp, ROTATED_KEY), clock=lambda: 1000
+        )
+        is None
+    )
+    assert (
+        security.verify_network(
+            old_body, timestamp, security.sign_network(old_body, timestamp, KEY), clock=lambda: 1000
+        )
+        == "bad signature"
+    )
 
 
 def test_first_load_initializes_one_valid_random_key(tmp_path, monkeypatch):

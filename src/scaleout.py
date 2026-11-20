@@ -16,6 +16,7 @@ Trạng thái chính (cửa sổ theo chủ gọi, mô hình) không chia sẻ g
 tăng tuyến tính theo số lõi. Đây là tầng xử lý luồng cho tích hợp lưu lượng lớn; API HTTP từng
 sự kiện (server.py) vẫn dùng cho demo/app và tích hợp nhỏ.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -50,7 +51,7 @@ def _worker(index: int, n: int, conn, warm_events: list[dict], threads: str) -> 
     from detector import Detector
 
     det = Detector()
-    owns = lambda msisdn: shard_of_key(msisdn, n) == index      # noqa: E731
+    owns = lambda msisdn: shard_of_key(msisdn, n) == index  # noqa: E731
     for ev in warm_events:
         if shard_of(ev, n) == index:
             prime(det.fs, [ev])
@@ -69,9 +70,18 @@ def _worker(index: int, n: int, conn, warm_events: list[dict], threads: str) -> 
         for ev in foreign:
             det.fs.observe_foreign(ev, owns)
         results = det.score_batch(owned) if owned else []
-        slim = [{"decision": r.get("decision"), "risk": r.get("risk"), "scored": r.get("scored", True),
-                 "model_decision": r.get("model_decision"), "tier": r.get("tier"), "zero_day": r.get("zero_day"),
-                 "reasons": [{"code": x.get("code")} for x in r.get("reasons", [])][:3]} for r in results]
+        slim = [
+            {
+                "decision": r.get("decision"),
+                "risk": r.get("risk"),
+                "scored": r.get("scored", True),
+                "model_decision": r.get("model_decision"),
+                "tier": r.get("tier"),
+                "zero_day": r.get("zero_day"),
+                "reasons": [{"code": x.get("code")} for x in r.get("reasons", [])][:3],
+            }
+            for r in results
+        ]
         conn.send((slim, (time.perf_counter() - t0) * 1000.0))
     conn.close()
 

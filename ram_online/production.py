@@ -3,6 +3,7 @@
 The original OnlineGate boolean/OnlineUnavailable contract is preserved. No fail-open
 is applied to authentication, policy writes or Kafka commits.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,6 +22,7 @@ class Permit:
 
 class CircuitBreaker:
     """One event loop/process owns this object; no lock held across network I/O."""
+
     def __init__(self, failure_threshold=2, cooldown=1.0, clock=time.monotonic):
         if type(failure_threshold) is not int or failure_threshold < 1 or not math.isfinite(cooldown) or cooldown <= 0:
             raise ValueError("positive breaker limits required")
@@ -120,5 +122,4 @@ class FailOpenGate:
             self.breaker.cancelled(permit)
             raise
         self.breaker.success(permit)
-        return CallDecision(allowed, "known", "hidden" if allowed else "blocked",
-                            "exact_policy", policy_version)
+        return CallDecision(allowed, "known", "hidden" if allowed else "blocked", "exact_policy", policy_version)

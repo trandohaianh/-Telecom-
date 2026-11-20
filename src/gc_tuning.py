@@ -10,6 +10,7 @@ gc.freeze() moves the objects alive at start-up into a permanent generation the 
 The higher thresholds make young collections rarer and full ones practically never happen; cyclic
 garbage created later is still collected by the young generations. Disable with FRAUD_GC_TUNING=0.
 """
+
 from __future__ import annotations
 
 import gc

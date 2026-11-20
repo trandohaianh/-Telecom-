@@ -28,6 +28,7 @@ Nguyên tắc của việc miễn, và đây là phần quan trọng nhất củ
 Đây là danh bạ trong bộ nhớ, đủ cho bản demo. Chạy thật thì nó là một bảng có
 kiểm soát truy cập, và mỗi lần thêm/sửa/xoá đều phải vào nhật ký kiểm toán.
 """
+
 from __future__ import annotations
 
 import threading
@@ -38,21 +39,23 @@ import reason_codes as rc
 # Mã lý do mô tả "đang gọi ra hàng loạt" — đúng công việc của một tổng đài đã đăng ký.
 # Giữ bằng mã (R102...) chứ không bằng tên đặc trưng: mã là thứ đi vào sổ bằng chứng
 # và hiện ra cho chuyên viên, nên quy tắc miễn đọc được bằng đúng ngôn ngữ đó.
-COMMERCIAL_PATTERN_CODES = frozenset({
-    "R101",  # tần suất gọi đột biến trong 1 phút
-    "R102",  # nhiều cuộc gọi đi trong 10 phút
-    "R103",  # lưu lượng gọi đi lớn trong 1 giờ
-    "R104",  # gọi tới rất nhiều số khác nhau
-    "R105",  # tỉ lệ gọi đi / gọi đến lệch
-    "R106",  # tỷ lệ cuộc cực ngắn cao (khách không nhấc máy)
-    "R107",  # thời lượng cuộc gọi bất thường
-    "R108",  # lịch sử cuộc gọi bất thường
-    "R109",  # gần như không có cuộc gọi đến
-    "R306",  # mới bắt đầu hoạt động trên mạng — chính là ngày đầu của chiến dịch
-    "R401",  # thuê bao mới kích hoạt
-    "R601",  # hoạt động vào khung giờ bất thường
-    "P001",  # ghi chú chính sách về mức bằng chứng, không phải tín hiệu gian lận
-})
+COMMERCIAL_PATTERN_CODES = frozenset(
+    {
+        "R101",  # tần suất gọi đột biến trong 1 phút
+        "R102",  # nhiều cuộc gọi đi trong 10 phút
+        "R103",  # lưu lượng gọi đi lớn trong 1 giờ
+        "R104",  # gọi tới rất nhiều số khác nhau
+        "R105",  # tỉ lệ gọi đi / gọi đến lệch
+        "R106",  # tỷ lệ cuộc cực ngắn cao (khách không nhấc máy)
+        "R107",  # thời lượng cuộc gọi bất thường
+        "R108",  # lịch sử cuộc gọi bất thường
+        "R109",  # gần như không có cuộc gọi đến
+        "R306",  # mới bắt đầu hoạt động trên mạng — chính là ngày đầu của chiến dịch
+        "R401",  # thuê bao mới kích hoạt
+        "R601",  # hoạt động vào khung giờ bất thường
+        "P001",  # ghi chú chính sách về mức bằng chứng, không phải tín hiệu gian lận
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -78,10 +81,15 @@ class CommercialRegistry:
         self.stats = {"exempted": 0, "kept_fraud_signal": 0, "kept_over_rate": 0, "harvest_downgraded": 0}
 
     # ------------------------------------------------------------------ quản trị
-    def register(self, number: str, enterprise: str, max_calls_per_hour: int,
-                 registered_at: float = 0.0, expires_at: float | None = None) -> Registration:
-        reg = Registration(str(number), enterprise, int(max_calls_per_hour),
-                           float(registered_at), expires_at)
+    def register(
+        self,
+        number: str,
+        enterprise: str,
+        max_calls_per_hour: int,
+        registered_at: float = 0.0,
+        expires_at: float | None = None,
+    ) -> Registration:
+        reg = Registration(str(number), enterprise, int(max_calls_per_hour), float(registered_at), expires_at)
         with self._lock:
             self._by_number[reg.number] = reg
         return reg
@@ -117,8 +125,11 @@ class CommercialRegistry:
         rate = (result.get("evidence_features") or {}).get("calls_1h")
         if rate is not None and rate > 2 * reg.max_calls_per_hour:
             self.stats["kept_over_rate"] += 1
-            self._prepend(result, rc.COMMERCIAL_OVER_RATE,
-                          extra=f"{reg.enterprise}: {int(rate)} > 2 × {reg.max_calls_per_hour} cuộc/giờ")
+            self._prepend(
+                result,
+                rc.COMMERCIAL_OVER_RATE,
+                extra=f"{reg.enterprise}: {int(rate)} > 2 × {reg.max_calls_per_hour} cuộc/giờ",
+            )
             return
 
         # Trí nhớ thu giọng (A108): ~2 % cuộc gọi thật cũng có đoạn im lặng, nên một tổng đài đã đăng ký
@@ -128,8 +139,10 @@ class CommercialRegistry:
             self.stats["harvest_downgraded"] += 1
             result["decision"] = "FLAG"
             from detector import ACTIONS
-            result["action_vi"], result["action_en"] = ACTIONS.get((result.get("event_type"), "FLAG"),
-                                                                  (result.get("action_vi"), result.get("action_en")))
+
+            result["action_vi"], result["action_en"] = ACTIONS.get(
+                (result.get("event_type"), "FLAG"), (result.get("action_vi"), result.get("action_en"))
+            )
             self._prepend(result, rc.COMMERCIAL_HARVEST, extra=reg.enterprise)
             return
 
@@ -137,8 +150,9 @@ class CommercialRegistry:
         fraud_codes = codes - COMMERCIAL_PATTERN_CODES
         if fraud_codes:
             self.stats["kept_fraud_signal"] += 1
-            self._prepend(result, rc.COMMERCIAL_FRAUD_SIGNAL,
-                          extra=f"{reg.enterprise}: {', '.join(sorted(fraud_codes))}")
+            self._prepend(
+                result, rc.COMMERCIAL_FRAUD_SIGNAL, extra=f"{reg.enterprise}: {', '.join(sorted(fraud_codes))}"
+            )
             return
 
         # 1. Chỉ có tín hiệu thương mại: miễn.
@@ -147,11 +161,13 @@ class CommercialRegistry:
         result["commercial_exempt"] = reg.enterprise
         self._prepend(result, rc.COMMERCIAL_REGISTERED, extra=reg.enterprise)
         from detector import ACTIONS
+
         result["action_vi"], result["action_en"] = ACTIONS[("CALL", "ALLOW")]
 
     @staticmethod
     def _prepend(result: dict, code_tuple, extra: str = "") -> None:
         code, vi, en = code_tuple
         suffix = f" [{extra}]" if extra else ""
-        result["reasons"] = [{"code": code, "vi": vi + suffix, "en": en + suffix,
-                              "feature": "commercial_registry"}] + (result.get("reasons") or [])
+        result["reasons"] = [{"code": code, "vi": vi + suffix, "en": en + suffix, "feature": "commercial_registry"}] + (
+            result.get("reasons") or []
+        )

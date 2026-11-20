@@ -2,6 +2,7 @@
 
 Each test fails on the first (sequential) demo. No broker needed.
 """
+
 import threading
 import time
 
@@ -58,8 +59,9 @@ def kmsgs(events, partitions=2, sent_at=1.0):
 
 def pipelined(consumer, producer, engine, state, **kw):
     kw.setdefault("adaptive", False)
-    return kp.PipelinedVerdictPipeline(consumer, producer, engine, state, max_wait_s=0,
-                                       offset_factory=lambda t, p, o: (t, p, o), **kw)
+    return kp.PipelinedVerdictPipeline(
+        consumer, producer, engine, state, max_wait_s=0, offset_factory=lambda t, p, o: (t, p, o), **kw
+    )
 
 
 def test_pipelined_publishes_after_the_journal_and_commits_each_batch_offsets_in_order(tmp_path):
@@ -82,8 +84,10 @@ def test_journal_writes_each_event_once_without_simulator_labels(tmp_path):
     state = BackendState(tmp_path / "j.sqlite3", background_checkpoint=False)
     state.db.set_trace_callback(sql.append)
     events = [dict(ev(i), label=1, fraud_type="SIM_BOX", actor="SB") for i in range(12)]
-    pipelined(OffsetConsumer(kmsgs(events)), FakeProducer(), FakeEngine(), state, max_batch=50).run(12, idle_timeout_s=1)
-    assert not any(s.strip().upper().startswith("UPDATE EVENTS SET RESULT") for s in sql)   # was one per event
+    pipelined(OffsetConsumer(kmsgs(events)), FakeProducer(), FakeEngine(), state, max_batch=50).run(
+        12, idle_timeout_s=1
+    )
+    assert not any(s.strip().upper().startswith("UPDATE EVENTS SET RESULT") for s in sql)  # was one per event
     payloads = [row[0] for row in state.db.execute("SELECT payload FROM events").fetchall()]
     assert len(payloads) == 12
     assert all("label" not in p and "fraud_type" not in p for p in payloads)
@@ -102,10 +106,11 @@ def test_next_batch_is_scored_while_the_previous_one_is_being_fsynced(tmp_path):
             return self.inner.__enter__()
 
         def __exit__(self, *exc):
-            time.sleep(0.3)                              # a slow fsync
+            time.sleep(0.3)  # a slow fsync
             out = self.inner.__exit__(*exc)
             marks.setdefault("first_commit_done", time.perf_counter())
             return out
+
     state.transaction = SlowTx
 
     class Timed(FakeEngine):
@@ -113,9 +118,11 @@ def test_next_batch_is_scored_while_the_previous_one_is_being_fsynced(tmp_path):
             if self.calls:
                 marks.setdefault("second_score_start", time.perf_counter())
             return super().process(events)
-    pipelined(OffsetConsumer(kmsgs([ev(i) for i in range(20)])), FakeProducer(), Timed(), state,
-              max_batch=10).run(20, idle_timeout_s=2)
-    assert marks["second_score_start"] < marks["first_commit_done"]          # real overlap
+
+    pipelined(OffsetConsumer(kmsgs([ev(i) for i in range(20)])), FakeProducer(), Timed(), state, max_batch=10).run(
+        20, idle_timeout_s=2
+    )
+    assert marks["second_score_start"] < marks["first_commit_done"]  # real overlap
     state.close()
 
 
@@ -125,11 +132,12 @@ def test_an_event_replayed_while_its_batch_is_in_flight_is_not_scored_twice(tmp_
     real_record = state.record_many
 
     def held(kind, events, results):
-        gate.wait(2)                                      # batch 1 stays in flight
+        gate.wait(2)  # batch 1 stays in flight
         return real_record(kind, events, results)
+
     state.record_many = held
     first = kmsgs([ev(i) for i in range(5)], partitions=1)
-    again = kmsgs([ev(i) for i in range(3, 8)], partitions=1)   # E3, E4 redelivered before batch 1 is durable
+    again = kmsgs([ev(i) for i in range(3, 8)], partitions=1)  # E3, E4 redelivered before batch 1 is durable
     engine = FakeEngine()
     timer = threading.Timer(0.3, gate.set)
     timer.start()
@@ -156,22 +164,23 @@ def test_writer_failure_stops_the_consumer_instead_of_committing_offsets(tmp_pat
 
     def boom(kind, events, results):
         raise OSError("disk full")
+
     state.record_many = boom
     consumer = OffsetConsumer(kmsgs([ev(i) for i in range(20)]))
     with pytest.raises(RuntimeError, match="journal writer failed"):
         pipelined(consumer, FakeProducer(), FakeEngine(), state, max_batch=5).run(20, idle_timeout_s=1)
-    assert consumer.committed == []                       # nothing acknowledged that is not durable
+    assert consumer.committed == []  # nothing acknowledged that is not durable
     state.close()
 
 
 def test_adaptive_batch_follows_the_latency_budget_and_grows_under_backlog():
     b = kp.AdaptiveBatcher(FakeConsumer([]), max_batch=1000, budget_ms=10.0, min_batch=16)
-    b.observe(20, 20 * 0.1)              # 0.1 ms per event -> 100 events fit 10 ms
+    b.observe(20, 20 * 0.1)  # 0.1 ms per event -> 100 events fit 10 ms
     assert b.limit == 100
-    b.observe(30, 30 * 1.0)              # much slower: the cap falls (EWMA)
+    b.observe(30, 30 * 1.0)  # much slower: the cap falls (EWMA)
     assert 16 <= b.limit < 100
     before = b.limit
-    for _ in range(3):                   # three full batches in a row: backlog -> throughput mode
+    for _ in range(3):  # three full batches in a row: backlog -> throughput mode
         b.observe(b.limit, b.limit * 1.0)
     assert b.limit > before and b.limit <= 1000
     with pytest.raises(ValueError):
@@ -180,6 +189,7 @@ def test_adaptive_batch_follows_the_latency_budget_and_grows_under_backlog():
 
 def test_lookup_many_detects_conflicting_content_and_record_many_returns_real_seqs(tmp_path):
     from backend_state import EventConflict
+
     state = BackendState(tmp_path / "j.sqlite3", background_checkpoint=False)
     with state.transaction():
         seqs = state.record_many("VERDICT", [ev(1), ev(2)], [{"decision": "ALLOW"}, {"decision": "FLAG"}])
@@ -200,7 +210,7 @@ class BlockingConsumer(FakeConsumer):
     def consume(self, num_messages=1, timeout=0):
         out = super().consume(num_messages, timeout)
         if len(out) < num_messages:
-            self.clock[0] += max(0.0, timeout)        # it waited the whole timeout for the missing ones
+            self.clock[0] += max(0.0, timeout)  # it waited the whole timeout for the missing ones
         return out
 
 
@@ -209,7 +219,7 @@ def test_a_lone_message_is_not_held_for_the_idle_timeout():
     consumer = BlockingConsumer([Msg(*kp.encode_event(ev(1), 0.0))], clock)
     batcher = kp.MicroBatcher(consumer, max_batch=1000, max_wait_s=0.001, clock=lambda: clock[0])
     assert len(batcher.next_batch(idle_timeout_s=0.5)) == 1
-    assert clock[0] <= 0.002                          # was 0.5 s: consume(1000, 0.5) waited for 999 more
+    assert clock[0] <= 0.002  # was 0.5 s: consume(1000, 0.5) waited for 999 more
 
 
 def test_sink_does_not_add_its_own_waiting_to_the_measured_latency():
@@ -217,4 +227,4 @@ def test_sink_does_not_add_its_own_waiting_to_the_measured_latency():
     v = kp.json.dumps({"event_id": "A", "decision": "ALLOW", kp.SENT_AT: 10.0}).encode()
     sink = kp.VerdictSink(BlockingConsumer([Msg(b"k", v)], clock), clock=lambda: clock[0])
     sink.run(1, timeout_s=1)
-    assert sink.latency_ms == [0.0]                   # was 200 ms: consume(5000, 0.2) waited before returning
+    assert sink.latency_ms == [0.0]  # was 200 ms: consume(5000, 0.2) waited before returning

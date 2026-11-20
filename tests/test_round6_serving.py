@@ -6,6 +6,7 @@
    -> chạy trong tiến trình con.
 3. Server HTTP không đóng băng heap khởi động cho GC như load test trong tiến trình -> dùng chung gc_tuning.
 """
+
 import gc
 import json
 from pathlib import Path
@@ -23,7 +24,7 @@ def test_writer_connection_never_checkpoints_and_background_thread_does(tmp_path
     state = BackendState(tmp_path / "s.sqlite3")
     try:
         assert state.background_checkpoint and state.db.execute("PRAGMA wal_autocheckpoint").fetchone()[0] == 0
-        assert state.db.execute("PRAGMA synchronous").fetchone()[0] == 2          # FULL durability unchanged
+        assert state.db.execute("PRAGMA synchronous").fetchone()[0] == 2  # FULL durability unchanged
         for i in range(50):
             with state.transaction():
                 seq, _ = state.reserve("VERDICT", {"event_id": f"E{i}", "pad": "x" * 2000})
@@ -53,6 +54,7 @@ def test_explicit_threshold_and_memory_state_keep_inline_checkpoint(tmp_path):
 
 def _chain(path, n):
     from evidence import EvidenceLog
+
     log = EvidenceLog(path)
     for i in range(n):
         log.submit({"event_id": f"E{i}", "decision": "FLAG"})
@@ -61,19 +63,20 @@ def _chain(path, n):
 
 def test_evidence_chain_is_verified_in_a_child_process(tmp_path):
     from evidence import verify_in_subprocess
+
     path = tmp_path / "evidence.jsonl"
     _chain(path, 20)
     ok, n, bad, state = verify_in_subprocess(path, {})
     assert ok is True and n == 20 and bad is None and state["n"] == 20
     lines = path.read_text(encoding="utf-8").splitlines()
     row = json.loads(lines[4])
-    row["record"]["decision"] = "ALLOW"                    # tamper with an old line
+    row["record"]["decision"] = "ALLOW"  # tamper with an old line
     lines[4] = json.dumps(row, ensure_ascii=False)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     ok, n, bad, _ = verify_in_subprocess(path, {})
     assert ok is False and bad == 5
     ok, *_ = verify_in_subprocess(tmp_path / "missing.jsonl", {})
-    assert ok is None                                      # could not run: never reported as tampering
+    assert ok is None  # could not run: never reported as tampering
 
 
 def test_server_verifies_evidence_outside_its_own_interpreter():
@@ -84,6 +87,7 @@ def test_server_verifies_evidence_outside_its_own_interpreter():
 
 def test_server_applies_the_same_gc_settings_as_the_in_process_benchmark(monkeypatch):
     import gc_tuning
+
     old = gc.get_threshold()
     try:
         monkeypatch.setenv("FRAUD_GC_TUNING", "0")
@@ -125,6 +129,7 @@ def test_journal_durability_defaults_to_full_and_normal_is_explicit_opt_in(tmp_p
 
 def test_evidence_coalescing_and_checkpoint_interval_are_bounded_settings(monkeypatch):
     from backend_evidence import _env_seconds
+
     monkeypatch.delenv("X_S", raising=False)
     assert _env_seconds("X_S", 0.02, 0.0, 5.0) == 0.02
     monkeypatch.setenv("X_S", "0.2")

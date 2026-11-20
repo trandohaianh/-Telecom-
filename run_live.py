@@ -1,4 +1,5 @@
 """Start a dedicated live/shadow API with isolated durable state: python run_live.py."""
+
 from __future__ import annotations
 
 import argparse
@@ -32,8 +33,10 @@ def main():
         if (adjacent_data / "dataset_manifest.json").is_file():
             os.environ.setdefault("FRAUD_DATA_DIR", str(adjacent_data))
     for variable, filename in (
-        ("FRAUD_STATE_DB", "state.sqlite3"), ("FRAUD_EVIDENCE_FILE", "evidence.jsonl"),
-        ("FRAUD_AUDIT_FILE", "audit.jsonl"), ("FRAUD_USERS_FILE", "users.json"),
+        ("FRAUD_STATE_DB", "state.sqlite3"),
+        ("FRAUD_EVIDENCE_FILE", "evidence.jsonl"),
+        ("FRAUD_AUDIT_FILE", "audit.jsonl"),
+        ("FRAUD_USERS_FILE", "users.json"),
         ("FRAUD_NETWORK_KEY", "network_link.key"),
     ):
         os.environ[variable] = str(state_dir / filename)
@@ -41,14 +44,18 @@ def main():
         os.environ["FRAUD_REQUIRE_MANIFEST"] = "1"
     sys.path.insert(0, str(root / "src"))
     import security
+
     security.load_users()
     security.network_key()
     import uvicorn
+
     print(f"Live API starts in shadow mode at http://{args.host}:{args.port}")
     print(f"State and integration credentials: {state_dir}")
     from server import app
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning",
-                loop="precise_event_loop:uvicorn_loop_factory")
+
+    uvicorn.run(
+        app, host=args.host, port=args.port, log_level="warning", loop="precise_event_loop:uvicorn_loop_factory"
+    )
 
 
 if __name__ == "__main__":

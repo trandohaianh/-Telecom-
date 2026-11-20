@@ -1,4 +1,5 @@
 """Bounded local WAV feature extraction. Acoustic measurements are not a deepfake verdict."""
+
 from __future__ import annotations
 
 import argparse
@@ -18,9 +19,17 @@ MAX_WAV_BYTES = 12 * 1024 * 1024
 MAX_DURATION_S = 30.0
 MIN_DURATION_S = 0.10
 REAL_FEATURES = [
-    "voice_fraction", "speech_s", "rms_dbfs", "clipping_ratio", "zero_crossing_rate",
-    "spectral_flatness", "spectral_centroid_hz", "spectral_centroid_std_hz",
-    "pitch_hz_median", "pitch_period_variation", "spectral_drift",
+    "voice_fraction",
+    "speech_s",
+    "rms_dbfs",
+    "clipping_ratio",
+    "zero_crossing_rate",
+    "spectral_flatness",
+    "spectral_centroid_hz",
+    "spectral_centroid_std_hz",
+    "pitch_hz_median",
+    "pitch_period_variation",
+    "spectral_drift",
 ]
 
 
@@ -35,7 +44,10 @@ def _decode_pcm(payload: bytes) -> tuple[np.ndarray, int, int]:
     try:
         with wave.open(io.BytesIO(payload), "rb") as source:
             rate, channels, width, frames = (
-                source.getframerate(), source.getnchannels(), source.getsampwidth(), source.getnframes()
+                source.getframerate(),
+                source.getnchannels(),
+                source.getsampwidth(),
+                source.getnframes(),
             )
             if source.getcomptype() != "NONE" or width not in (1, 2, 3, 4):
                 raise AudioValidationError("expected uncompressed integer PCM WAV (8/16/24/32 bit)")
@@ -85,17 +97,18 @@ def _segments(mask: np.ndarray, duration: float) -> list[dict]:
             start = i
         if not value and start is not None:
             if i - start >= 8:
-                spans.append({"start_s": round(start * .01, 3),
-                              "end_s": round(min(duration, (i - 1) * .01 + .025), 3)})
+                spans.append(
+                    {"start_s": round(start * 0.01, 3), "end_s": round(min(duration, (i - 1) * 0.01 + 0.025), 3)}
+                )
             start = None
     return spans
 
 
 def _channel_metrics(samples: np.ndarray, *, clipping_ratio: float) -> tuple[dict, list[dict]]:
-    raw_rms = float(np.sqrt(np.mean(samples ** 2)))
+    raw_rms = float(np.sqrt(np.mean(samples**2)))
     centered = samples - float(np.mean(samples))
     frames = _frames(centered)
-    frame_rms = np.sqrt(np.mean(frames ** 2, axis=1))
+    frame_rms = np.sqrt(np.mean(frames**2, axis=1))
     db = 20 * np.log10(np.maximum(frame_rms, 1e-10))
     threshold = max(-55.0, min(-35.0, float(np.percentile(db, 20)) + 8.0))
     # Transparent energy VAD baseline. It is intentionally not advertised as a neural speech detector.
@@ -103,8 +116,8 @@ def _channel_metrics(samples: np.ndarray, *, clipping_ratio: float) -> tuple[dic
     spans = _segments(mask, len(samples) / TARGET_RATE)
     valid_mask = np.zeros(len(mask), dtype=bool)
     for span in spans:
-        start = int(round(span["start_s"] / .01))
-        end = min(len(mask), int(round((span["end_s"] - .025) / .01)) + 1)
+        start = int(round(span["start_s"] / 0.01))
+        end = min(len(mask), int(round((span["end_s"] - 0.025) / 0.01)) + 1)
         valid_mask[start:end] = True
     active = frames[valid_mask]
     duration = len(samples) / TARGET_RATE
@@ -115,9 +128,12 @@ def _channel_metrics(samples: np.ndarray, *, clipping_ratio: float) -> tuple[dic
         "rms_dbfs": float(20 * np.log10(max(raw_rms, 1e-10))),
         "clipping_ratio": clipping_ratio,
         "zero_crossing_rate": float(np.mean(np.signbit(centered[:-1]) != np.signbit(centered[1:]))),
-        "spectral_flatness": 0.0, "spectral_centroid_hz": 0.0,
-        "spectral_centroid_std_hz": 0.0, "pitch_hz_median": None,
-        "pitch_period_variation": None, "spectral_drift": 0.0,
+        "spectral_flatness": 0.0,
+        "spectral_centroid_hz": 0.0,
+        "spectral_centroid_std_hz": 0.0,
+        "pitch_hz_median": None,
+        "pitch_period_variation": None,
+        "spectral_drift": 0.0,
     }
     if not len(active):
         return result, spans
@@ -127,23 +143,25 @@ def _channel_metrics(samples: np.ndarray, *, clipping_ratio: float) -> tuple[dic
     band = (freq >= 80) & (freq <= 7500)
     band_power = power[:, band]
     centroids = np.sum(band_power * freq[band], axis=1) / np.sum(band_power, axis=1)
-    result["spectral_flatness"] = float(np.mean(
-        np.exp(np.mean(np.log(band_power), axis=1)) / np.mean(band_power, axis=1)))
+    result["spectral_flatness"] = float(
+        np.mean(np.exp(np.mean(np.log(band_power), axis=1)) / np.mean(band_power, axis=1))
+    )
     result["spectral_centroid_hz"] = float(np.mean(centroids))
     result["spectral_centroid_std_hz"] = float(np.std(centroids))
     norm_spectrum = band_power / np.sum(band_power, axis=1, keepdims=True)
     if len(norm_spectrum) > 1:
         midpoint = len(norm_spectrum) // 2
         a, b = norm_spectrum[:midpoint].mean(axis=0), norm_spectrum[midpoint:].mean(axis=0)
-        result["spectral_drift"] = float(np.clip(
-            1 - np.dot(a, b) / max(np.linalg.norm(a) * np.linalg.norm(b), 1e-16), 0, 1))
+        result["spectral_drift"] = float(
+            np.clip(1 - np.dot(a, b) / max(np.linalg.norm(a) * np.linalg.norm(b), 1e-16), 0, 1)
+        )
     # Frame-period variability is a proxy; it is not cycle-level clinical jitter or a speaker identity score.
     transformed = np.fft.rfft(windowed, n=1024, axis=1)
     corr = np.fft.irfft(np.abs(transformed) ** 2, n=1024, axis=1)
     lo, hi = int(TARGET_RATE / 400), int(TARGET_RATE / 60)
-    lags = np.argmax(corr[:, lo:hi + 1], axis=1) + lo
+    lags = np.argmax(corr[:, lo : hi + 1], axis=1) + lo
     peaks = corr[np.arange(len(corr)), lags] / np.maximum(corr[:, 0], 1e-16)
-    periods = lags[peaks >= .55].astype(float) / TARGET_RATE
+    periods = lags[peaks >= 0.55].astype(float) / TARGET_RATE
     if len(periods):
         result["pitch_hz_median"] = float(1 / np.median(periods))
     if len(periods) > 1:
@@ -168,8 +186,9 @@ class LocalWhisperASR:
     def transcribe(self, samples: np.ndarray, sample_rate: int) -> str:
         if sample_rate != TARGET_RATE:
             raise AudioValidationError("ASR requires 16 kHz input")
-        segments, _ = self.model.transcribe(samples.astype(np.float32), language=self.language,
-                                             beam_size=1, vad_filter=True)
+        segments, _ = self.model.transcribe(
+            samples.astype(np.float32), language=self.language, beam_size=1, vad_filter=True
+        )
         return " ".join(s.text.strip() for s in segments).strip()
 
 
@@ -186,8 +205,7 @@ def analyze_wav(payload: bytes, *, caller_channel: int | None = None, asr=None) 
         divisor = math.gcd(source_rate, TARGET_RATE)
         samples = resample_poly(samples, TARGET_RATE // divisor, source_rate // divisor, axis=0)
     # Mono has no party attribution; two channels also require an explicit caller-channel mapping.
-    channel_results = [_channel_metrics(samples[:, c], clipping_ratio=float(clipping[c]))
-                       for c in range(channels)]
+    channel_results = [_channel_metrics(samples[:, c], clipping_ratio=float(clipping[c])) for c in range(channels)]
     selected = caller_channel if caller_channel is not None else 0
     features, segments = channel_results[selected]
     warnings = []
@@ -199,22 +217,28 @@ def analyze_wav(payload: bytes, *, caller_channel: int | None = None, asr=None) 
         warnings.append("caller_channel_required")
     if features["rms_dbfs"] < -50:
         warnings.append("near_silence")
-    if features["clipping_ratio"] > .01:
+    if features["clipping_ratio"] > 0.01:
         warnings.append("clipping")
-    if features["speech_s"] < .2:
+    if features["speech_s"] < 0.2:
         warnings.append("insufficient_speech")
     transcript = asr.transcribe(samples[:, selected], TARGET_RATE) if asr else None
     attributable = channels == 2 and caller_channel is not None
     return {
-        "schema_version": SCHEMA_VERSION, "source": "real_pcm_wav",
+        "schema_version": SCHEMA_VERSION,
+        "source": "real_pcm_wav",
         "audio_sha256": hashlib.sha256(payload).hexdigest(),
-        "source_sample_rate": source_rate, "sample_rate": TARGET_RATE,
-        "channels": channels, "duration_s": len(samples) / TARGET_RATE,
-        "vad": "adaptive_energy_v1", "clipping_measurement": "source_pcm_extreme_code_fraction",
-        "features": features, "segments": segments,
+        "source_sample_rate": source_rate,
+        "sample_rate": TARGET_RATE,
+        "channels": channels,
+        "duration_s": len(samples) / TARGET_RATE,
+        "vad": "adaptive_energy_v1",
+        "clipping_measurement": "source_pcm_extreme_code_fraction",
+        "features": features,
+        "segments": segments,
         "caller_speech_ratio": features["voice_fraction"] if attributable else None,
         "callee_speech_s": channel_results[1 - selected][0]["speech_s"] if attributable else None,
-        "transcript": transcript, "transcript_source": "local_asr" if asr else "unavailable",
+        "transcript": transcript,
+        "transcript_source": "local_asr" if asr else "unavailable",
         "quality_warnings": warnings,
     }
 

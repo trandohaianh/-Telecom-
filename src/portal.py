@@ -5,6 +5,7 @@ Giao diện:
 - /admin/          bảng điều khiển vận hành (giám sát luồng, bằng chứng, AI agent)
 - /admin/manage    quản trị: tài khoản nhân viên, duyệt báo cáo số, chi phí, pipeline
 """
+
 from __future__ import annotations
 
 import os
@@ -65,7 +66,7 @@ def startup(engine_getter) -> None:
     CPU_AT_START = costs.process_cpu_seconds()
     observability.register(engine_getter, lambda: _db)
     if not getattr(engine_getter(), "demo_mode", security.DEMO_MODE):
-        real_otp_provider(demo=False)   # fail fast: a misconfigured OTP provider must stop start-up, not 500 later
+        real_otp_provider(demo=False)  # fail fast: a misconfigured OTP provider must stop start-up, not 500 later
     name = security.bootstrap_admin_password()
     if name:
         print(f"  Đã đặt mật khẩu ban đầu cho tài khoản vận hành '{name}' (từ FRAUD_ADMIN_PASSWORD).")
@@ -95,7 +96,7 @@ class AlertSink:
         except Exception:
             self.dropped += 1
         if push_sender is not None:
-            push_sender.notify(msisdn, item)   # Web Push to the subscriber's installed app (no number in payload)
+            push_sender.notify(msisdn, item)  # Web Push to the subscriber's installed app (no number in payload)
 
     def _run(self) -> None:
         import json
@@ -110,8 +111,10 @@ class AlertSink:
                 pass
             try:
                 with db().tx() as c:
-                    c.executemany("INSERT INTO subscriber_alerts(msisdn, created_at, item_json) VALUES (?,?,?)",
-                                  [(m, t, json.dumps(i, ensure_ascii=False, default=str)) for m, i, t in batch])
+                    c.executemany(
+                        "INSERT INTO subscriber_alerts(msisdn, created_at, item_json) VALUES (?,?,?)",
+                        [(m, t, json.dumps(i, ensure_ascii=False, default=str)) for m, i, t in batch],
+                    )
             except Exception:
                 self.dropped += len(batch)
 
@@ -141,7 +144,7 @@ def hydrate_engine(eng) -> None:
     with eng.lock:
         for msisdn, items in history.items():
             box = eng.inbox[msisdn]
-            for item in items:          # cũ → mới; appendleft để mục mới nhất đứng đầu như lúc chạy
+            for item in items:  # cũ → mới; appendleft để mục mới nhất đứng đầu như lúc chạy
                 box.appendleft(item)
         for r in d.query("SELECT msisdn FROM subscribers WHERE msisdn IS NOT NULL AND disabled_at IS NULL"):
             eng.inbox[r["msisdn"]]  # chạm hộp thư: cảnh báo tới số này được giữ lại kể cả khi app đang đóng
@@ -151,7 +154,9 @@ def hydrate_engine(eng) -> None:
             eng.invites[r["protected"]].add(r["guardian"])
         for r in d.query("SELECT number, reporter FROM number_reports"):
             eng.reports[r["number"]].add(r["reporter"])
-        confirmed = [r["number"] for r in d.query("SELECT DISTINCT number FROM number_reports WHERE status='confirmed'")]
+        confirmed = [
+            r["number"] for r in d.query("SELECT DISTINCT number FROM number_reports WHERE status='confirmed'")
+        ]
     if confirmed:
         with eng.det_lock:
             eng.g.fallback.block_manual(confirmed, "REPORT-CONFIRMED")
@@ -159,6 +164,7 @@ def hydrate_engine(eng) -> None:
         alert_sink = AlertSink()
     global push_sender
     import push as _push
+
     if push_sender is None and _push.available():
         push_sender = _push.PushSender(db)
     eng.inbox_hook = alert_sink
@@ -194,8 +200,11 @@ def auth_config():
     eng = engine()
     demo = bool(getattr(eng, "demo_mode", security.DEMO_MODE))
     ids = accounts.google_client_ids()
-    return {"google_client_id": ids[0] if ids else None, "demo_mode": demo,
-            "phone_verification": "demo_pool" if demo else ("otp" if _otp_ready() else "unavailable")}
+    return {
+        "google_client_id": ids[0] if ids else None,
+        "demo_mode": demo,
+        "phone_verification": "demo_pool" if demo else ("otp" if _otp_ready() else "unavailable"),
+    }
 
 
 def _otp_ready() -> bool:
@@ -291,7 +300,7 @@ def claim_demo_number(me: dict = Depends(subscriber_session)):
     pool = [s.msisdn for s in eng.sim.subs if s.msisdn not in public]
     number = subscribers().claim_demo_number(me["id"], pool)
     if not me.get("msisdn"):
-        forget_number_history(number)   # số giả lập tái sử dụng: không mang theo lịch sử người dùng trước
+        forget_number_history(number)  # số giả lập tái sử dụng: không mang theo lịch sử người dùng trước
     with eng.lock:
         eng.inbox[number]
     return {"msisdn": number, "kind": "demo"}
@@ -309,6 +318,7 @@ class OtpIn(PhoneIn):
 @router.get("/api/app/push/key")
 def push_key():
     import push as _push
+
     key = _push.public_key()
     if key is None:
         raise HTTPException(503, "Máy chủ chưa bật Web Push")
@@ -318,18 +328,25 @@ def push_key():
 @router.post("/api/app/push/subscribe")
 def push_subscribe(body: dict, request: Request, me: dict = Depends(subscriber_session)):
     import push as _push
+
     accounts.limiter.hit("push_subscribe", str(me["id"]), 20, 3600)
     try:
         sub = _push.validate_subscription(body)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     with db().tx() as c:
-        c.execute("INSERT INTO push_subscriptions(subscriber_id, endpoint, p256dh, auth, created_at) VALUES (?,?,?,?,?) "
-                  "ON CONFLICT(endpoint) DO UPDATE SET subscriber_id=excluded.subscriber_id, p256dh=excluded.p256dh, "
-                  "auth=excluded.auth", (me["id"], sub["endpoint"], sub["p256dh"], sub["auth"], now()))
+        c.execute(
+            "INSERT INTO push_subscriptions(subscriber_id, endpoint, p256dh, auth, created_at) VALUES (?,?,?,?,?) "
+            "ON CONFLICT(endpoint) DO UPDATE SET subscriber_id=excluded.subscriber_id, p256dh=excluded.p256dh, "
+            "auth=excluded.auth",
+            (me["id"], sub["endpoint"], sub["p256dh"], sub["auth"], now()),
+        )
         # mỗi tài khoản tối đa 5 thiết bị nhận push
-        c.execute("DELETE FROM push_subscriptions WHERE subscriber_id=? AND id NOT IN (SELECT id FROM push_subscriptions "
-                  "WHERE subscriber_id=? ORDER BY created_at DESC LIMIT 5)", (me["id"], me["id"]))
+        c.execute(
+            "DELETE FROM push_subscriptions WHERE subscriber_id=? AND id NOT IN (SELECT id FROM push_subscriptions "
+            "WHERE subscriber_id=? ORDER BY created_at DESC LIMIT 5)",
+            (me["id"], me["id"]),
+        )
     return {"subscribed": True}
 
 
@@ -337,7 +354,9 @@ def push_subscribe(body: dict, request: Request, me: dict = Depends(subscriber_s
 def push_unsubscribe(body: dict, me: dict = Depends(subscriber_session)):
     endpoint = (body or {}).get("endpoint")
     with db().tx() as c:
-        c.execute("DELETE FROM push_subscriptions WHERE subscriber_id=? AND endpoint=?", (me["id"], str(endpoint or "")))
+        c.execute(
+            "DELETE FROM push_subscriptions WHERE subscriber_id=? AND endpoint=?", (me["id"], str(endpoint or ""))
+        )
     return {"subscribed": False}
 
 
@@ -396,8 +415,10 @@ def forget_number_history(msisdn: str) -> None:
 # ---- ghi xuống CSDL các thao tác của app (server.py gọi sau khi cập nhật bộ nhớ engine)
 def persist_report(number: str, reporter: str, reason: str) -> None:
     with db().tx() as c:
-        c.execute("INSERT OR IGNORE INTO number_reports(number, reporter, reason, created_at) VALUES (?,?,?,?)",
-                  (number, reporter, (reason or "")[:500], now()))
+        c.execute(
+            "INSERT OR IGNORE INTO number_reports(number, reporter, reason, created_at) VALUES (?,?,?,?)",
+            (number, reporter, (reason or "")[:500], now()),
+        )
 
 
 def persist_invite(protected: str, guardian: str) -> None:
@@ -484,14 +505,21 @@ def save_operator(body: OperatorIn, u=Depends(require("admin"))):
     if body.password is not None and len(body.password) < 10:
         raise HTTPException(422, "Mật khẩu nhân viên tối thiểu 10 ký tự")
     try:
-        out = security.upsert_operator(body.name, body.role, email=body.email, password=body.password,
-                                       disabled=body.disabled)
+        out = security.upsert_operator(
+            body.name, body.role, email=body.email, password=body.password, disabled=body.disabled
+        )
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     from server import audit
 
-    audit.record(u["name"], "operator_upsert", target=body.name, role=body.role,
-                 disabled=bool(body.disabled), password_changed=bool(body.password))
+    audit.record(
+        u["name"],
+        "operator_upsert",
+        target=body.name,
+        role=body.role,
+        disabled=bool(body.disabled),
+        password_changed=bool(body.password),
+    )
     return out
 
 
@@ -503,8 +531,11 @@ def _report_key(number: str) -> str:
 
 
 @router.get("/api/admin/reports")
-def list_reports(status: str = Query("pending", pattern="^(pending|confirmed|dismissed)$"),
-                 limit: int = Query(100, ge=1, le=500), u=Depends(require("analyst"))):
+def list_reports(
+    status: str = Query("pending", pattern="^(pending|confirmed|dismissed)$"),
+    limit: int = Query(100, ge=1, le=500),
+    u=Depends(require("analyst")),
+):
     """Số bị thuê bao báo cáo, gộp theo số. Số luôn hiển thị dạng che (tối thiểu hoá dữ liệu),
     kèm số lần mô hình đã chặn/gắn cờ số đó để chuyên viên đối chiếu."""
     rows = db().query(
@@ -512,7 +543,8 @@ def list_reports(status: str = Query("pending", pattern="^(pending|confirmed|dis
                   GROUP_CONCAT(NULLIF(reason, ''), ' | ') AS reasons, MAX(reviewer) AS reviewer,
                   MAX(review_note) AS review_note
            FROM number_reports WHERE status = ? GROUP BY number ORDER BY reporters DESC, last_at DESC LIMIT ?""",
-        (status, limit))
+        (status, limit),
+    )
     eng = engine()
     out = []
     for r in rows:
@@ -539,8 +571,11 @@ def review_report(key: str, body: ReviewIn, u=Depends(require("analyst"))):
         raise HTTPException(404, "Không có báo cáo chờ duyệt cho số này")
     status = "confirmed" if body.decision == "confirm" else "dismissed"
     with db().tx() as c:
-        n = c.execute("UPDATE number_reports SET status=?, reviewer=?, review_note=?, reviewed_at=? "
-                      "WHERE number=? AND status='pending'", (status, u["name"], body.note, now(), number)).rowcount
+        n = c.execute(
+            "UPDATE number_reports SET status=?, reviewer=?, review_note=?, reviewed_at=? "
+            "WHERE number=? AND status='pending'",
+            (status, u["name"], body.note, now(), number),
+        ).rowcount
     eng = engine()
     if status == "confirmed" and eng is not None:
         # Chuyên viên xác nhận → luật dự phòng chặn số (con người quyết định, mô hình không tự học từ báo cáo).
@@ -548,8 +583,9 @@ def review_report(key: str, body: ReviewIn, u=Depends(require("analyst"))):
             eng.g.fallback.block_manual([number], f"REPORT-{u['name']}")
     from server import audit
 
-    audit.record(u["name"], "report_review", number=security.mask_number(number), decision=status, reports=n,
-                 note=body.note)
+    audit.record(
+        u["name"], "report_review", number=security.mask_number(number), decision=status, reports=n, note=body.note
+    )
     return {"key": key, "number_masked": security.mask_number(number), "status": status, "reports": n}
 
 
@@ -573,13 +609,22 @@ def cost_summary(days: int = Query(30, ge=1, le=366), u=Depends(require("admin")
 @router.post("/api/admin/costs/infra")
 def add_infra(body: InfraIn, u=Depends(require("admin"))):
     with db().tx() as c:
-        rid = c.execute("INSERT INTO infra_costs(month, provider, item, amount_usd, note, created_by, created_at) "
-                        "VALUES (?,?,?,?,?,?,?)", (body.month, body.provider, body.item, body.amount_usd, body.note,
-                                                   u["name"], now())).lastrowid
+        rid = c.execute(
+            "INSERT INTO infra_costs(month, provider, item, amount_usd, note, created_by, created_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (body.month, body.provider, body.item, body.amount_usd, body.note, u["name"], now()),
+        ).lastrowid
     from server import audit
 
-    audit.record(u["name"], "infra_cost_add", target=str(rid), provider=body.provider, item=body.item,
-                 amount_usd=body.amount_usd, month=body.month)
+    audit.record(
+        u["name"],
+        "infra_cost_add",
+        target=str(rid),
+        provider=body.provider,
+        item=body.item,
+        amount_usd=body.amount_usd,
+        month=body.month,
+    )
     return {"id": rid, **body.model_dump()}
 
 

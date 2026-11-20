@@ -1,4 +1,5 @@
 """One-time explicit creation of an empty policy namespace; never run on server boot."""
+
 import asyncio
 import os
 from urllib.parse import quote, urlsplit, urlunsplit
@@ -11,7 +12,15 @@ async def main():
     password_file = os.getenv("POLICY_REDIS_PASSWORD_FILE")
     if password_file:
         parts = urlsplit(url)
-        url = urlunsplit((parts.scheme, ":" + quote(open(password_file, encoding="utf-8").read().strip(), safe="") + "@" + parts.netloc, parts.path, parts.query, parts.fragment))
+        url = urlunsplit(
+            (
+                parts.scheme,
+                ":" + quote(open(password_file, encoding="utf-8").read().strip(), safe="") + "@" + parts.netloc,
+                parts.path,
+                parts.query,
+                parts.fragment,
+            )
+        )
     client = make_client(url, max_connections=1, io_timeout=1.0)
     try:
         await PolicyStore(client, os.getenv("POLICY_NAMESPACE", "telecom-policy")).initialize_empty_policy()

@@ -1,4 +1,5 @@
 """Các mục còn lại của reports/06 §4 sửa ngày 20/11/2026. Mỗi test thất bại trên mã trước bản sửa."""
+
 import re
 import time
 from pathlib import Path
@@ -21,8 +22,8 @@ def read(rel):
 def test_pages_have_no_inline_scripts_or_inline_handlers():
     for page in PAGES:
         html = read(page)
-        assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", html), page        # every script has src=
-        assert not re.search(r"\son[a-z]+\s*=", html), page                        # no onclick= / onload= ...
+        assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", html), page  # every script has src=
+        assert not re.search(r"\son[a-z]+\s*=", html), page  # no onclick= / onload= ...
         assert "javascript:" not in html, page
 
 
@@ -30,9 +31,15 @@ def test_csp_refuses_inline_scripts_but_api_docs_keep_working(env):  # noqa: F81
     c, _, _ = env
     csp = c.get("/health/live").headers["content-security-policy"]
     assert "script-src 'self' https://accounts.google.com" in csp and "'unsafe-inline'" not in csp
-    assert "script-src" not in c.get("/docs").headers["content-security-policy"]   # FastAPI docs exempt
-    for asset in ("/admin/assets/dashboard.js", "/admin/assets/manage.js", "/admin/assets/theme-init.js",
-                  "/app/app.js", "/app/theme-init.js", "/app/theme-toggle.js"):
+    assert "script-src" not in c.get("/docs").headers["content-security-policy"]  # FastAPI docs exempt
+    for asset in (
+        "/admin/assets/dashboard.js",
+        "/admin/assets/manage.js",
+        "/admin/assets/theme-init.js",
+        "/app/app.js",
+        "/app/theme-init.js",
+        "/app/theme-toggle.js",
+    ):
         r = c.get(asset)
         assert r.status_code == 200 and "javascript" in r.headers["content-type"], asset
 
@@ -62,7 +69,11 @@ def test_every_base_image_is_pinned_by_digest():
     for df in ("Dockerfile", "deploy/kafka-demo/Dockerfile", "telecom_grpc/Dockerfile", "spark/Dockerfile"):
         froms = re.findall(r"^FROM\s+(\S+)", read(df), re.M)
         assert froms and all("@sha256:" in f for f in froms), df
-    for compose in ("deploy/cloud/docker-compose.yml", "deploy/kafka-demo/docker-compose.yml", "spark/docker-compose.yml"):
+    for compose in (
+        "deploy/cloud/docker-compose.yml",
+        "deploy/kafka-demo/docker-compose.yml",
+        "spark/docker-compose.yml",
+    ):
         for name, svc in yaml.safe_load(read(compose))["services"].items():
             image = svc.get("image", "")
             if "build" not in svc and image:
@@ -99,9 +110,10 @@ def test_runtime_retention_is_hourly_idle_only_and_configurable(monkeypatch):
     src = read("src/backend_runtime.py")
     loop = src.split("def _loop(self):", 1)[1].split("\n    def ", 1)[0]
     idle = loop.split("except queue.Empty:", 1)[1].split("continue", 1)[0]
-    assert "self._retention()" in idle                                  # only when the queue is empty
+    assert "self._retention()" in idle  # only when the queue is empty
     assert "now - self._last_retention < 3600" in src
     from backend_runtime import event_retention_days
+
     assert event_retention_days() == 30
     monkeypatch.setenv("FRAUD_EVENT_RETENTION_DAYS", "0")
     assert event_retention_days() == 0

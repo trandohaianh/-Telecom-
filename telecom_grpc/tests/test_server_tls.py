@@ -23,8 +23,7 @@ def test_tls_credentials_always_require_client_auth(monkeypatch, tmp_path):
     captured = {}
 
     def make_credentials(certificates, *, root_certificates, require_client_auth):
-        captured.update(certificates=certificates, roots=root_certificates,
-                        require_client_auth=require_client_auth)
+        captured.update(certificates=certificates, roots=root_certificates, require_client_auth=require_client_auth)
         return object()
 
     monkeypatch.setattr(tls_config.grpc, "ssl_server_credentials", make_credentials)

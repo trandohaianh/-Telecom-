@@ -1,4 +1,5 @@
 """Physical audio contracts and API domain separation; generated tones are fixtures, not accuracy evidence."""
+
 import io
 import sys
 import wave
@@ -16,7 +17,7 @@ def wav_bytes(samples, rate=16000, width=2):
     if data.ndim == 1:
         data = data[:, None]
     if width == 3:
-        values = np.rint(np.clip(data, -1, 1 - 2 ** -23) * 2 ** 23).astype(np.int32).ravel()
+        values = np.rint(np.clip(data, -1, 1 - 2**-23) * 2**23).astype(np.int32).ravel()
         raw = np.column_stack([values & 255, (values >> 8) & 255, (values >> 16) & 255]).astype("uint8").tobytes()
     else:
         raw = np.rint(np.clip(data, -1, 32767 / 32768) * 32768).astype("<i2").tobytes()
@@ -31,7 +32,7 @@ def wav_bytes(samples, rate=16000, width=2):
 
 def tone(seconds=1.0, rate=16000, frequency=200.0):
     t = np.arange(round(seconds * rate)) / rate
-    return .15 * np.sin(2 * np.pi * frequency * t)
+    return 0.15 * np.sin(2 * np.pi * frequency * t)
 
 
 def test_silence_is_observation_without_fake_pitch_or_party_attribution():
@@ -48,8 +49,8 @@ def test_pitch_measurement_and_resampling_are_consistent():
     for rate in (8000, 16000, 48000):
         observation = analyze_wav(wav_bytes(tone(rate=rate), rate))
         assert observation["sample_rate"] == 16000
-        assert observation["features"]["pitch_hz_median"] == pytest.approx(200, rel=.05)
-        assert observation["features"]["voice_fraction"] > .9
+        assert observation["features"]["pitch_hz_median"] == pytest.approx(200, rel=0.05)
+        assert observation["features"]["voice_fraction"] > 0.9
         assert observation["duration_s"] == pytest.approx(1.0)
 
 
@@ -59,15 +60,15 @@ def test_stereo_roles_require_explicit_mapping():
     observation = analyze_wav(payload, caller_channel=0)
     assert unknown["caller_speech_ratio"] is None
     assert observation["caller_speech_ratio"] == 0
-    assert observation["callee_speech_s"] > .9
+    assert observation["callee_speech_s"] > 0.9
     assert "party_attribution_unavailable" not in observation["quality_warnings"]
 
 
 def test_pcm24_roundtrip_keeps_sign_and_scale():
-    source = np.array([-.9, -.1, 0, .1, .9] * 320)
+    source = np.array([-0.9, -0.1, 0, 0.1, 0.9] * 320)
     actual, rate = decode_wav(wav_bytes(source, width=3))
     assert rate == 16000
-    np.testing.assert_allclose(actual[:, 0], source, atol=2 ** -22)
+    np.testing.assert_allclose(actual[:, 0], source, atol=2**-22)
 
 
 def test_malformed_oversized_or_truncated_audio_is_rejected():
@@ -89,6 +90,7 @@ def test_local_asr_adapter_contract_does_not_store_audio():
         def transcribe(self, samples, sample_rate):
             assert sample_rate == 16000 and samples.ndim == 1
             return "xin chao"
+
     observation = analyze_wav(wav_bytes(tone()), asr=ASR())
     assert observation["transcript"] == "xin chao"
     assert observation["transcript_source"] == "local_asr"

@@ -5,6 +5,7 @@ giờ, bị chặn 120 trên 120 cuộc với điểm rủi ro 0,999 — trong k
 chạy thì 0 trên 15.952 cuộc bị động tới. Cổng `has_behavioural_evidence` không
 cứu được, vì một tổng đài thật sự CÓ bằng chứng hành vi.
 """
+
 import sys
 from pathlib import Path
 
@@ -17,16 +18,22 @@ TONG_DAI = "02873001234"
 
 
 def call(ts=1000.0, caller=TONG_DAI, imei="35391110000001"):
-    return {"event_id": "e1", "event_type": "CALL", "ts": ts, "caller": caller,
-            "callee": "0900000001", "imei": imei}
+    return {"event_id": "e1", "event_type": "CALL", "ts": ts, "caller": caller, "callee": "0900000001", "imei": imei}
 
 
 def verdict(decision="BLOCK", codes=("R103", "R104"), calls_1h=80):
     """Kết quả như detector trả về: quyết định, mã lý do, và đặc trưng kèm theo."""
-    return {"event_id": "e1", "event_type": "CALL", "ts": 1000.0, "decision": decision,
-            "risk": 0.99, "action_vi": "x", "action_en": "x",
-            "reasons": [{"code": c, "vi": "", "en": "", "feature": ""} for c in codes],
-            "evidence_features": {"calls_1h": calls_1h}}
+    return {
+        "event_id": "e1",
+        "event_type": "CALL",
+        "ts": 1000.0,
+        "decision": decision,
+        "risk": 0.99,
+        "action_vi": "x",
+        "action_en": "x",
+        "reasons": [{"code": c, "vi": "", "en": "", "feature": ""} for c in codes],
+        "evidence_features": {"calls_1h": calls_1h},
+    }
 
 
 def fresh():
@@ -65,7 +72,7 @@ def test_moi_hoat_dong_tren_mang_la_tin_hieu_duoc_mien():
 
 # ------------------------------------------------- không miễn tín hiệu gian lận
 def test_sim_box_thi_van_chan_du_da_dang_ky():
-    reg, r = fresh(), verdict("BLOCK", ("R103", "R202"))      # R202 = nhiều SIM một máy
+    reg, r = fresh(), verdict("BLOCK", ("R103", "R202"))  # R202 = nhiều SIM một máy
     reg.apply(call(), r)
     assert r["decision"] == "BLOCK"
     assert codes_of(r)[0] == "C002"
@@ -96,7 +103,7 @@ def test_thu_giong_chi_canh_bao_voi_so_da_dang_ky():
 
 # ------------------------------------------------------------- trần tốc độ
 def test_vuot_xa_toc_do_da_khai_thi_thoi_mien():
-    reg, r = fresh(), verdict("BLOCK", ("R103",), calls_1h=5000)   # khai 100
+    reg, r = fresh(), verdict("BLOCK", ("R103",), calls_1h=5000)  # khai 100
     reg.apply(call(), r)
     assert r["decision"] == "BLOCK"
     assert codes_of(r)[0] == "C003"
@@ -104,7 +111,7 @@ def test_vuot_xa_toc_do_da_khai_thi_thoi_mien():
 
 
 def test_trong_bien_do_gap_doi_thi_van_mien():
-    reg, r = fresh(), verdict("BLOCK", ("R103",), calls_1h=180)    # <= 2 × 100
+    reg, r = fresh(), verdict("BLOCK", ("R103",), calls_1h=180)  # <= 2 × 100
     reg.apply(call(), r)
     assert r["decision"] == "ALLOW"
 
@@ -143,6 +150,7 @@ def test_quyet_dinh_cho_qua_thi_khong_dong_vao():
 # --------------------------------------------- người vẫn thắng đăng ký
 def test_chan_nhom_do_chuyen_vien_duyet_thang_dang_ky():
     """Đăng ký không được biến một số thành không thể chặn."""
+
     class Fake:
         def score_batch(self, evs):
             return [verdict("BLOCK", ("R103",)) for _ in evs]
@@ -179,10 +187,11 @@ def test_khong_truyen_registry_thi_van_chay_binh_thuong():
 # ------------------------------------------------------------- phía khách hàng
 def test_khach_hang_khong_doc_ma_noi_bo_nhung_van_doc_duoc_C002():
     import reason_codes as rc
+
     reg, r = fresh(), verdict("BLOCK", ("R103", "R202"))
     reg.apply(call(), r)
     seen = {x["code"] for x in rc.for_subscriber(r["reasons"])}
-    assert "C002" in seen            # "số có đăng ký nhưng còn dấu hiệu lừa đảo"
+    assert "C002" in seen  # "số có đăng ký nhưng còn dấu hiệu lừa đảo"
     r2 = verdict("BLOCK", ("R103",))
     fresh().apply(call(), r2)
     assert "C001" not in {x["code"] for x in rc.for_subscriber(r2["reasons"])}

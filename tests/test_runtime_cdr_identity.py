@@ -1,4 +1,5 @@
 """Completed CDR identities survive cross-link validation, cache eviction and restart."""
+
 import asyncio
 import sys
 from pathlib import Path
@@ -16,8 +17,9 @@ def create_runtime(directory, **options):
     state = BackendState(directory / "state.sqlite3")
     detector = FakeDetector()
     guarded = GuardedDetector(detector, budget_ms=1000)
-    runtime = InferenceRuntime(guarded, state=state, checkpoint_every=1_000_000,
-                               checkpoint_interval_s=1_000_000, **options)
+    runtime = InferenceRuntime(
+        guarded, state=state, checkpoint_every=1_000_000, checkpoint_interval_s=1_000_000, **options
+    )
     return runtime, state, detector
 
 
@@ -27,13 +29,21 @@ def setup():
 
 def cdr_for(item=None):
     item = setup() if item is None else item
-    return {**{name: item[name] for name in
-        ("event_id", "event_type", "caller", "callee", "call_id", "ts")}, "duration_s": 5.0}
+    return {
+        **{name: item[name] for name in ("event_id", "event_type", "caller", "callee", "call_id", "ts")},
+        "duration_s": 5.0,
+    }
 
 
-@pytest.mark.parametrize("changes", [
-    {"caller": "different"}, {"ts": 101.0}, {"call_id": "different"}, {"callee": "different"},
-])
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"caller": "different"},
+        {"ts": 101.0},
+        {"call_id": "different"},
+        {"callee": "different"},
+    ],
+)
 def test_standalone_cdr_rejects_conflicting_new_setup_before_insert(tmp_path, changes):
     runtime, state, detector = create_runtime(tmp_path)
     cdr = cdr_for()
@@ -67,15 +77,28 @@ def test_standalone_cdr_allows_later_matching_setup_and_both_retries(tmp_path):
 def seed_completed_legacy_pair(directory):
     runtime, state, _ = create_runtime(directory, start=False)
     original_setup = validate_event(setup())
-    conflicting_cdr = validate_event(dict(cdr_for(), caller="84999999999",
-                                         call_id="LEGACY-OTHER-SESSION", ts=90.0), "CDR")
+    conflicting_cdr = validate_event(
+        dict(cdr_for(), caller="84999999999", call_id="LEGACY-OTHER-SESSION", ts=90.0), "CDR"
+    )
     try:
         with state.transaction():
             seq, _ = state.reserve("VERDICT", original_setup)
-            state.finish(seq, {"event_id": "LINKED", "event_type": "CALL", "ts": 100.0,
-                "party": original_setup["caller"], "counterparty": original_setup["callee"],
-                "decision": "BLOCK", "scored": True, "ingest": "ADMITTED", "reasons": [],
-                "learned_deny_updates": {}, "learned_deny_evicted": []})
+            state.finish(
+                seq,
+                {
+                    "event_id": "LINKED",
+                    "event_type": "CALL",
+                    "ts": 100.0,
+                    "party": original_setup["caller"],
+                    "counterparty": original_setup["callee"],
+                    "decision": "BLOCK",
+                    "scored": True,
+                    "ingest": "ADMITTED",
+                    "reasons": [],
+                    "learned_deny_updates": {},
+                    "learned_deny_evicted": [],
+                },
+            )
             seq, _ = state.reserve("CDR", conflicting_cdr)
             state.finish(seq, {"event_id": "LINKED", "ok": True, "scored": False})
     finally:
@@ -92,9 +115,14 @@ def test_legacy_contradictory_completed_pairs_retry_from_cache_eviction_and_rest
         try:
             before = state.journal_after(0)
             assert detector.fs.calls == detector.fs.cdrs == 1
-            requests = [("CDR", conflicting_cdr), ("CDR", conflicting_cdr),
-                        ("VERDICT", original_setup), ("VERDICT", original_setup),
-                        ("CDR", conflicting_cdr), ("VERDICT", original_setup)]
+            requests = [
+                ("CDR", conflicting_cdr),
+                ("CDR", conflicting_cdr),
+                ("VERDICT", original_setup),
+                ("VERDICT", original_setup),
+                ("CDR", conflicting_cdr),
+                ("VERDICT", original_setup),
+            ]
             for kind, payload in requests:
                 result = asyncio.run(runtime.submit(kind, payload, budget_ms=2000))
                 assert result["duplicate"] and result["durable"] and not result["actionable"]
@@ -176,7 +204,7 @@ def test_same_batch_crosslinks_commit_only_valid_operations_without_ghosts(tmp_p
         for _ in range(1000):
             if runtime.queue.qsize() == 2:
                 break
-            await asyncio.sleep(.001)
+            await asyncio.sleep(0.001)
         assert runtime.queue.qsize() == 2
         runtime.start()
         return await asyncio.gather(first, second, return_exceptions=True)
@@ -209,14 +237,36 @@ def test_legacy_pending_conflict_fails_startup_without_advancing_past_later_comp
     try:
         with state.transaction():
             seq, _ = state.reserve("VERDICT", original)
-            state.finish(seq, {"event_id": original["event_id"], "event_type": "CALL",
-                "ts": original["ts"], "decision": "ALLOW", "scored": True, "ingest": "ADMITTED",
-                "reasons": [], "learned_deny_updates": {}, "learned_deny_evicted": []})
+            state.finish(
+                seq,
+                {
+                    "event_id": original["event_id"],
+                    "event_type": "CALL",
+                    "ts": original["ts"],
+                    "decision": "ALLOW",
+                    "scored": True,
+                    "ingest": "ADMITTED",
+                    "reasons": [],
+                    "learned_deny_updates": {},
+                    "learned_deny_evicted": [],
+                },
+            )
             pending_seq, _ = state.reserve("CDR", pending)
             later_seq, _ = state.reserve("VERDICT", later)
-            state.finish(later_seq, {"event_id": later["event_id"], "event_type": "CALL",
-                "ts": later["ts"], "decision": "ALLOW", "scored": True, "ingest": "ADMITTED",
-                "reasons": [], "learned_deny_updates": {}, "learned_deny_evicted": []})
+            state.finish(
+                later_seq,
+                {
+                    "event_id": later["event_id"],
+                    "event_type": "CALL",
+                    "ts": later["ts"],
+                    "decision": "ALLOW",
+                    "scored": True,
+                    "ingest": "ADMITTED",
+                    "reasons": [],
+                    "learned_deny_updates": {},
+                    "learned_deny_evicted": [],
+                },
+            )
         before_rows = state.journal_after(0)
         before_metadata = state.db.execute("SELECT key,value FROM metadata ORDER BY key").fetchall()
         assert state.get("checkpoint")["seq"] == 0 and later_seq > pending_seq

@@ -1,4 +1,5 @@
 """Atomic local state transactions retain SQLite WAL/FULL durability."""
+
 import sqlite3
 import sys
 import threading
@@ -353,8 +354,11 @@ def test_completed_lookup_miss_and_pending_are_select_only_and_namespace_scoped(
     try:
         payload = event("observation-1")
         state.reserve("OBSERVATION", payload)
-        before = (state.db.total_changes, state.journal_after(0),
-                  state.db.execute("SELECT key,value FROM metadata ORDER BY key").fetchall())
+        before = (
+            state.db.total_changes,
+            state.journal_after(0),
+            state.db.execute("SELECT key,value FROM metadata ORDER BY key").fetchall(),
+        )
         statements = []
         state.db.set_trace_callback(statements.append)
         assert state.lookup_completed("OBSERVATION", event("missing")) is None
@@ -362,8 +366,11 @@ def test_completed_lookup_miss_and_pending_are_select_only_and_namespace_scoped(
         assert state.lookup_completed("VERDICT", payload) is None
         state.db.set_trace_callback(None)
         assert statements and all(sql.lstrip().upper().startswith("SELECT") for sql in statements)
-        assert (state.db.total_changes, state.journal_after(0),
-                state.db.execute("SELECT key,value FROM metadata ORDER BY key").fetchall()) == before
+        assert (
+            state.db.total_changes,
+            state.journal_after(0),
+            state.db.execute("SELECT key,value FROM metadata ORDER BY key").fetchall(),
+        ) == before
     finally:
         state.close()
 
@@ -371,15 +378,23 @@ def test_completed_lookup_miss_and_pending_are_select_only_and_namespace_scoped(
 def test_completed_lookup_uses_canonical_digest_returns_fresh_data_and_survives_reopen(tmp_path):
     path = tmp_path / "state.sqlite3"
     state = BackendState(path)
-    payload = {"event_id": "observation-1", "event_type": "VOICE_OBSERVATION",
-               "ts": 100.0, "attributes": {"caller_channel": 0, "schema": "voice-acoustic-v1"}}
+    payload = {
+        "event_id": "observation-1",
+        "event_type": "VOICE_OBSERVATION",
+        "ts": 100.0,
+        "attributes": {"caller_channel": 0, "schema": "voice-acoustic-v1"},
+    }
     result = {"decision": "OBSERVE", "observation": {"speech_ratio": 0.25}, "status": "COMPLETE"}
     try:
         with state.transaction():
             seq, _ = state.reserve("OBSERVATION", payload)
             state.finish(seq, result)
-        reordered = {"attributes": {"schema": "voice-acoustic-v1", "caller_channel": 0},
-                     "ts": 100.0, "event_type": "VOICE_OBSERVATION", "event_id": "observation-1"}
+        reordered = {
+            "attributes": {"schema": "voice-acoustic-v1", "caller_channel": 0},
+            "ts": 100.0,
+            "event_type": "VOICE_OBSERVATION",
+            "event_id": "observation-1",
+        }
         before = state.db.total_changes
         found = state.lookup_completed("OBSERVATION", reordered)
         assert found == result
@@ -436,7 +451,7 @@ def test_completed_lookup_waits_for_outer_commit_before_returning_to_other_threa
             worker = threading.Thread(target=lookup)
             worker.start()
             assert started.wait(2)
-            assert not finished.wait(.05)
+            assert not finished.wait(0.05)
         assert finished.wait(2)
         assert not failures and found == [{"decision": "OBSERVE"}]
     finally:

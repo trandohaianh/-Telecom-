@@ -5,6 +5,7 @@ Thuê bao đăng ký bằng email/mật khẩu hoặc Google, sau đó gắn m�
   vì luồng lưu lượng là dữ liệu mô phỏng — người dùng thật không sở hữu số nào trong đó.
 - Chế độ thật: xác minh quyền sở hữu số bằng OTP SMS (Twilio Verify hoặc nhà cung cấp tương đương).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -38,7 +39,7 @@ def hash_password(password: str) -> str:
     if not 8 <= len(password) <= 128:
         raise ValueError("Mật khẩu cần 8–128 ký tự")
     salt = secrets.token_bytes(16)
-    digest = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    digest = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=2**14, r=8, p=1, dklen=32)
     return f"scrypt$14$8$1${salt.hex()}${digest.hex()}"
 
 
@@ -47,8 +48,14 @@ def verify_password(password: str, stored: str | None) -> bool:
         algo, log_n, r, p, salt_hex, hash_hex = (stored or "").split("$")
         if algo != "scrypt":
             return False
-        digest = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt_hex),
-                                n=2 ** int(log_n), r=int(r), p=int(p), dklen=len(hash_hex) // 2)
+        digest = hashlib.scrypt(
+            password.encode("utf-8"),
+            salt=bytes.fromhex(salt_hex),
+            n=2 ** int(log_n),
+            r=int(r),
+            p=int(p),
+            dklen=len(hash_hex) // 2,
+        )
         return hmac.compare_digest(digest.hex(), hash_hex)
     except (ValueError, TypeError):
         return False
@@ -104,8 +111,11 @@ class RateLimiter:
             while q and q[0] <= t - window_s:
                 q.popleft()
             if len(q) >= limit:
-                raise HTTPException(429, "Thao tác quá nhanh, vui lòng thử lại sau.",
-                                    headers={"Retry-After": str(int(q[0] + window_s - t) + 1)})
+                raise HTTPException(
+                    429,
+                    "Thao tác quá nhanh, vui lòng thử lại sau.",
+                    headers={"Retry-After": str(int(q[0] + window_s - t) + 1)},
+                )
             q.append(t)
 
     def check(self, scope: str, key: str, limit: int, window_s: int) -> None:
@@ -118,8 +128,11 @@ class RateLimiter:
             while q and q[0] <= t - window_s:
                 q.popleft()
             if q is not None and len(q) >= limit:
-                raise HTTPException(429, "Thao tác quá nhanh, vui lòng thử lại sau.",
-                                    headers={"Retry-After": str(int(q[0] + window_s - t) + 1)})
+                raise HTTPException(
+                    429,
+                    "Thao tác quá nhanh, vui lòng thử lại sau.",
+                    headers={"Retry-After": str(int(q[0] + window_s - t) + 1)},
+                )
 
     def record(self, scope: str, key: str) -> None:
         if os.environ.get("FRAUD_RATE_LIMIT", "1") == "0" or not key:
@@ -167,8 +180,14 @@ def verify_google_token(credential: str) -> GoogleIdentity:
         raise HTTPException(401, "Thông tin Google không hợp lệ")
     try:
         key = _jwks().get_signing_key_from_jwt(credential).key
-        claims = jwt.decode(credential, key, algorithms=["RS256"], audience=audiences, leeway=30,
-                            options={"require": ["exp", "iat", "iss", "aud", "sub"]})
+        claims = jwt.decode(
+            credential,
+            key,
+            algorithms=["RS256"],
+            audience=audiences,
+            leeway=30,
+            options={"require": ["exp", "iat", "iss", "aud", "sub"]},
+        )
     except jwt.PyJWTError as exc:
         raise HTTPException(401, "Thông tin Google không hợp lệ hoặc đã hết hạn") from exc
     return identity_from_claims(claims)
@@ -217,9 +236,13 @@ class TwilioSmsOtp(OtpProvider):
 
         resp = httpx.post(
             f"https://api.twilio.com/2010-04-01/Accounts/{self.sid}/Messages.json",
-            auth=(self.sid, self.token), timeout=15,
-            data={"To": "+" + phone, "From": self.sender,
-                  "Body": f"Ma xac thuc La chan lua dao: {code}. Het han sau 5 phut. Khong chia se ma nay."},
+            auth=(self.sid, self.token),
+            timeout=15,
+            data={
+                "To": "+" + phone,
+                "From": self.sender,
+                "Body": f"Ma xac thuc La chan lua dao: {code}. Het han sau 5 phut. Khong chia se ma nay.",
+            },
         )
         if resp.status_code >= 300:
             raise HTTPException(502, "Không gửi được SMS, vui lòng thử lại")
@@ -235,6 +258,7 @@ class HttpSmsOtp(OtpProvider):
       FRAUD_SMS_BRANDNAME      registered sender name (default LACHAN)
       FRAUD_SMS_HTTP_OK_FIELD / FRAUD_SMS_HTTP_OK_VALUE  optional success marker in the JSON reply
     """
+
     name = "sms-http"
 
     def __init__(self):
@@ -245,9 +269,10 @@ class HttpSmsOtp(OtpProvider):
         token_file = os.environ.get("FRAUD_SMS_HTTP_TOKEN_FILE")
         self.token = open(token_file, encoding="utf-8").read().strip() if token_file else ""
         # `or`: docker compose forwards an unset ${VAR:-} as an EMPTY string, which must mean "default".
-        self.template = (os.environ.get("FRAUD_SMS_HTTP_BODY")
-                         or '{"to": "{phone}", "from": "{brandname}", "text": "{message}"}')
-        json.loads(self.template)          # invalid template -> OtpConfigError at start-up, not at first OTP
+        self.template = (
+            os.environ.get("FRAUD_SMS_HTTP_BODY") or '{"to": "{phone}", "from": "{brandname}", "text": "{message}"}'
+        )
+        json.loads(self.template)  # invalid template -> OtpConfigError at start-up, not at first OTP
         self.brandname = os.environ.get("FRAUD_SMS_BRANDNAME") or "LACHAN"
         self.ok_field = os.environ.get("FRAUD_SMS_HTTP_OK_FIELD", "")
         self.ok_value = os.environ.get("FRAUD_SMS_HTTP_OK_VALUE", "")
@@ -257,7 +282,7 @@ class HttpSmsOtp(OtpProvider):
         message = f"Ma xac thuc La chan lua dao: {code}. Het han sau 5 phut. Khong chia se ma nay."
         values = {"phone": phone, "phone_plus": "+" + phone, "message": message, "brandname": self.brandname}
 
-        def fill(node):   # fill placeholders inside a parsed template: values are never JSON-injected
+        def fill(node):  # fill placeholders inside a parsed template: values are never JSON-injected
             if isinstance(node, str):
                 for k, v in values.items():
                     node = node.replace("{" + k + "}", v)
@@ -267,6 +292,7 @@ class HttpSmsOtp(OtpProvider):
             if isinstance(node, dict):
                 return {k: fill(v) for k, v in node.items()}
             return node
+
         return fill(json.loads(self.template))
 
     def send(self, phone: str, code: str) -> None:
@@ -298,7 +324,7 @@ def otp_provider() -> OtpProvider | None:
             return TwilioSmsOtp()
         if kind in ("sms-http", "http"):
             return HttpSmsOtp()
-    except KeyError as exc:      # a missing variable used to surface as a 500 on every /api/auth/config call
+    except KeyError as exc:  # a missing variable used to surface as a 500 on every /api/auth/config call
         raise OtpConfigError(f"FRAUD_OTP_PROVIDER={kind} requires {exc.args[0]}") from None
     except (OSError, ValueError, RuntimeError) as exc:
         raise OtpConfigError(f"FRAUD_OTP_PROVIDER={kind}: {exc}") from None
@@ -324,13 +350,16 @@ class SubscriberAccounts:
         with self.db.tx() as c:
             if c.execute("SELECT 1 FROM subscribers WHERE email=?", (email,)).fetchone():
                 raise HTTPException(400, "Email đã được sử dụng")
-            cur = c.execute("INSERT INTO subscribers(email, password_hash, created_at) VALUES (?,?,?)",
-                            (email, pw, now()))
+            cur = c.execute(
+                "INSERT INTO subscribers(email, password_hash, created_at) VALUES (?,?,?)", (email, pw, now())
+            )
             return int(cur.lastrowid)
 
     def authenticate(self, email: str, password: str) -> int | None:
-        row = self.db.one("SELECT id, password_hash FROM subscribers WHERE email=? AND disabled_at IS NULL",
-                          ((email or "").strip().lower(),))
+        row = self.db.one(
+            "SELECT id, password_hash FROM subscribers WHERE email=? AND disabled_at IS NULL",
+            ((email or "").strip().lower(),),
+        )
         if row is None or not row["password_hash"]:
             burn_password_check(password)
             return None
@@ -342,8 +371,9 @@ class SubscriberAccounts:
         with self.db.tx() as c:
             row = c.execute("SELECT id, disabled_at FROM subscribers WHERE google_sub=?", (ident.sub,)).fetchone()
             if row is None:
-                row = c.execute("SELECT id, disabled_at, google_sub, password_hash FROM subscribers WHERE email=?",
-                                (ident.email,)).fetchone()
+                row = c.execute(
+                    "SELECT id, disabled_at, google_sub, password_hash FROM subscribers WHERE email=?", (ident.email,)
+                ).fetchone()
                 if row is not None:
                     if row["google_sub"] and row["google_sub"] != ident.sub:
                         raise HTTPException(403, "Email đã liên kết với tài khoản Google khác")
@@ -357,8 +387,9 @@ class SubscriberAccounts:
                 if row["disabled_at"]:
                     raise HTTPException(403, "Tài khoản đã bị khoá")
                 return int(row["id"]), False
-            cur = c.execute("INSERT INTO subscribers(email, google_sub, created_at) VALUES (?,?,?)",
-                            (ident.email, ident.sub, now()))
+            cur = c.execute(
+                "INSERT INTO subscribers(email, google_sub, created_at) VALUES (?,?,?)", (ident.email, ident.sub, now())
+            )
             return int(cur.lastrowid), True
 
     # ---- phiên
@@ -368,19 +399,25 @@ class SubscriberAccounts:
         with self.db.tx() as c:
             c.execute("INSERT INTO subscriber_sessions VALUES (?,?,?,?)", (_token_hash(token), subscriber_id, t, t))
             # Giữ tối đa 10 phiên/tài khoản (nhiều thiết bị), xoá phiên cũ nhất.
-            c.execute("""DELETE FROM subscriber_sessions WHERE subscriber_id=? AND token_hash NOT IN (
+            c.execute(
+                """DELETE FROM subscriber_sessions WHERE subscriber_id=? AND token_hash NOT IN (
                          SELECT token_hash FROM subscriber_sessions WHERE subscriber_id=?
-                         ORDER BY last_seen DESC LIMIT 10)""", (subscriber_id, subscriber_id))
+                         ORDER BY last_seen DESC LIMIT 10)""",
+                (subscriber_id, subscriber_id),
+            )
         return token
 
     def session(self, token: str) -> dict | None:
         if not token:
             return None
         h, t = _token_hash(token), now()
-        row = self.db.one("""SELECT s.created_at, s.last_seen, u.id, u.email, u.msisdn, u.msisdn_kind, u.disabled_at,
+        row = self.db.one(
+            """SELECT s.created_at, s.last_seen, u.id, u.email, u.msisdn, u.msisdn_kind, u.disabled_at,
                                     u.google_sub
                              FROM subscriber_sessions s JOIN subscribers u ON u.id = s.subscriber_id
-                             WHERE s.token_hash=?""", (h,))
+                             WHERE s.token_hash=?""",
+            (h,),
+        )
         if row is None:
             return None
         if row["disabled_at"] or t - row["created_at"] > SESSION_TTL_S or t - row["last_seen"] > SESSION_IDLE_S:
@@ -389,8 +426,13 @@ class SubscriberAccounts:
         if t - row["last_seen"] > 60:  # giảm ghi đĩa: cập nhật tối đa mỗi phút
             with self.db.tx() as c:
                 c.execute("UPDATE subscriber_sessions SET last_seen=? WHERE token_hash=?", (t, h))
-        return {"id": int(row["id"]), "email": row["email"], "msisdn": row["msisdn"],
-                "msisdn_kind": row["msisdn_kind"], "has_google": bool(row["google_sub"])}
+        return {
+            "id": int(row["id"]),
+            "email": row["email"],
+            "msisdn": row["msisdn"],
+            "msisdn_kind": row["msisdn_kind"],
+            "has_google": bool(row["google_sub"]),
+        }
 
     def revoke(self, token: str) -> None:
         with self.db.tx() as c:
@@ -412,13 +454,15 @@ class SubscriberAccounts:
             return number
 
     def otp_start(self, subscriber_id: int, phone: str, provider: OtpProvider) -> None:
-        code = f"{secrets.randbelow(10 ** 6):06d}"
+        code = f"{secrets.randbelow(10**6):06d}"
         with self.db.tx() as c:
             owner = c.execute("SELECT id FROM subscribers WHERE msisdn=? AND id<>?", (phone, subscriber_id)).fetchone()
             if owner:
                 raise HTTPException(409, "Số này đã gắn với tài khoản khác")
-            c.execute("INSERT OR REPLACE INTO otp_codes VALUES (?,?,?,?,0)",
-                      (phone, subscriber_id, _token_hash(f"{phone}:{code}"), now() + OTP_TTL_S))
+            c.execute(
+                "INSERT OR REPLACE INTO otp_codes VALUES (?,?,?,?,0)",
+                (phone, subscriber_id, _token_hash(f"{phone}:{code}"), now() + OTP_TTL_S),
+            )
         provider.send(phone, code)
 
     def otp_verify(self, subscriber_id: int, phone: str, code: str) -> str:

@@ -7,6 +7,7 @@ small set of model-free fallback rules still runs (so overloading the detector i
 then traffic fails open. Late verdicts are kept, events the model never saw are re-scored after
 recovery, and hits become post-hoc ("retro") alerts.
 """
+
 from __future__ import annotations
 
 import collections
@@ -22,6 +23,7 @@ from config import CB_COOLDOWN_S, CB_FAILURE_THRESHOLD
 
 class RescoreStateRestoreError(RuntimeError):
     """Live feature state could not be restored; the owner must stop and replay."""
+
     requires_recovery = True
 
 
@@ -40,7 +42,7 @@ class CircuitBreaker:
     def allow_request(self) -> bool:
         with self._lock:
             if self.state == self.OPEN and self.clock() - self.opened_at >= self.cooldown_s:
-                self.state = self.HALF_OPEN          # let one trial batch through
+                self.state = self.HALF_OPEN  # let one trial batch through
             return self.state != self.OPEN
 
     # record_success reset bộ đếm lỗi và đóng breaker sau khi phục hồi thành công.
@@ -63,11 +65,20 @@ class CircuitBreaker:
 # fail_open_result tạo payload fail-open chuẩn hóa để caller / log biết event đã được cho qua.
 def fail_open_result(ev, why):
     code, vi, en = rc.FAIL_OPEN
-    return {"event_id": ev["event_id"], "event_type": ev["event_type"], "ts": ev["ts"], "decision": "ALLOW",
-            "fail_open": True, "risk": None, "action_vi": "Cho qua (fail-open)", "action_en": "Allowed (fail-open)",
-            "reasons": [{"code": code, "vi": f"{vi} [{why}]", "en": f"{en} [{why}]", "feature": "resilience"}],
-            "tier": 1 if ev["event_type"] == "CALL" else 2, "party": ev.get("caller") or ev.get("sender"),
-            "counterparty": ev.get("callee") or ev.get("recipient")}
+    return {
+        "event_id": ev["event_id"],
+        "event_type": ev["event_type"],
+        "ts": ev["ts"],
+        "decision": "ALLOW",
+        "fail_open": True,
+        "risk": None,
+        "action_vi": "Cho qua (fail-open)",
+        "action_en": "Allowed (fail-open)",
+        "reasons": [{"code": code, "vi": f"{vi} [{why}]", "en": f"{en} [{why}]", "feature": "resilience"}],
+        "tier": 1 if ev["event_type"] == "CALL" else 2,
+        "party": ev.get("caller") or ev.get("sender"),
+        "counterparty": ev.get("callee") or ev.get("recipient"),
+    }
 
 
 # FallbackRules: lớp phòng vệ tối thiểu khi mô hình không trả lời kịp, chỉ gồm tra cứu bảng (vài micro giây).
@@ -82,14 +93,15 @@ class FallbackRules:
 
     def __init__(self, ttl_s: float = 24 * 3600, max_entries: int = 200_000):
         from data_generator import BRAND_SENDERS, PROTECTED_CLI
+
         self.protected, self.brands = set(PROTECTED_CLI), set(BRAND_SENDERS)
         self.ttl_s, self.max_entries = ttl_s, max_entries
-        self.deny: dict[str, float] = {}     # number or IMEI -> event time it was blocked by the model
-        self._deny_dirty: set[str] = set()   # D14: deny keys changed since the last checkpoint
+        self.deny: dict[str, float] = {}  # number or IMEI -> event time it was blocked by the model
+        self._deny_dirty: set[str] = set()  # D14: deny keys changed since the last checkpoint
         # Human decisions (approved agent proposals). They override the model, in both directions.
-        self.manual: dict[str, str] = {}     # number or IMEI -> proposal id that approved the group block
-        self.allow: set[str] = set()         # numbers an analyst confirmed as legitimate
-        self.on_change = None               # durable human-policy callback, installed by live runtime
+        self.manual: dict[str, str] = {}  # number or IMEI -> proposal id that approved the group block
+        self.allow: set[str] = set()  # numbers an analyst confirmed as legitimate
+        self.on_change = None  # durable human-policy callback, installed by live runtime
 
     def _save_policy(self, manual, allow):
         if self.on_change is not None:
@@ -182,9 +194,16 @@ class GuardedDetector:
     """Wraps Detector.score_batch with a latency budget, a circuit breaker, fallback rules and re-scoring."""
 
     # __init__ lưu detector được bảo vệ, ngân sách, luật dự phòng và hàng đợi chấm lại có giới hạn.
-    def __init__(self, detector, budget_ms: float, breaker: CircuitBreaker | None = None,
-                 fallback: FallbackRules | None = None, rescore_max: int = 50_000,
-                 registry=None, content_budget_ms: float | None = None):
+    def __init__(
+        self,
+        detector,
+        budget_ms: float,
+        breaker: CircuitBreaker | None = None,
+        fallback: FallbackRules | None = None,
+        rescore_max: int = 50_000,
+        registry=None,
+        content_budget_ms: float | None = None,
+    ):
         self.det, self.budget_ms = detector, budget_ms
         # Batch không có CALL (chỉ SMS/AUDIO) có ngân sách tầng 2 (170 ms), không phải 30 ms của tầng 1.
         self.content_budget_ms = content_budget_ms
@@ -193,16 +212,23 @@ class GuardedDetector:
         # Danh bạ số thương mại đã đăng ký gọi ra hàng loạt. Chỉ miễn các tín hiệu
         # thuộc về việc gọi ra hàng loạt, không bao giờ miễn tín hiệu gian lận.
         from commercial_registry import CommercialRegistry
+
         self.registry = registry if registry is not None else CommercialRegistry()
-        self.chaos_delay_ms = 0.0     # fault injection for demos / tests
+        self.chaos_delay_ms = 0.0  # fault injection for demos / tests
         self.chaos_error = False
         # Events the model never saw (breaker open / error) wait here to be re-scored after recovery.
         # Bounded: when full the oldest is dropped and counted, never silently lost.
         self.rescore_queue: collections.deque = collections.deque(maxlen=rescore_max)
         # Verdicts that arrived after the budget (timeout) or from re-scoring, for post-hoc action.
         self.retro: collections.deque = collections.deque(maxlen=5_000)
-        self.stats = {"fallback_block": 0, "fallback_flag": 0, "rescore_dropped": 0, "rescored": 0,
-                      "retro_alerts": 0, "late_verdicts": 0}
+        self.stats = {
+            "fallback_block": 0,
+            "fallback_flag": 0,
+            "rescore_dropped": 0,
+            "rescored": 0,
+            "retro_alerts": 0,
+            "late_verdicts": 0,
+        }
 
     def _degraded(self, events, why, queue=True):
         """Fallback rules first; whatever they do not catch is allowed (fail-open)."""
@@ -215,7 +241,11 @@ class GuardedDetector:
             if hit:
                 decision, (code, vi, en) = hit
                 r["decision"] = decision
-                r["action_vi"], r["action_en"] = ("Chặn (luật dự phòng)", "Blocked (fallback)") if decision == "BLOCK" else ("Cảnh báo (luật dự phòng)", "Flagged (fallback)")
+                r["action_vi"], r["action_en"] = (
+                    ("Chặn (luật dự phòng)", "Blocked (fallback)")
+                    if decision == "BLOCK"
+                    else ("Cảnh báo (luật dự phòng)", "Flagged (fallback)")
+                )
                 r["reasons"].insert(0, {"code": code, "vi": vi, "en": en, "feature": "fallback"})
                 self.stats["fallback_block" if decision == "BLOCK" else "fallback_flag"] += 1
             out.append(r)
@@ -286,7 +316,10 @@ class GuardedDetector:
         else:
             return
         from detector import ACTIONS
-        r["action_vi"], r["action_en"] = ACTIONS.get((r.get("event_type"), r["decision"]), (r.get("action_vi"), r.get("action_en")))
+
+        r["action_vi"], r["action_en"] = ACTIONS.get(
+            (r.get("event_type"), r["decision"]), (r.get("action_vi"), r.get("action_en"))
+        )
 
     def _keep_retro(self, events, results, requires_review=False):
         new = []
@@ -294,7 +327,11 @@ class GuardedDetector:
             self.apply_policy(e, r, learn=not requires_review)
             if r.get("decision") != "ALLOW":
                 code, vi, en = rc.RETRO
-                rr = dict(r, retro=True, reasons=[{"code": code, "vi": vi, "en": en, "feature": "resilience"}] + r.get("reasons", []))
+                rr = dict(
+                    r,
+                    retro=True,
+                    reasons=[{"code": code, "vi": vi, "en": en, "feature": "resilience"}] + r.get("reasons", []),
+                )
                 if requires_review:
                     rr["model_decision"] = rr["decision"]
                     rr["decision"] = "FLAG"

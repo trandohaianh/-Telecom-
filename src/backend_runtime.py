@@ -3,6 +3,7 @@
 The operator still enforces its own signalling timer. A timed-out task may finish later and
 produce a retrospective alert, but its HTTP recommendation is always fail-open.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -27,13 +28,47 @@ from resilience import RescoreStateRestoreError, fail_open_result
 REQUIRED = {
     "CALL": ("event_id", "ts", "caller", "callee", "cell_id", "imei", "origin_trunk", "network"),
     "SMS": ("event_id", "ts", "sender", "recipient", "sms_route", "cell_id", "text"),
-    "AUDIO": ("event_id", "ts", "caller", "callee", "codec", "vocoder_artifact", "pitch_jitter",
-              "spectral_flatness", "speaker_drift"),
+    "AUDIO": (
+        "event_id",
+        "ts",
+        "caller",
+        "callee",
+        "codec",
+        "vocoder_artifact",
+        "pitch_jitter",
+        "spectral_flatness",
+        "speaker_drift",
+    ),
 }
-NUMERIC = {"ts", "duration_s", "end_ts", "caller_age_days", "vocoder_artifact", "pitch_jitter",
-           "spectral_flatness", "speaker_drift", "caller_speech_ratio", "callee_speech_s"}
-TEXT_FIELDS = {"event_id", "call_id", "caller", "callee", "sender", "recipient", "cell_id", "imei",
-               "origin_trunk", "network", "sms_route", "codec", "text", "transcript", "event_type"}
+NUMERIC = {
+    "ts",
+    "duration_s",
+    "end_ts",
+    "caller_age_days",
+    "vocoder_artifact",
+    "pitch_jitter",
+    "spectral_flatness",
+    "speaker_drift",
+    "caller_speech_ratio",
+    "callee_speech_s",
+}
+TEXT_FIELDS = {
+    "event_id",
+    "call_id",
+    "caller",
+    "callee",
+    "sender",
+    "recipient",
+    "cell_id",
+    "imei",
+    "origin_trunk",
+    "network",
+    "sms_route",
+    "codec",
+    "text",
+    "transcript",
+    "event_type",
+}
 OPTIONAL = NUMERIC | TEXT_FIELDS
 # Upper sanity bound for event time in Unix SECONDS (~year 5138). A millisecond timestamp (1.7e12) or
 # 1e308 would otherwise become the IngestGuard frontier and mark every later event LATE (unscored ALLOW),
@@ -66,7 +101,11 @@ def validate_event(ev, kind="VERDICT"):
                 raise ValueError(f"{name} must be nonnegative")
         elif name in TEXT_FIELDS:
             limit = 10000 if name in ("text", "transcript") else 200
-            if not isinstance(value, str) or len(value) > limit or (not value and name not in ("text", "transcript", "imei")):
+            if (
+                not isinstance(value, str)
+                or len(value) > limit
+                or (not value and name not in ("text", "transcript", "imei"))
+            ):
                 raise ValueError(f"invalid {name}")
     for name in ("vocoder_artifact", "spectral_flatness", "speaker_drift", "caller_speech_ratio"):
         if name in ev and not 0 <= ev[name] <= 1:
@@ -127,9 +166,23 @@ class Work:
 
 
 class InferenceRuntime:
-    def __init__(self, guarded, state=None, on_result=None, on_retro=None, execution_lock=None,
-                 capacity=128, checkpoint_every=100_000, checkpoint_interval_s=30.0, start=True, admission_capacity=None,
-                 batch_size=16, batch_wait_ms=0.0, cache_capacity=4096, owner_stall_after_s=5.0):
+    def __init__(
+        self,
+        guarded,
+        state=None,
+        on_result=None,
+        on_retro=None,
+        execution_lock=None,
+        capacity=128,
+        checkpoint_every=100_000,
+        checkpoint_interval_s=30.0,
+        start=True,
+        admission_capacity=None,
+        batch_size=16,
+        batch_wait_ms=0.0,
+        cache_capacity=4096,
+        owner_stall_after_s=5.0,
+    ):
         if type(capacity) is not int or capacity < 1:
             raise ValueError("inference capacity must be a positive integer")
         admission_capacity = capacity + 1 if admission_capacity is None else admission_capacity
@@ -196,13 +249,18 @@ class InferenceRuntime:
 
     def _snapshot(self):
         det = self.g.det
-        return {"seq": self.last_seq, "model_identity": self.model_identity, "feature_store": det.fs.state_dict(),
-                "harvest_hits": copy.deepcopy(getattr(det, "harvest_hits", {})),
-                "ingest": self.guard.state_dict(),
-                "fallback_deny": dict(self.g.fallback.deny),
-                "rescore": list(self.g.rescore_queue),
-                "retro": list(self.g.retro), "retro_alerts": self.g.stats["retro_alerts"],
-                "published_retro": self._published_retro}
+        return {
+            "seq": self.last_seq,
+            "model_identity": self.model_identity,
+            "feature_store": det.fs.state_dict(),
+            "harvest_hits": copy.deepcopy(getattr(det, "harvest_hits", {})),
+            "ingest": self.guard.state_dict(),
+            "fallback_deny": dict(self.g.fallback.deny),
+            "rescore": list(self.g.rescore_queue),
+            "retro": list(self.g.retro),
+            "retro_alerts": self.g.stats["retro_alerts"],
+            "published_retro": self._published_retro,
+        }
 
     def _compact_state(self):
         """Drop window entries no future scoring can read, before each periodic checkpoint.
@@ -240,16 +298,26 @@ class InferenceRuntime:
     def _delta_snapshot(self, seq):
         """D14: what changed since the previous checkpoint. Small bounded parts travel whole."""
         det = self.g.det
-        return {"seq": seq, "model_identity": self.model_identity,
-                "feature_store": det.fs.take_delta(), "ingest": self.guard.take_delta(),
-                "fallback_deny": self.g.fallback.take_deny_delta(),
-                "harvest_hits": copy.deepcopy(getattr(det, "harvest_hits", {})),
-                "rescore": list(self.g.rescore_queue), "retro": list(self.g.retro),
-                "retro_alerts": self.g.stats["retro_alerts"], "published_retro": self._published_retro}
+        return {
+            "seq": seq,
+            "model_identity": self.model_identity,
+            "feature_store": det.fs.take_delta(),
+            "ingest": self.guard.take_delta(),
+            "fallback_deny": self.g.fallback.take_deny_delta(),
+            "harvest_hits": copy.deepcopy(getattr(det, "harvest_hits", {})),
+            "rescore": list(self.g.rescore_queue),
+            "retro": list(self.g.retro),
+            "retro_alerts": self.g.stats["retro_alerts"],
+            "published_retro": self._published_retro,
+        }
 
     def _incremental_supported(self):
-        return (hasattr(self.state, "add_checkpoint_delta") and hasattr(self.g.det.fs, "take_delta")
-                and hasattr(self.guard, "take_delta") and hasattr(self.g.fallback, "take_deny_delta"))
+        return (
+            hasattr(self.state, "add_checkpoint_delta")
+            and hasattr(self.g.det.fs, "take_delta")
+            and hasattr(self.guard, "take_delta")
+            and hasattr(self.g.fallback, "take_deny_delta")
+        )
 
     def checkpoint(self):
         with self.execution_lock:
@@ -263,10 +331,14 @@ class InferenceRuntime:
         previous_identity = self.state.get("model_identity")
         if previous_identity is None:
             if snapshot is not None or self.state.has_completed_inference():
-                raise RuntimeError("state has unversioned model history; use a fresh state database or an explicit migration")
+                raise RuntimeError(
+                    "state has unversioned model history; use a fresh state database or an explicit migration"
+                )
             self.state.set("model_identity", self.model_identity)
         elif previous_identity != self.model_identity:
-            raise RuntimeError("loaded model bundle/feature contract differs from durable state; explicit migration is required")
+            raise RuntimeError(
+                "loaded model bundle/feature contract differs from durable state; explicit migration is required"
+            )
         if snapshot is not None and snapshot.get("model_identity") != self.model_identity:
             raise RuntimeError("checkpoint model identity mismatch; refusing to replay under another bundle")
         if snapshot:
@@ -283,17 +355,32 @@ class InferenceRuntime:
         self.g.fallback.manual = dict(policy.get("manual", {}))
         self.g.fallback.allow = set(policy.get("allow", []))
         restored_refs = {r.get("journal_ref") for r in self.g.retro if r.get("journal_ref")}
+
         def restore_notifications(raw):
             ref = raw.get("journal_ref")
             if ref in restored_refs:
                 return
             intents = raw.get("late_model_results", [])
-            if not intents and raw.get("scored") and not raw.get("fail_open") and raw.get("decision") in ("BLOCK", "FLAG"):
+            if (
+                not intents
+                and raw.get("scored")
+                and not raw.get("fail_open")
+                and raw.get("decision") in ("BLOCK", "FLAG")
+            ):
                 # A process crash cannot prove delivery of a committed response. Recover
                 # an investigation intent, never a new network action or confirmed notice.
-                intents = [dict(raw, decision="FLAG", model_decision=raw.get("decision"), retro=True,
-                                requires_review=True, retro_context="commit_delivery_unconfirmed",
-                                action_vi="Review committed evidence", action_en="Review committed evidence")]
+                intents = [
+                    dict(
+                        raw,
+                        decision="FLAG",
+                        model_decision=raw.get("decision"),
+                        retro=True,
+                        requires_review=True,
+                        retro_context="commit_delivery_unconfirmed",
+                        action_vi="Review committed evidence",
+                        action_en="Review committed evidence",
+                    )
+                ]
             for intent in intents:
                 limit = self.g.retro.maxlen
                 if limit and self.g.stats["retro_alerts"] - self._published_retro >= limit:
@@ -303,6 +390,7 @@ class InferenceRuntime:
                 self.g.stats["retro_alerts"] += 1
             if intents and ref:
                 restored_refs.add(ref)
+
         if snapshot:
             for raw in snapshot.get("unconfirmed_delivery", []):
                 restore_notifications(raw)
@@ -325,7 +413,7 @@ class InferenceRuntime:
             restored_refs = {r.get("journal_ref") for r in self.g.retro if r.get("journal_ref")}
             for raw in delta.get("unconfirmed_delivery", []):
                 restore_notifications(raw)
-        self._checkpointed_seq = self.last_seq          # everything up to here is covered by a checkpoint
+        self._checkpointed_seq = self.last_seq  # everything up to here is covered by a checkpoint
         # Rebuild changes since the checkpoint in journal order. Historical decisions are not
         # enforced again. The durable result ledger is the authority for previously returned RPCs.
         for seq, kind, ev, result in self.state.journal_after(self.last_seq):
@@ -342,13 +430,15 @@ class InferenceRuntime:
                 if not work.future.done():
                     raise RuntimeError(
                         f"legacy pending journal sequence {seq} ({kind}) did not resolve; "
-                        "explicit recovery or migration is required")
+                        "explicit recovery or migration is required"
+                    )
                 try:
                     work.future.result()
                 except Exception as exc:
                     raise RuntimeError(
                         f"legacy pending journal sequence {seq} ({kind}) replay failed; "
-                        "explicit recovery or migration is required") from exc
+                        "explicit recovery or migration is required"
+                    ) from exc
             else:
                 if kind == "CDR" and result.get("ok"):
                     self.g.det.fs.commit_cdr(ev)
@@ -376,10 +466,18 @@ class InferenceRuntime:
 
     def _fail_open(self, ev, why, ingest="PENDING"):
         result = fail_open_result(ev, why)
-        result.update(scored=False, scored_before_deadline=False, actionable=False, durable=False,
-                      degraded=True, pending=ingest == "PENDING", ingest=ingest,
-                      model_version=self.model_version, model_identity=self.model_identity,
-                      artifact_status=getattr(self.g.det, "model_manifest", {}).get("status", "legacy_unverified"))
+        result.update(
+            scored=False,
+            scored_before_deadline=False,
+            actionable=False,
+            durable=False,
+            degraded=True,
+            pending=ingest == "PENDING",
+            ingest=ingest,
+            model_version=self.model_version,
+            model_identity=self.model_identity,
+            artifact_status=getattr(self.g.det, "model_manifest", {}).get("status", "legacy_unverified"),
+        )
         return result
 
     def _finish(self, work, result):
@@ -387,7 +485,9 @@ class InferenceRuntime:
         result = dict(result)
         result.setdefault("model_version", self.model_version)
         result.setdefault("model_identity", self.model_identity)
-        result.setdefault("artifact_status", getattr(self.g.det, "model_manifest", {}).get("status", "legacy_unverified"))
+        result.setdefault(
+            "artifact_status", getattr(self.g.det, "model_manifest", {}).get("status", "legacy_unverified")
+        )
         result["journal_ref"] = f"{self._store_id}:{work.seq}"
         result["model_decision"] = result.get("model_decision", result.get("decision"))
         result.setdefault("learned_deny_updates", {})
@@ -406,25 +506,43 @@ class InferenceRuntime:
         expired = time.perf_counter() >= work.deadline
         result = dict(raw)
         if work.kind == "VERDICT" and expired:
-            result = self._fail_open(work.event, "durable result missed the response deadline",
-                                     raw.get("ingest", "ADMITTED"))
-            result.update(scored=bool(raw.get("scored")), model_seen=bool(raw.get("model_seen")),
-                          model_decision=raw.get("model_decision", raw.get("decision")),
-                          journal_ref=raw.get("journal_ref"), pending=False, delivery_expired=True)
-        result.update(durable=True, admitted=True, duplicate=duplicate,
-                      latency_ms=round(elapsed, 3), commit_ms=round(commit_ms, 3),
-                      latency_phase="durable_delivery", delivery_status="duplicate" if duplicate else
-                      ("expired" if expired else "completed"))
-        result["scored_before_deadline"] = bool(not expired and not duplicate and result.get("scored")
-                                                and not result.get("fail_open") and not result.get("pending"))
-        result["actionable"] = bool(not expired and not duplicate and result.get("ingest") == ADMITTED
-                                    and not result.get("pending"))
+            result = self._fail_open(
+                work.event, "durable result missed the response deadline", raw.get("ingest", "ADMITTED")
+            )
+            result.update(
+                scored=bool(raw.get("scored")),
+                model_seen=bool(raw.get("model_seen")),
+                model_decision=raw.get("model_decision", raw.get("decision")),
+                journal_ref=raw.get("journal_ref"),
+                pending=False,
+                delivery_expired=True,
+            )
+        result.update(
+            durable=True,
+            admitted=True,
+            duplicate=duplicate,
+            latency_ms=round(elapsed, 3),
+            commit_ms=round(commit_ms, 3),
+            latency_phase="durable_delivery",
+            delivery_status="duplicate" if duplicate else ("expired" if expired else "completed"),
+        )
+        result["scored_before_deadline"] = bool(
+            not expired
+            and not duplicate
+            and result.get("scored")
+            and not result.get("fail_open")
+            and not result.get("pending")
+        )
+        result["actionable"] = bool(
+            not expired and not duplicate and result.get("ingest") == ADMITTED and not result.get("pending")
+        )
         return result
 
     def _enqueue(self, kind, ev, deadline, submitted):
         # This path is memory-only, so the event loop can enqueue without an executor hop.
-        fingerprint = hashlib.sha256(json.dumps(ev, sort_keys=True, ensure_ascii=False,
-                                    separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+        fingerprint = hashlib.sha256(
+            json.dumps(ev, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        ).hexdigest()
         with self.admission_lock:
             if self._closing:
                 return self._admission_rejected(kind, ev, closing=True)
@@ -446,8 +564,15 @@ class InferenceRuntime:
                 self.stats["overloaded"] += 1
                 if kind == "CDR":
                     self.stats["cdr_admission_rejected"] += 1
-                    return {"ok": False, "pending": False, "retryable": True, "durable": False,
-                            "admitted": False, "event_id": ev["event_id"], "ingest": "OVERLOAD"}
+                    return {
+                        "ok": False,
+                        "pending": False,
+                        "retryable": True,
+                        "durable": False,
+                        "admitted": False,
+                        "event_id": ev["event_id"],
+                        "ingest": "OVERLOAD",
+                    }
                 result = self._fail_open(ev, "inference queue full", "OVERLOAD")
                 result.update(admitted=False, retryable=True)
                 return result
@@ -464,8 +589,15 @@ class InferenceRuntime:
         self.stats["admission_rejected"] += 1
         status = "CLOSED" if closing else ("OVERLOAD" if self.queue.full() else "ADMISSION_OVERLOAD")
         if kind == "CDR":
-            return {"ok": False, "pending": False, "retryable": True, "durable": False,
-                    "admitted": False, "event_id": event["event_id"], "ingest": status}
+            return {
+                "ok": False,
+                "pending": False,
+                "retryable": True,
+                "durable": False,
+                "admitted": False,
+                "event_id": event["event_id"],
+                "ingest": status,
+            }
         result = self._fail_open(event, "admission service closing" if closing else "admission capacity full", status)
         result.update(admitted=False, retryable=True)
         return result
@@ -506,14 +638,13 @@ class InferenceRuntime:
             self.stats["http_timeouts"] += 1
             if work.future.done() and not work.future.cancelled():
                 raw = work.future.result()
-                return self._delivery(work, raw, duplicate=bool(raw.get("duplicate")),
-                                      commit_ms=raw.get("commit_ms", 0))
+                return self._delivery(
+                    work, raw, duplicate=bool(raw.get("duplicate")), commit_ms=raw.get("commit_ms", 0)
+                )
             if kind == "CDR":
-                return {"ok": False, "pending": True, "retryable": True, "durable": False,
-                        "event_id": ev["event_id"]}
+                return {"ok": False, "pending": True, "retryable": True, "durable": False, "event_id": ev["event_id"]}
             result = self._fail_open(ev, "HTTP inference deadline exceeded")
-            result.update(latency_ms=round((time.perf_counter() - submitted) * 1000, 3),
-                          retryable=True, admitted=False)
+            result.update(latency_ms=round((time.perf_counter() - submitted) * 1000, 3), retryable=True, admitted=False)
             return result
 
     def _observe_without_model(self, event, result):
@@ -542,6 +673,7 @@ class InferenceRuntime:
             with self.state.transaction():
                 if hasattr(self.state, "flush_evidence_acks"):
                     self.state.flush_evidence_acks()
+
                 def flush_scores():
                     if not pending:
                         return
@@ -556,8 +688,7 @@ class InferenceRuntime:
                     if len(results) != len(items):
                         raise RuntimeError("detector result count does not match the owner batch")
                     for work, result in zip(items, results):
-                        result = dict(result, ingest=ADMITTED,
-                                      queue_ms=round((started - work.submitted) * 1000, 3))
+                        result = dict(result, ingest=ADMITTED, queue_ms=round((started - work.submitted) * 1000, 3))
                         if not result.get("model_seen", True):
                             self._observe_without_model(work.event, result)
                         result["scored"] = bool(result.get("model_seen", not result.get("fail_open")))
@@ -567,6 +698,7 @@ class InferenceRuntime:
                         if late:
                             result["late_model_results"] = copy.deepcopy(late)
                         completed.append((work, self._finish(work, result), False))
+
                 for work in works:
                     if (work.kind, work.event['event_id']) in pending_ids:
                         flush_scores()
@@ -580,11 +712,21 @@ class InferenceRuntime:
                             related = self.state.event_payload(related_kind, work.event["event_id"])
                             if related is not None:
                                 fields = ("caller", "ts", "call_id", "callee")
-                                mismatch = [name for name in fields if name in related and
-                                            name in work.event and related[name] != work.event[name]]
-                                if related.get("event_type") != "CALL" or work.event.get("event_type") != "CALL" or mismatch:
-                                    message = ("CDR does not match its linked CALL setup" if work.kind == "CDR"
-                                               else "CALL setup does not match its linked CDR")
+                                mismatch = [
+                                    name
+                                    for name in fields
+                                    if name in related and name in work.event and related[name] != work.event[name]
+                                ]
+                                if (
+                                    related.get("event_type") != "CALL"
+                                    or work.event.get("event_type") != "CALL"
+                                    or mismatch
+                                ):
+                                    message = (
+                                        "CDR does not match its linked CALL setup"
+                                        if work.kind == "CDR"
+                                        else "CALL setup does not match its linked CDR"
+                                    )
                                     raise EventConflict(message)
                         seq, previous = self.state.reserve(work.kind, work.event)
                     except EventConflict as exc:
@@ -600,8 +742,12 @@ class InferenceRuntime:
                     if work.kind == "CDR":
                         flush_scores()
                         self.g.det.fs.commit_cdr(work.event)
-                        raw = {"ok": True, "event_id": work.event["event_id"], "scored": False,
-                               "queue_ms": round((time.perf_counter() - work.submitted) * 1000, 3)}
+                        raw = {
+                            "ok": True,
+                            "event_id": work.event["event_id"],
+                            "scored": False,
+                            "queue_ms": round((time.perf_counter() - work.submitted) * 1000, 3),
+                        }
                         completed.append((work, self._finish(work, raw), False))
                     else:
                         status = self.guard.admit(work.event)
@@ -614,12 +760,19 @@ class InferenceRuntime:
                             completed.append((work, self._finish(work, raw), False))
                 flush_scores()
                 next_seq = max([self.last_seq] + [work.seq for work, _, _ in completed])
-                if new_count and (self._since_checkpoint + new_count >= self.checkpoint_every or
-                                  time.perf_counter() - self._checkpoint_at >= self.checkpoint_interval_s):
+                if new_count and (
+                    self._since_checkpoint + new_count >= self.checkpoint_every
+                    or time.perf_counter() - self._checkpoint_at >= self.checkpoint_interval_s
+                ):
                     self._compact_state()
-                    unconfirmed = [raw for _, raw, duplicate in completed
-                        if not duplicate and raw.get("scored") and not raw.get("fail_open")
-                        and raw.get("decision") in ("BLOCK", "FLAG")]
+                    unconfirmed = [
+                        raw
+                        for _, raw, duplicate in completed
+                        if not duplicate
+                        and raw.get("scored")
+                        and not raw.get("fail_open")
+                        and raw.get("decision") in ("BLOCK", "FLAG")
+                    ]
                     if self._incremental_supported() and self._deltas_since_base < self.base_every_deltas:
                         delta = self._delta_snapshot(next_seq)
                         delta["unconfirmed_delivery"] = unconfirmed
@@ -652,7 +805,15 @@ class InferenceRuntime:
             result = self._delivery(work, raw, duplicate=duplicate, commit_ms=commit_ms)
             with self.admission_lock:
                 self._completed[(work.kind, work.event["event_id"])] = (
-                    getattr(work, "fingerprint", "") or hashlib.sha256(json.dumps(work.event, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest(), work.seq, copy.deepcopy(raw))
+                    getattr(work, "fingerprint", "")
+                    or hashlib.sha256(
+                        json.dumps(
+                            work.event, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+                        ).encode("utf-8")
+                    ).hexdigest(),
+                    work.seq,
+                    copy.deepcopy(raw),
+                )
                 self._completed.move_to_end((work.kind, work.event["event_id"]))
                 while len(self._completed) > self.cache_capacity:
                     self._completed.popitem(last=False)
@@ -680,37 +841,45 @@ class InferenceRuntime:
 
     async def lookup_observation(self, event):
         """Read durable audio history without recomputing or reinterpreting old features."""
+
         def lookup():
             try:
                 return self.state.lookup_completed("OBSERVATION", event)
             except EventConflict:
                 stored = self.state.event_payload("OBSERVATION", event["event_id"])
-                if (stored is None or stored.get("schema_version") != "voice-acoustic-v1"
-                        or event.get("schema_version") != "voice-acoustic-v2"):
+                if (
+                    stored is None
+                    or stored.get("schema_version") != "voice-acoustic-v1"
+                    or event.get("schema_version") != "voice-acoustic-v2"
+                ):
                     raise
                 # Schema is server-derived metadata, not a changed upstream WAV.
                 # Canonical lookup still checks every original business field and hash.
                 legacy = dict(event, schema_version="voice-acoustic-v1")
                 previous = self.state.lookup_completed("OBSERVATION", legacy)
                 if previous is None:
-                    raise EventConflict("legacy audio observation is incomplete; explicit recovery is required") from None
+                    raise EventConflict(
+                        "legacy audio observation is incomplete; explicit recovery is required"
+                    ) from None
                 return previous
+
         previous = await asyncio.to_thread(lookup)
         return dict(previous, duplicate=True) if previous is not None else None
 
     async def record_observation(self, event, result):
         """Persist real-audio results with one FULL commit and no proxy model call."""
+
         def record():
             with self.state.transaction():
                 seq, previous = self.state.reserve("OBSERVATION", event)
                 if previous is None:
-                    observed = dict(result, record_type="audio_observation",
-                                    journal_ref=f"{self._store_id}:{seq}")
+                    observed = dict(result, record_type="audio_observation", journal_ref=f"{self._store_id}:{seq}")
                     self.state.finish(seq, observed)
             if previous is not None:
                 return dict(previous, duplicate=True)
             self.on_result(event, observed)
             return observed
+
         return await asyncio.to_thread(record)
 
     def _stop_after_owner_error(self, exc, works=()):
@@ -731,8 +900,13 @@ class InferenceRuntime:
             if work.future.done():
                 continue
             if work.kind == "CDR":
-                result = {"ok": False, "pending": False, "durable": False,
-                          "event_id": work.event["event_id"], "ingest": "RECOVERY_REQUIRED"}
+                result = {
+                    "ok": False,
+                    "pending": False,
+                    "durable": False,
+                    "event_id": work.event["event_id"],
+                    "ingest": "RECOVERY_REQUIRED",
+                }
             else:
                 result = self._fail_open(work.event, "inference owner requires recovery", "RECOVERY_REQUIRED")
             result.update(admitted=False, retryable=True)
@@ -783,7 +957,8 @@ class InferenceRuntime:
             # starved the rescore queue until it silently dropped its oldest fail-open events.
             busy_for = time.perf_counter() - self._last_maintenance
             if busy_for >= self.busy_maintenance_interval_s and (
-                    getattr(self.g, "rescore_queue", None) or getattr(self.g, "retro", None)):
+                getattr(self.g, "rescore_queue", None) or getattr(self.g, "retro", None)
+            ):
                 if not self._maintenance(8):
                     break
         if self._fatal_error is None:
@@ -798,7 +973,7 @@ class InferenceRuntime:
         try:
             deleted = self.state.prune_events(time.time() - self.event_retention_s, self._checkpointed_seq)
             self.stats["events_pruned"] = self.stats.get("events_pruned", 0) + deleted
-        except Exception:      # noqa: BLE001 - retention must never take the owner down
+        except Exception:  # noqa: BLE001 - retention must never take the owner down
             self.stats["retention_errors"] = self.stats.get("retention_errors", 0) + 1
 
     def _maintenance(self, max_rescore):
@@ -827,9 +1002,12 @@ class InferenceRuntime:
         now = time.perf_counter()
         busy = max(0.0, now - self._owner_busy_since) if self._owner_busy_since else 0.0
         stalled = busy >= self.owner_stall_after_s
-        return {"ready": not self._closing and self._fatal_error is None and not stalled,
-                "stalled": stalled, "owner_busy_ms": round(busy * 1000, 3),
-                "seconds_since_progress": round(now - self._last_owner_progress, 3)}
+        return {
+            "ready": not self._closing and self._fatal_error is None and not stalled,
+            "stalled": stalled,
+            "owner_busy_ms": round(busy * 1000, 3),
+            "seconds_since_progress": round(now - self._last_owner_progress, 3),
+        }
 
     def close(self):
         with self.admission_lock:

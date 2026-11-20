@@ -1,4 +1,5 @@
 """Near-real-time event-time counting on a SEPARATE analytical Redis."""
+
 from __future__ import annotations
 
 import argparse
@@ -36,8 +37,14 @@ class EventFromFuture(RuntimeError):
 
 
 class SlidingWindowDetector:
-    def __init__(self, analytics_client, policy: PolicyStore, threshold=100,
-                 namespace="telecom-window", activate_demo_blocks=False):
+    def __init__(
+        self,
+        analytics_client,
+        policy: PolicyStore,
+        threshold=100,
+        namespace="telecom-window",
+        activate_demo_blocks=False,
+    ):
         if type(threshold) is not int or threshold <= 0:
             raise ValueError("positive threshold required")
         if not namespace.replace("-", "").replace("_", "").isalnum():
@@ -58,8 +65,7 @@ class SlidingWindowDetector:
             # Usually clock skew between hosts, not a bad record: retry, never dead-letter.
             raise EventFromFuture("event timestamp is too far in the future")
         tag = "{" + self.namespace + ":" + caller + "}"
-        count, frontier = await self.analytics.eval(
-            WINDOW_LUA, 2, tag + ":calls", tag + ":frontier", ts, call_id)
+        count, frontier = await self.analytics.eval(WINDOW_LUA, 2, tag + ":calls", tag + ":frontier", ts, call_id)
         flagged = count > self.threshold
         fresh = 0 <= now - frontier <= 5000
         activated = False
@@ -67,8 +73,14 @@ class SlidingWindowDetector:
             # Illustration only: production needs calibrated policy/allowlists.
             await self.policy.set_blocked(caller, True)
             activated = True
-        return {"caller": caller, "calls_60s": count, "frontier_ms": frontier,
-                "flagged": flagged, "fresh": fresh, "activated": activated}
+        return {
+            "caller": caller,
+            "calls_60s": count,
+            "frontier_ms": frontier,
+            "flagged": flagged,
+            "fresh": fresh,
+            "activated": activated,
+        }
 
 
 # Lỗi xác định theo nội dung bản ghi: chạy lại bao nhiêu lần cũng hỏng y như vậy.
@@ -111,6 +123,7 @@ async def process_kafka_message(message, detector, consumer, commit=None, dead_l
 
 class SerialConsumer:
     """Serialize poll/commit/close; cancellation never closes while poll is running."""
+
     def __init__(self, consumer):
         self.consumer = consumer
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kafka-owner")
@@ -134,19 +147,33 @@ class SerialConsumer:
 
 async def consume(args):
     from confluent_kafka import Consumer
+
     config = {}
     security_file = getattr(args, "security_config", None)
     if security_file:
         from pathlib import Path
+
         config = json.loads(Path(security_file).read_text(encoding="utf-8"))
-        allowed = {"security.protocol", "ssl.ca.location", "ssl.certificate.location",
-                   "ssl.key.location", "ssl.endpoint.identification.algorithm"}
+        allowed = {
+            "security.protocol",
+            "ssl.ca.location",
+            "ssl.certificate.location",
+            "ssl.key.location",
+            "ssl.endpoint.identification.algorithm",
+        }
         if set(config) - allowed or config.get("security.protocol") != "SSL":
             raise ValueError("Expected an explicit TLS client configuration")
-    config.update({"bootstrap.servers": args.bootstrap, "group.id": args.group,
-                   "enable.auto.commit": False, "enable.auto.offset.store": False,
-                   "auto.offset.reset": "earliest", "socket.timeout.ms": 5000,
-                   "socket.connection.setup.timeout.ms": 5000})
+    config.update(
+        {
+            "bootstrap.servers": args.bootstrap,
+            "group.id": args.group,
+            "enable.auto.commit": False,
+            "enable.auto.offset.store": False,
+            "auto.offset.reset": "earliest",
+            "socket.timeout.ms": 5000,
+            "socket.connection.setup.timeout.ms": 5000,
+        }
+    )
     task = asyncio.current_task()
     loop = asyncio.get_running_loop()
     installed = False
@@ -158,40 +185,63 @@ async def consume(args):
             pass
         async with AsyncExitStack() as stack:
             online = await stack.enter_async_context(owned_redis(args.policy_redis, io_timeout=1.0))
-            analytical = await stack.enter_async_context(owned_redis(args.analytics_redis, io_timeout=1.0, max_connections=8))
+            analytical = await stack.enter_async_context(
+                owned_redis(args.analytics_redis, io_timeout=1.0, max_connections=8)
+            )
             consumer = Consumer(config)
             owner = SerialConsumer(consumer)
             stack.push_async_callback(close_async, "confluent-consumer", owner.close, 15.0)
             await owner.call(consumer.subscribe, [args.topic])
-            detector = SlidingWindowDetector(analytical, PolicyStore(online, args.namespace),
-                threshold=args.threshold, activate_demo_blocks=args.activate_demo_blocks)
+            detector = SlidingWindowDetector(
+                analytical,
+                PolicyStore(online, args.namespace),
+                threshold=args.threshold,
+                activate_demo_blocks=args.activate_demo_blocks,
+            )
+
             async def commit(message):
                 await owner.call(consumer.commit, message=message, asynchronous=False)
+
             dead_letter = None
             if getattr(args, "dlq_topic", None):
                 from confluent_kafka import Producer
-                producer = Producer({**{k: v for k, v in config.items() if k.startswith(("security.", "ssl."))},
-                                     "bootstrap.servers": args.bootstrap, "acks": "all",
-                                     "enable.idempotence": True})
+
+                producer = Producer(
+                    {
+                        **{k: v for k, v in config.items() if k.startswith(("security.", "ssl."))},
+                        "bootstrap.servers": args.bootstrap,
+                        "acks": "all",
+                        "enable.idempotence": True,
+                    }
+                )
 
                 async def dead_letter(message, reason):
                     failures = []
-                    producer.produce(args.dlq_topic, key=message.key(), value=message.value(),
-                                     headers=[("error", reason.encode()), ("source_topic", message.topic().encode()),
-                                              ("source_partition", str(message.partition()).encode()),
-                                              ("source_offset", str(message.offset()).encode())],
-                                     on_delivery=lambda err, _msg: err and failures.append(err))
+                    producer.produce(
+                        args.dlq_topic,
+                        key=message.key(),
+                        value=message.value(),
+                        headers=[
+                            ("error", reason.encode()),
+                            ("source_topic", message.topic().encode()),
+                            ("source_partition", str(message.partition()).encode()),
+                            ("source_offset", str(message.offset()).encode()),
+                        ],
+                        on_delivery=lambda err, _msg: err and failures.append(err),
+                    )
                     remaining = await asyncio.to_thread(producer.flush, 10.0)
                     if remaining or failures:
                         raise RuntimeError("dead-letter publish not acknowledged; offset left uncommitted")
+
             while True:
                 message = await owner.call(consumer.poll, 1.0)
                 if message is None:
                     continue
                 if message.error():
                     raise RuntimeError("Kafka message error")
-                result = await process_kafka_message(message, detector, consumer, commit=commit,
-                                                     dead_letter=dead_letter)
+                result = await process_kafka_message(
+                    message, detector, consumer, commit=commit, dead_letter=dead_letter
+                )
                 # Do not print the caller's phone number into production logs.
                 print(json.dumps({k: v for k, v in result.items() if k != "caller"}), flush=True)
     finally:
@@ -210,8 +260,11 @@ def main():
     parser.add_argument("--namespace", default="telecom-policy")
     parser.add_argument("--threshold", type=int, default=100)
     parser.add_argument("--activate-demo-blocks", action="store_true")
-    parser.add_argument("--dlq-topic", default=os.environ.get("KAFKA_DLQ_TOPIC"),
-                        help="topic for malformed records; without it a malformed record stops the consumer")
+    parser.add_argument(
+        "--dlq-topic",
+        default=os.environ.get("KAFKA_DLQ_TOPIC"),
+        help="topic for malformed records; without it a malformed record stops the consumer",
+    )
     try:
         run(consume(parser.parse_args()))
     except (asyncio.CancelledError, KeyboardInterrupt):

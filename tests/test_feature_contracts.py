@@ -1,4 +1,5 @@
 """Regression contracts for causal features, restarts, late events and micro-batches."""
+
 import copy
 import json
 import sys
@@ -14,17 +15,40 @@ from ingest_guard import ADMITTED, DUPLICATE, LATE, IngestGuard, event_key
 
 
 def call(ts, eid="call", **extra):
-    ev = dict(event_type="CALL", event_id=eid, call_id=eid, ts=float(ts), caller="A", callee="B",
-              cell_id="HN-0001", imei="35391110000001", origin_trunk="LOCAL", network="4G",
-              caller_age_days=500)
+    ev = dict(
+        event_type="CALL",
+        event_id=eid,
+        call_id=eid,
+        ts=float(ts),
+        caller="A",
+        callee="B",
+        cell_id="HN-0001",
+        imei="35391110000001",
+        origin_trunk="LOCAL",
+        network="4G",
+        caller_age_days=500,
+    )
     ev.update(extra)
     return ev
 
 
 def audio(ts, callee="B", eid="audio"):
-    return dict(event_type="AUDIO", event_id=eid, call_id=eid, ts=float(ts), caller="A", callee=callee,
-                codec="EVS-VoLTE", vocoder_artifact=0.2, pitch_jitter=0.02, spectral_flatness=0.3,
-                speaker_drift=0.2, caller_speech_ratio=0.02, callee_speech_s=4.0, transcript="")
+    return dict(
+        event_type="AUDIO",
+        event_id=eid,
+        call_id=eid,
+        ts=float(ts),
+        caller="A",
+        callee=callee,
+        codec="EVS-VoLTE",
+        vocoder_artifact=0.2,
+        pitch_jitter=0.02,
+        spectral_flatness=0.3,
+        speaker_drift=0.2,
+        caller_speech_ratio=0.02,
+        callee_speech_s=4.0,
+        transcript="",
+    )
 
 
 def test_short_completed_call_is_visible_while_earlier_long_call_remains_pending():
@@ -149,8 +173,10 @@ def detector(guard=None):
     d.call_model = d.audio_model = ZeroModel()
     d.iso = {name: ZeroAnomaly() for name in ("domestic", "foreign", "trunk")}
     d.iso_feats, d.iso_med, d.iso_iqr = ["calls_1m"], np.array([0.0]), np.array([1.0])
-    d.th = {"call": {"block": 0.9, "flag": 0.5,
-                     "anomaly_flag": {name: 1 for name in d.iso}}, "audio": {"block": 0.9, "flag": 0.5}}
+    d.th = {
+        "call": {"block": 0.9, "flag": 0.5, "anomaly_flag": {name: 1 for name in d.iso}},
+        "audio": {"block": 0.9, "flag": 0.5},
+    }
     return d
 
 
@@ -182,9 +208,11 @@ def test_prediction_failure_rolls_back_only_touched_feature_keys_before_retry():
     d = detector()
     d.score_batch([call(1, "prior", caller="other")])
     before = copy.deepcopy(d.fs.state_dict())
+
     class FailingModel:
         def predict(self, *args, **kwargs):
             raise RuntimeError("inference failed")
+
     d.call_model = FailingModel()
     with pytest.raises(RuntimeError, match="inference failed"):
         d.score_batch([call(10, "failed", duration_s=3)])
@@ -199,10 +227,12 @@ def test_policy_failure_rolls_back_harvest_memory_and_audio_state():
     d = detector()
     before = copy.deepcopy(d.fs.state_dict())
     original_result = d._result
+
     def broken_result(*args, **kwargs):
         out = original_result(*args, **kwargs)
         out["reasons"] = None  # the second harvesting victim reaches policy, then fails
         return out
+
     d._result = broken_result
     with pytest.raises(AttributeError):
         d.score_batch([audio(10, "v1", "a1"), audio(20, "v2", "a2")])
@@ -246,8 +276,7 @@ def test_three_real_calls_keep_exact_serving_features_through_feedback_export(tm
         writer.writeheader()
         writer.writerow(dict(event_id=events[-1]["event_id"], group_id="one-campaign", label=0, reviewer="reviewer"))
     destination = tmp_path / "reviewed-feedback"
-    report = build_feedback(database, labels, destination, key=b"k" * 32,
-                            train_before=10, calibration_before=20)
+    report = build_feedback(database, labels, destination, key=b"k" * 32, train_before=10, calibration_before=20)
     assert report["splits"]["train"]["events"] == 1
     exported = json.loads((destination / "train_reviewed_calls.jsonl").read_text(encoding="utf-8"))
     assert exported["callee_dispersion_1h"] == serving_value

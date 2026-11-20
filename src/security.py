@@ -12,6 +12,7 @@ proves *who* did it and nobody can write a line in someone else's name without t
 Limitation: the keys live on this server. In production they belong in an HSM or on each user's
 device (asymmetric signatures), and the chain head is anchored periodically in the operator's system.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -39,8 +40,13 @@ DEMO_MODE = os.environ.get("FRAUD_DEMO", "0") == "1"
 # ------------------------------------------------------------------ users
 # Tài khoản mặc định. "viewer" là mọi nhân viên tập đoàn có tài khoản: xem phân tích, số đã che.
 # "ai_agent" không đăng nhập được (vai trò ngoài ROLES): chỉ có khóa để ký các đề xuất của nó vào nhật ký.
-DEFAULT_ACCOUNTS = (("viettel_admin", "admin"), ("analyst_1", "analyst"), ("viewer_1", "viewer"),
-                    ("nhanvien_01", "viewer"), ("ai_agent", "agent"))
+DEFAULT_ACCOUNTS = (
+    ("viettel_admin", "admin"),
+    ("analyst_1", "analyst"),
+    ("viewer_1", "viewer"),
+    ("nhanvien_01", "viewer"),
+    ("ai_agent", "agent"),
+)
 ROLE_LABEL_VI = {"admin": "Quản trị (nhà mạng)", "analyst": "Chuyên viên", "viewer": "Nhân viên", "agent": "AI agent"}
 
 
@@ -130,12 +136,13 @@ def configure_store(store=None):
         suspended.update(store.suspended_users())
 
 
-
 def _open_session(u: dict, clock=time.time):
     sid, now = secrets.token_urlsafe(32), clock()
     with _sessions_lock:
-        for k in [k for k, s in SESSIONS.items() if now - s["created"] > SESSION_TTL_S or now - s["last"] > SESSION_IDLE_S]:
-            del SESSIONS[k]                      # drop expired sessions as we go
+        for k in [
+            k for k, s in SESSIONS.items() if now - s["created"] > SESSION_TTL_S or now - s["last"] > SESSION_IDLE_S
+        ]:
+            del SESSIONS[k]  # drop expired sessions as we go
         payload = {**u, "created": now, "last": now}
         if _session_store is not None:
             _session_store.save_session(sid, payload)
@@ -180,7 +187,12 @@ def login_password(username: str, password: str, clock=time.time):
     if not u or not u.get("password_hash"):
         burn_password_check(password)
         return None
-    if not u or u.get("role") not in ROLES or u.get("disabled") or not verify_password(password, u.get("password_hash")):
+    if (
+        not u
+        or u.get("role") not in ROLES
+        or u.get("disabled")
+        or not verify_password(password, u.get("password_hash"))
+    ):
         return None
     return _open_session(_public(name, u), clock)
 
@@ -195,14 +207,24 @@ def login_google_operator(email: str, clock=time.time):
 
 
 def list_operators() -> list[dict]:
-    return [{"name": n, "role": u["role"], "role_label": ROLE_LABEL_VI.get(u["role"], u["role"]),
-             "email": u.get("email"), "has_password": bool(u.get("password_hash")),
-             "disabled": bool(u.get("disabled")), "suspended": n in suspended}
-            for n, u in sorted(users().items()) if u.get("role") in ROLES]
+    return [
+        {
+            "name": n,
+            "role": u["role"],
+            "role_label": ROLE_LABEL_VI.get(u["role"], u["role"]),
+            "email": u.get("email"),
+            "has_password": bool(u.get("password_hash")),
+            "disabled": bool(u.get("disabled")),
+            "suspended": n in suspended,
+        }
+        for n, u in sorted(users().items())
+        if u.get("role") in ROLES
+    ]
 
 
-def upsert_operator(name: str, role: str, *, email: str | None = None, password: str | None = None,
-                    disabled: bool | None = None) -> dict:
+def upsert_operator(
+    name: str, role: str, *, email: str | None = None, password: str | None = None, disabled: bool | None = None
+) -> dict:
     from accounts import hash_password
 
     name = (name or "").strip().lower()
@@ -293,6 +315,7 @@ def require(min_role: str):
         if ROLES[u["role"]] < ROLES[min_role]:
             raise HTTPException(403, f"role '{u['role']}' cannot do this (needs '{min_role}')")
         return u
+
     return dep
 
 
@@ -386,7 +409,6 @@ def reload_network_key() -> bytes:
         return key
 
 
-
 _network_timestamp_lock = threading.Lock()
 _last_network_timestamp_ns = 0
 
@@ -403,6 +425,7 @@ def network_timestamp() -> str:
         _last_network_timestamp_ns = current
     seconds, fraction = divmod(current, 1_000_000_000)
     return f"{seconds}.{fraction:09d}"
+
 
 def sign_network(body: bytes, ts: str, key: bytes = None) -> str:
     return hmac.new(key or network_key(), ts.encode() + b"." + body, hashlib.sha256).hexdigest()
@@ -462,12 +485,18 @@ class AuditLog:
                     self.torn_lines += 1
             if raw and not raw.endswith("\n"):
                 with self.path.open("a", encoding="utf-8") as fh:
-                    fh.write("\n")   # the next record starts on its own line
+                    fh.write("\n")  # the next record starts on its own line
         self._lock = threading.Lock()
 
     def record(self, actor: str, action: str, **params) -> dict:
         db = self.user_db if self.user_db is not None else users()
-        entry = {"ts": round(time.time(), 3), "actor": actor, "role": db[actor]["role"], "action": action, "params": params}
+        entry = {
+            "ts": round(time.time(), 3),
+            "actor": actor,
+            "role": db[actor]["role"],
+            "action": action,
+            "params": params,
+        }
         payload = json.dumps(entry, ensure_ascii=False, sort_keys=True)
         with self._lock:
             h = _digest(self.prev, payload)
@@ -497,8 +526,11 @@ def verify_audit(path: Path = None, user_db: dict | None = None, anchor: dict | 
     if anchor is not None and result["valid"]:
         want_n, want_hash = int(anchor.get("records", 0)), str(anchor.get("hash", ""))
         if want_n > result["records"] or (want_n and result["hashes"][want_n - 1] != want_hash):
-            result.update(valid=False, problem="log truncated or rewritten before the external anchor",
-                          first_bad_line=min(want_n, result["records"] + 1))
+            result.update(
+                valid=False,
+                problem="log truncated or rewritten before the external anchor",
+                first_bad_line=min(want_n, result["records"] + 1),
+            )
     result.pop("hashes", None)
     return result
 
@@ -508,6 +540,7 @@ def _verify_audit_chain(path: Path, db: dict) -> dict:
 
     def out(**kw):
         return {"head": {"records": n, "hash": prev}, "hashes": hashes, **kw}
+
     if not path.exists():
         return out(valid=True, records=0, first_bad_line=None, problem=None)
     for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
@@ -527,10 +560,12 @@ def _verify_audit_chain(path: Path, db: dict) -> dict:
             return out(valid=False, records=n, first_bad_line=i, problem="content edited after it was written")
         actor = row["entry"].get("actor")
         if actor not in db or not hmac.compare_digest(_sign(db[actor]["sign_key"], row["hash"]), row["sig"]):
-            return out(valid=False, records=n, first_bad_line=i,
-                       problem=f"signature does not match '{actor}' (written without that user's key)")
+            return out(
+                valid=False,
+                records=n,
+                first_bad_line=i,
+                problem=f"signature does not match '{actor}' (written without that user's key)",
+            )
         prev, n = row["hash"], n + 1
         hashes.append(prev)
     return out(valid=True, records=n, first_bad_line=None, problem=None)
-
-

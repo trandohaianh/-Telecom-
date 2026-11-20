@@ -1,4 +1,5 @@
 """Exercise the real HTTP stack in a fresh temporary live/shadow instance, then restart it."""
+
 from __future__ import annotations
 
 import argparse
@@ -29,10 +30,15 @@ ROOT = Path(__file__).resolve().parents[1]
 def signed_post(client, url, path, data, key):
     body = json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
     timestamp = network_timestamp()
-    return client.post(url + path, content=body, headers={
-        "content-type": "application/json", "x-timestamp": timestamp,
-        "x-signature": sign_network(body, timestamp, key),
-    })
+    return client.post(
+        url + path,
+        content=body,
+        headers={
+            "content-type": "application/json",
+            "x-timestamp": timestamp,
+            "x-signature": sign_network(body, timestamp, key),
+        },
+    )
 
 
 def await_result(client, url, path, data, key):
@@ -40,7 +46,7 @@ def await_result(client, url, path, data, key):
         response = signed_post(client, url, path, data, key)
         if response.status_code != 202 and not response.json().get("pending"):
             return response
-        time.sleep(.03)
+        time.sleep(0.03)
     raise RuntimeError("isolated request never completed")
 
 
@@ -48,15 +54,23 @@ def start_server(directory, model_dir=None):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
-    env = dict(os.environ, FRAUD_DEMO="0", FRAUD_REAL_TRAFFIC_VALIDATED="0",
-               FRAUD_REQUIRE_MANIFEST="0", PYTHONDONTWRITEBYTECODE="1",
-               PYTHONPATH=str(ROOT / "src"), OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1",
-               MKL_NUM_THREADS="1", NUMBA_NUM_THREADS="1",
-               FRAUD_STATE_DB=str(directory / "state.sqlite3"),
-               FRAUD_EVIDENCE_FILE=str(directory / "evidence.jsonl"),
-               FRAUD_AUDIT_FILE=str(directory / "audit.jsonl"),
-               FRAUD_USERS_FILE=str(directory / "users.json"),
-               FRAUD_NETWORK_KEY=str(directory / "network.key"))
+    env = dict(
+        os.environ,
+        FRAUD_DEMO="0",
+        FRAUD_REAL_TRAFFIC_VALIDATED="0",
+        FRAUD_REQUIRE_MANIFEST="0",
+        PYTHONDONTWRITEBYTECODE="1",
+        PYTHONPATH=str(ROOT / "src"),
+        OPENBLAS_NUM_THREADS="1",
+        OMP_NUM_THREADS="1",
+        MKL_NUM_THREADS="1",
+        NUMBA_NUM_THREADS="1",
+        FRAUD_STATE_DB=str(directory / "state.sqlite3"),
+        FRAUD_EVIDENCE_FILE=str(directory / "evidence.jsonl"),
+        FRAUD_AUDIT_FILE=str(directory / "audit.jsonl"),
+        FRAUD_USERS_FILE=str(directory / "users.json"),
+        FRAUD_NETWORK_KEY=str(directory / "network.key"),
+    )
     env["FRAUD_MODEL_DIR"] = str(model_dir or ROOT / "models")
     env["FRAUD_DATA_DIR"] = str(model_dir.parent / "data" if model_dir else ROOT / "data")
     env["FRAUD_REQUIRE_MANIFEST"] = "1" if model_dir else "0"
@@ -71,11 +85,18 @@ def start_server(directory, model_dir=None):
         "s.run()"
     )
     log = (directory / "server.log").open("a", encoding="utf-8")
-    process = subprocess.Popen([sys.executable, "-B", "-c", code], cwd=ROOT, env=env,
-                               stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True)
+    process = subprocess.Popen(
+        [sys.executable, "-B", "-c", code],
+        cwd=ROOT,
+        env=env,
+        stdin=subprocess.PIPE,
+        stdout=log,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
     url = f"http://127.0.0.1:{port}"
     try:
-        with httpx.Client(timeout=.5, trust_env=False) as client:
+        with httpx.Client(timeout=0.5, trust_env=False) as client:
             deadline = time.monotonic() + 90
             last_probe = "no response"
             while time.monotonic() < deadline:
@@ -88,7 +109,7 @@ def start_server(directory, model_dir=None):
                         return process, log, url
                 except httpx.HTTPError as exc:
                     last_probe = type(exc).__name__
-                time.sleep(.1)
+                time.sleep(0.1)
         raise RuntimeError(f"isolated server did not become ready: {last_probe}; log={directory / 'server.log'}")
     except Exception:
         stop_server(process, log)
@@ -113,7 +134,9 @@ def stop_server(process, log):
                 process.wait(timeout=5)
                 raise RuntimeError("isolated server could not drain within 30 seconds") from shutdown_error
         if process.returncode != 0:
-            raise RuntimeError(f"isolated server exited with code {process.returncode}; inspect server.log") from shutdown_error
+            raise RuntimeError(
+                f"isolated server exited with code {process.returncode}; inspect server.log"
+            ) from shutdown_error
     finally:
         if process.stdin:
             try:
@@ -136,9 +159,17 @@ def verify_stack(*, rates=(100, 500), seconds=2.0, model_dir=None, concurrency=3
         key = bytes.fromhex((directory / "network.key").read_text(encoding="utf-8").strip())
         with httpx.Client(timeout=3, trust_env=False) as client:
             event = {
-                "event_id": "SMOKE-CALL", "call_id": "SMOKE-SESSION", "event_type": "CALL", "ts": time.time(),
-                "caller": "84900000001", "callee": "84900000002", "cell_id": "HN-0001",
-                "imei": "353911100000001", "origin_trunk": "LOCAL", "network": "4G", "caller_age_days": 500,
+                "event_id": "SMOKE-CALL",
+                "call_id": "SMOKE-SESSION",
+                "event_type": "CALL",
+                "ts": time.time(),
+                "caller": "84900000001",
+                "callee": "84900000002",
+                "cell_id": "HN-0001",
+                "imei": "353911100000001",
+                "origin_trunk": "LOCAL",
+                "network": "4G",
+                "caller_age_days": 500,
             }
             first = await_result(client, url, "/api/v1/verdict", event, key)
             assert first.status_code == 200, first.text
@@ -148,34 +179,53 @@ def verify_stack(*, rates=(100, 500), seconds=2.0, model_dir=None, concurrency=3
             conflict = signed_post(client, url, "/api/v1/verdict", {**event, "callee": "OTHER"}, key)
             assert conflict.status_code == 409, conflict.text
             assert client.post(url + "/api/v1/verdict", json=event).status_code == 401
-            cdr = {"event_type": "CALL", "event_id": event["event_id"], "call_id": event["call_id"],
-                   "ts": event["ts"], "caller": event["caller"], "duration_s": 1.0}
+            cdr = {
+                "event_type": "CALL",
+                "event_id": event["event_id"],
+                "call_id": event["call_id"],
+                "ts": event["ts"],
+                "caller": event["caller"],
+                "duration_s": 1.0,
+            }
             assert await_result(client, url, "/api/v1/cdr", cdr, key).json()["ok"]
             assert await_result(client, url, "/api/v1/cdr", cdr, key).json()["duplicate"]
-            samples = (.15 * np.sin(2 * np.pi * 200 * np.arange(16000) / 16000) * 32767).astype("<i2")
+            samples = (0.15 * np.sin(2 * np.pi * 200 * np.arange(16000) / 16000) * 32767).astype("<i2")
             buffer = io.BytesIO()
             with wave.open(buffer, "wb") as audio:
                 audio.setnchannels(1)
                 audio.setsampwidth(2)
                 audio.setframerate(16000)
                 audio.writeframes(samples.tobytes())
-            voice = {"event_type": "AUDIO", "event_id": "SMOKE-VOICE", "call_id": event["call_id"],
-                     "caller": event["caller"], "callee": event["callee"], "ts": event["ts"] + 1,
-                     "wav_b64": base64.b64encode(buffer.getvalue()).decode()}
+            voice = {
+                "event_type": "AUDIO",
+                "event_id": "SMOKE-VOICE",
+                "call_id": event["call_id"],
+                "caller": event["caller"],
+                "callee": event["callee"],
+                "ts": event["ts"] + 1,
+                "wav_b64": base64.b64encode(buffer.getvalue()).decode(),
+            }
             audio_result = await_result(client, url, "/api/v1/audio", voice, key)
             assert audio_result.status_code == 200, audio_result.text
             assert audio_result.json()["decision"] == "OBSERVE"
             assert audio_result.json()["recommended_action"] == "NONE"
             users = json.loads((directory / "users.json").read_text(encoding="utf-8"))
-            login = client.post(url + "/api/login", headers={"Authorization": "Bearer " + users["viettel_admin"]["token"]})
+            login = client.post(
+                url + "/api/login", headers={"Authorization": "Bearer " + users["viettel_admin"]["token"]}
+            )
             headers = {"Authorization": "Bearer " + login.json()["session"]}
             enforce = client.post(url + "/api/network/mode?mode=enforce", headers=headers)
             assert enforce.status_code == 409
-            smoke = {"signed_setup": True, "duplicate_no_second_update": True, "conflicting_identity_409": True,
-                     "unsigned_401": True, "cdr_retry_idempotent": True, "real_wav_observation": True,
-                     "unvalidated_enforce_refused": True}
-        reports = [run_async(run_http(url, key, rate=rate, seconds=seconds,
-                                      concurrency=concurrency)) for rate in rates]
+            smoke = {
+                "signed_setup": True,
+                "duplicate_no_second_update": True,
+                "conflicting_identity_409": True,
+                "unsigned_401": True,
+                "cdr_retry_idempotent": True,
+                "real_wav_observation": True,
+                "unvalidated_enforce_refused": True,
+            }
+        reports = [run_async(run_http(url, key, rate=rate, seconds=seconds, concurrency=concurrency)) for rate in rates]
     finally:
         stop_server(process, log)
     valid, evidence_records, bad = verify(directory / "evidence.jsonl")
@@ -191,16 +241,29 @@ def verify_stack(*, rates=(100, 500), seconds=2.0, model_dir=None, concurrency=3
         stop_server(process, log)
     connection = sqlite3.connect(directory / "state.sqlite3")
     counts = dict(connection.execute("SELECT kind,count(*) FROM events GROUP BY kind"))
-    assert connection.execute("SELECT count(*) FROM events WHERE kind='VERDICT' AND event_id='SMOKE-CALL'").fetchone()[0] == 1
-    assert connection.execute("SELECT count(*) FROM events WHERE kind='CDR' AND event_id='SMOKE-CALL'").fetchone()[0] == 1
-    assert connection.execute("SELECT count(*) FROM events WHERE kind='OBSERVATION' AND event_id='SMOKE-VOICE'").fetchone()[0] == 1
+    assert (
+        connection.execute("SELECT count(*) FROM events WHERE kind='VERDICT' AND event_id='SMOKE-CALL'").fetchone()[0]
+        == 1
+    )
+    assert (
+        connection.execute("SELECT count(*) FROM events WHERE kind='CDR' AND event_id='SMOKE-CALL'").fetchone()[0] == 1
+    )
+    assert (
+        connection.execute(
+            "SELECT count(*) FROM events WHERE kind='OBSERVATION' AND event_id='SMOKE-VOICE'"
+        ).fetchone()[0]
+        == 1
+    )
     connection.close()
     smoke["restart_setup_and_voice_idempotent"] = True
     return {
         "verified_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "isolation": "fresh local temporary credentials/state; user logs and secrets unchanged",
-        "artifacts_dir": str(directory), "smoke": smoke, "runs": reports,
-        "evidence_chain_valid": valid, "evidence_records_before_restart": evidence_records,
+        "artifacts_dir": str(directory),
+        "smoke": smoke,
+        "runs": reports,
+        "evidence_chain_valid": valid,
+        "evidence_records_before_restart": evidence_records,
         "journal_counts": counts,
         "model_scope": "synthetic model bundle; runtime/transport verification, not real-world accuracy evidence",
         "model_version": first.json().get("model_version"),
@@ -223,8 +286,12 @@ def main(argv=None):
             validate_run_parameters(rate=rate, seconds=args.seconds, concurrency=args.concurrency)
     except ValueError as error:
         parser.error(str(error))
-    result = verify_stack(rates=rates, seconds=args.seconds, concurrency=args.concurrency,
-                          model_dir=args.model_dir.resolve() if args.model_dir else None)
+    result = verify_stack(
+        rates=rates,
+        seconds=args.seconds,
+        concurrency=args.concurrency,
+        model_dir=args.model_dir.resolve() if args.model_dir else None,
+    )
     content = json.dumps(result, indent=2)
     if args.out:
         with args.out.open("x", encoding="utf-8") as destination:

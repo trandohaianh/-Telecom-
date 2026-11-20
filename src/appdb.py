@@ -3,6 +3,7 @@
 Tách khỏi `backend_state` (journal suy luận một chủ sở hữu) để dữ liệu người dùng không phụ thuộc
 vào vòng đời mô hình và tồn tại qua các lần khởi động lại, kể cả ở chế độ demo.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -153,7 +154,7 @@ class AppDB:
             if number > version:
                 self._conn.execute("BEGIN IMMEDIATE")
                 try:
-                    for statement in script.split(";"):     # inside the transaction (executescript would commit)
+                    for statement in script.split(";"):  # inside the transaction (executescript would commit)
                         if statement.strip():
                             self._conn.execute(statement)
                     self._conn.execute(f"PRAGMA user_version={number}")

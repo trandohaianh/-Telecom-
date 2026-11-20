@@ -1,4 +1,5 @@
 """Replay validated CALLs to an explicitly provisioned topic, in causal order."""
+
 from __future__ import annotations
 
 import argparse
@@ -11,8 +12,7 @@ from event_contract import json_safe, validate_call
 HERE = Path(__file__).resolve().parent
 
 
-def replay(rows, producer, topic, *, rate=0.0, speed=0.0,
-           clock=time.perf_counter, sleep=time.sleep):
+def replay(rows, producer, topic, *, rate=0.0, speed=0.0, clock=time.perf_counter, sleep=time.sleep):
     """Wait before sending; acknowledgements must succeed before counting a send."""
     started = clock()
     first_ts = rows[0]["ts"] if rows else 0
@@ -30,6 +30,7 @@ def main():
 
     import pandas as pd
     from kafka import KafkaProducer
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--events", type=Path, default=HERE / "sample_events.csv")
     parser.add_argument("--topic", default="telecom.events.ordered.v2")
@@ -43,8 +44,7 @@ def main():
         parser.error("rate/speed/limit must be nonnegative; partitions must be positive")
     if args.rate and args.speed:
         parser.error("choose either rate or speed")
-    frame = pd.read_csv(args.events, dtype={key: str for key in
-        ("caller", "callee", "imei", "cell_id", "event_id")})
+    frame = pd.read_csv(args.events, dtype={key: str for key in ("caller", "callee", "imei", "cell_id", "event_id")})
     frame = frame.sort_values(["ts", "event_id"], kind="stable")
     if args.limit:
         frame = frame.head(args.limit)
@@ -52,10 +52,15 @@ def main():
     rows = [row for row in rows if row is not None]
     if len({row["event_id"] for row in rows}) != len(rows):
         raise ValueError("Replay input has duplicate event_id")
-    producer = KafkaProducer(bootstrap_servers=args.bootstrap,
+    producer = KafkaProducer(
+        bootstrap_servers=args.bootstrap,
         value_serializer=lambda row: json.dumps(row, allow_nan=False).encode(),
-        key_serializer=lambda key: str(key).encode(), acks="all", retries=3,
-        max_in_flight_requests_per_connection=1, linger_ms=0)
+        key_serializer=lambda key: str(key).encode(),
+        acks="all",
+        retries=3,
+        max_in_flight_requests_per_connection=1,
+        linger_ms=0,
+    )
     started = time.perf_counter()
     try:
         partitions = producer.partitions_for(args.topic)

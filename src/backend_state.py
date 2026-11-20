@@ -1,4 +1,5 @@
 """Durable state for one local inference owner; SQLite is not a distributed feature store."""
+
 from __future__ import annotations
 
 import contextlib
@@ -36,11 +37,15 @@ class BackendState:
     BACKGROUND_CHECKPOINT_INTERVAL_S = 0.25
 
     def __init__(self, path=None, *, wal_autocheckpoint_pages=None, background_checkpoint=None):
-        explicit_threshold = (wal_autocheckpoint_pages is not None
-                              or "FRAUD_SQLITE_WAL_AUTOCHECKPOINT_PAGES" in os.environ)
+        explicit_threshold = (
+            wal_autocheckpoint_pages is not None or "FRAUD_SQLITE_WAL_AUTOCHECKPOINT_PAGES" in os.environ
+        )
         if background_checkpoint is None:
-            background_checkpoint = (path is not None and not explicit_threshold
-                                     and os.environ.get("FRAUD_SQLITE_BACKGROUND_CHECKPOINT", "1") != "0")
+            background_checkpoint = (
+                path is not None
+                and not explicit_threshold
+                and os.environ.get("FRAUD_SQLITE_BACKGROUND_CHECKPOINT", "1") != "0"
+            )
         if wal_autocheckpoint_pages is None:
             try:
                 wal_autocheckpoint_pages = int(os.environ.get("FRAUD_SQLITE_WAL_AUTOCHECKPOINT_PAGES", "1000"))
@@ -68,8 +73,9 @@ class BackendState:
         self.path = Path(path).resolve() if path is not None else None
         if self.path:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(str(self.path) if self.path else ":memory:",
-                                  timeout=5.0, check_same_thread=False, isolation_level=None)
+        self.db = sqlite3.connect(
+            str(self.path) if self.path else ":memory:", timeout=5.0, check_same_thread=False, isolation_level=None
+        )
         self.lock = threading.RLock()
         self._transaction_depth = 0
         self._transaction_rollback_only = False
@@ -88,8 +94,9 @@ class BackendState:
         self._checkpoint_stop = threading.Event()
         self._checkpoint_thread = None
         if self.background_checkpoint:
-            self._checkpoint_thread = threading.Thread(target=self._checkpoint_loop, name="sqlite-wal-checkpoint",
-                                                       daemon=True)
+            self._checkpoint_thread = threading.Thread(
+                target=self._checkpoint_loop, name="sqlite-wal-checkpoint", daemon=True
+            )
             self._checkpoint_thread.start()
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -162,9 +169,11 @@ class BackendState:
             fh.seek(0)
             if os.name == "nt":
                 import msvcrt
+
                 msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
             else:
                 import fcntl
+
                 fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except (OSError, IOError) as exc:
             fh.close()
@@ -180,7 +189,9 @@ class BackendState:
     # periodic checkpoint appends only what changed. Recovery = base + deltas in order + journal.
     def add_checkpoint_delta(self, seq, value):
         with self.lock:
-            self.db.execute("INSERT OR REPLACE INTO checkpoint_delta(seq, value) VALUES (?,?)", (int(seq), _json(value)))
+            self.db.execute(
+                "INSERT OR REPLACE INTO checkpoint_delta(seq, value) VALUES (?,?)", (int(seq), _json(value))
+            )
 
     def checkpoint_deltas(self):
         with self.lock:
@@ -195,23 +206,30 @@ class BackendState:
         encoded = _json(value)
         with self.lock:
             # Unchanged agent/policy snapshots must not add WAL frames and fsyncs.
-            self.db.execute("INSERT INTO metadata(key,value) VALUES (?,?) "
-                            "ON CONFLICT(key) DO UPDATE SET value=excluded.value "
-                            "WHERE metadata.value<>excluded.value", (key, encoded))
+            self.db.execute(
+                "INSERT INTO metadata(key,value) VALUES (?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value "
+                "WHERE metadata.value<>excluded.value",
+                (key, encoded),
+            )
 
     def reserve(self, kind, ev):
         payload = _json(ev)
         digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
         with self.lock:
-            row = self.db.execute("SELECT seq,digest,result FROM events WHERE kind=? AND event_id=?",
-                                  (kind, str(ev["event_id"]))).fetchone()
+            row = self.db.execute(
+                "SELECT seq,digest,result FROM events WHERE kind=? AND event_id=?", (kind, str(ev["event_id"]))
+            ).fetchone()
             if row is None:
-                cursor = self.db.execute("INSERT OR IGNORE INTO events(kind,event_id,digest,payload,received) VALUES (?,?,?,?,?)",
-                                         (kind, str(ev["event_id"]), digest, payload, time.time()))
+                cursor = self.db.execute(
+                    "INSERT OR IGNORE INTO events(kind,event_id,digest,payload,received) VALUES (?,?,?,?,?)",
+                    (kind, str(ev["event_id"]), digest, payload, time.time()),
+                )
                 if cursor.rowcount:
                     return cursor.lastrowid, None
-                row = self.db.execute("SELECT seq,digest,result FROM events WHERE kind=? AND event_id=?",
-                                      (kind, str(ev["event_id"]))).fetchone()
+                row = self.db.execute(
+                    "SELECT seq,digest,result FROM events WHERE kind=? AND event_id=?", (kind, str(ev["event_id"]))
+                ).fetchone()
             if row[1] != digest:
                 raise EventConflict("event_id already belongs to different content for this operation")
         return row[0], json.loads(row[2]) if row[2] else None
@@ -228,7 +246,8 @@ class BackendState:
             cur = self.db.execute(
                 "DELETE FROM events WHERE seq IN (SELECT seq FROM events WHERE seq<=? AND received<? "
                 "AND result IS NOT NULL AND evidence_exported=1 ORDER BY seq LIMIT ?)",
-                (int(max_seq), float(before_ts), int(limit)))
+                (int(max_seq), float(before_ts), int(limit)),
+            )
         return cur.rowcount
 
     # ---- batched journal for streaming consumers (Kafka demo, A2: one write per event instead of two)
@@ -242,11 +261,14 @@ class BackendState:
         ids = [str(ev["event_id"]) for ev in events]
         digests = {str(ev["event_id"]): hashlib.sha256(_json(ev).encode("utf-8")).hexdigest() for ev in events}
         conn = db if db is not None else self.db
-        with (contextlib.nullcontext() if db is not None else self.lock):
+        with contextlib.nullcontext() if db is not None else self.lock:
             for i in range(0, len(ids), 500):
-                chunk = ids[i:i + 500]
-                rows = conn.execute(f"SELECT event_id,digest,result FROM events WHERE kind=? AND event_id IN "
-                                       f"({','.join('?' * len(chunk))})", (kind, *chunk)).fetchall()
+                chunk = ids[i : i + 500]
+                rows = conn.execute(
+                    f"SELECT event_id,digest,result FROM events WHERE kind=? AND event_id IN "
+                    f"({','.join('?' * len(chunk))})",
+                    (kind, *chunk),
+                ).fetchall()
                 for event_id, digest, result in rows:
                     if digest != digests[event_id]:
                         raise EventConflict("event_id already belongs to different content for this operation")
@@ -263,26 +285,39 @@ class BackendState:
         rows = []
         for ev, result in zip(events, results):
             payload = _json(ev)
-            rows.append((kind, str(ev["event_id"]), hashlib.sha256(payload.encode("utf-8")).hexdigest(), payload,
-                         _json(result), now))
+            rows.append(
+                (
+                    kind,
+                    str(ev["event_id"]),
+                    hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+                    payload,
+                    _json(result),
+                    now,
+                )
+            )
         ids = [r[1] for r in rows]
         seqs = {}
         with self.lock:
-            self.db.executemany("INSERT INTO events(kind,event_id,digest,payload,result,received) VALUES (?,?,?,?,?,?)",
-                                rows)
+            self.db.executemany(
+                "INSERT INTO events(kind,event_id,digest,payload,result,received) VALUES (?,?,?,?,?,?)", rows
+            )
             # Real sequence numbers (AUTOINCREMENT may skip values, so they are read back, not computed).
             for i in range(0, len(ids), 500):
-                chunk = ids[i:i + 500]
-                seqs.update(self.db.execute(f"SELECT event_id,seq FROM events WHERE kind=? AND event_id IN "
-                                            f"({','.join('?' * len(chunk))})", (kind, *chunk)).fetchall())
+                chunk = ids[i : i + 500]
+                seqs.update(
+                    self.db.execute(
+                        f"SELECT event_id,seq FROM events WHERE kind=? AND event_id IN ({','.join('?' * len(chunk))})",
+                        (kind, *chunk),
+                    ).fetchall()
+                )
         return [seqs[i] for i in ids]
 
     def event_payload(self, kind, event_id):
         """Read one journal identity without scanning, reserving or modifying it."""
         with self.lock:
             row = self.db.execute(
-                "SELECT payload FROM events WHERE kind=? AND event_id=?",
-                (kind, str(event_id))).fetchone()
+                "SELECT payload FROM events WHERE kind=? AND event_id=?", (kind, str(event_id))
+            ).fetchone()
         return json.loads(row[0]) if row is not None else None
 
     def lookup_completed(self, kind, event):
@@ -295,8 +330,8 @@ class BackendState:
         digest = hashlib.sha256(_json(event).encode("utf-8")).hexdigest()
         with self.lock:
             row = self.db.execute(
-                "SELECT digest,result FROM events WHERE kind=? AND event_id=?",
-                (kind, str(event["event_id"]))).fetchone()
+                "SELECT digest,result FROM events WHERE kind=? AND event_id=?", (kind, str(event["event_id"]))
+            ).fetchone()
             if row is None:
                 return None
             if row[0] != digest:
@@ -314,11 +349,16 @@ class BackendState:
 
     def has_completed_inference(self):
         with self.lock:
-            return self.db.execute("SELECT 1 FROM events WHERE kind='VERDICT' AND result IS NOT NULL LIMIT 1").fetchone() is not None
+            return (
+                self.db.execute("SELECT 1 FROM events WHERE kind='VERDICT' AND result IS NOT NULL LIMIT 1").fetchone()
+                is not None
+            )
 
     def journal_after(self, seq):
         with self.lock:
-            rows = self.db.execute("SELECT seq,kind,payload,result FROM events WHERE seq>? ORDER BY seq", (seq,)).fetchall()
+            rows = self.db.execute(
+                "SELECT seq,kind,payload,result FROM events WHERE seq>? ORDER BY seq", (seq,)
+            ).fetchall()
         return [(n, kind, json.loads(ev), json.loads(r) if r else None) for n, kind, ev, r in rows]
 
     def acknowledged_evidence_after(self, seq=0, limit=1000):
@@ -328,7 +368,9 @@ class BackendState:
         with self.lock:
             rows = self.db.execute(
                 "SELECT seq,result FROM events WHERE seq>? AND result IS NOT NULL "
-                "AND evidence_exported=1 ORDER BY seq LIMIT ?", (seq, limit)).fetchall()
+                "AND evidence_exported=1 ORDER BY seq LIMIT ?",
+                (seq, limit),
+            ).fetchall()
         return [(number, json.loads(result)) for number, result in rows]
 
     def pending_evidence(self, limit=200):
@@ -342,7 +384,9 @@ class BackendState:
             while len(pending) < limit:
                 rows = self.db.execute(
                     "SELECT seq,result FROM events WHERE seq>? AND result IS NOT NULL "
-                    "AND evidence_exported=0 ORDER BY seq LIMIT ?", (after, page_size)).fetchall()
+                    "AND evidence_exported=0 ORDER BY seq LIMIT ?",
+                    (after, page_size),
+                ).fetchall()
                 if not rows:
                     break
                 for seq, result in rows:
@@ -379,8 +423,7 @@ class BackendState:
             if not sequences:
                 return 0
             with self.transaction():
-                self.db.executemany("UPDATE events SET evidence_exported=1 WHERE seq=?",
-                                    [(seq,) for seq in sequences])
+                self.db.executemany("UPDATE events SET evidence_exported=1 WHERE seq=?", [(seq,) for seq in sequences])
                 self._transaction_evidence_acks.update(sequences)
             return len(sequences)
 

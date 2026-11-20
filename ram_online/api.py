@@ -1,4 +1,5 @@
 """Authenticated production boundary for the RAM-first online policy gate."""
+
 from __future__ import annotations
 
 import asyncio
@@ -32,6 +33,7 @@ def create_app():
         async with owned_redis(url) as online, owned_redis(url, io_timeout=1.0, max_connections=2) as builder:
             raw = OnlineGate(PolicyStore(online), budget_ms=5.0)
             app.state.gate = FailOpenGate(raw)
+
             async def refresh():
                 while True:
                     try:
@@ -40,6 +42,7 @@ def create_app():
                     except (RedisError, OnlineUnavailable, TimeoutError, ValueError):
                         pass  # Keep prior snapshot. Redis version guard still applies.
                     await asyncio.sleep(30)
+
             task = asyncio.create_task(refresh(), name="policy-bloom-refresh")
             try:
                 yield
@@ -63,6 +66,7 @@ def create_app():
         response = asdict(decision)
         response["status"] = decision.status
         return response
+
     return app
 
 

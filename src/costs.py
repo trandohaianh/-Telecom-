@@ -5,6 +5,7 @@ Hệ thống chấm điểm chạy mô hình tại chỗ (LightGBM / IsolationFo
 Chi phí chính là server: lấy tổng chi phí hạ tầng tháng chia cho số quyết định dự kiến trong tháng,
 kèm số giây CPU thực tế của tiến trình cho mỗi 1.000 quyết định (để biết khi nào phải nâng máy).
 """
+
 from __future__ import annotations
 
 import calendar
@@ -16,12 +17,23 @@ from datetime import datetime, timezone
 from appdb import AppDB, now
 
 
-def record_usage(db: AppDB, kind: str, *, provider: str | None = None, units: float = 1.0,
-                 cost_usd: float = 0.0, subscriber_id: int | None = None, detail: str | None = None) -> None:
+def record_usage(
+    db: AppDB,
+    kind: str,
+    *,
+    provider: str | None = None,
+    units: float = 1.0,
+    cost_usd: float = 0.0,
+    subscriber_id: int | None = None,
+    detail: str | None = None,
+) -> None:
     try:
         with db.tx() as c:
-            c.execute("INSERT INTO usage_events(created_at, kind, provider, units, cost_usd, subscriber_id, detail)"
-                      " VALUES (?,?,?,?,?,?,?)", (now(), kind, provider, units, cost_usd, subscriber_id, detail))
+            c.execute(
+                "INSERT INTO usage_events(created_at, kind, provider, units, cost_usd, subscriber_id, detail)"
+                " VALUES (?,?,?,?,?,?,?)",
+                (now(), kind, provider, units, cost_usd, subscriber_id, detail),
+            )
     except Exception:  # chi phí là best-effort, không làm hỏng luồng chính
         pass
     try:
@@ -46,12 +58,22 @@ def process_rss_mb() -> float:
 
 def summary(db: AppDB, *, processed: int, uptime_s: float, days: int = 30, cpu_baseline_s: float = 0.0) -> dict:
     since = now() - days * 86400
-    by_kind = [dict(r) for r in db.query(
-        "SELECT kind, provider, COUNT(*) AS events, SUM(units) AS units, SUM(cost_usd) AS cost_usd "
-        "FROM usage_events WHERE created_at >= ? GROUP BY kind, provider ORDER BY cost_usd DESC", (since,))]
-    by_day = [dict(r) for r in db.query(
-        "SELECT date(created_at, 'unixepoch') AS day, SUM(cost_usd) AS cost_usd, COUNT(*) AS events "
-        "FROM usage_events WHERE created_at >= ? GROUP BY day ORDER BY day", (since,))]
+    by_kind = [
+        dict(r)
+        for r in db.query(
+            "SELECT kind, provider, COUNT(*) AS events, SUM(units) AS units, SUM(cost_usd) AS cost_usd "
+            "FROM usage_events WHERE created_at >= ? GROUP BY kind, provider ORDER BY cost_usd DESC",
+            (since,),
+        )
+    ]
+    by_day = [
+        dict(r)
+        for r in db.query(
+            "SELECT date(created_at, 'unixepoch') AS day, SUM(cost_usd) AS cost_usd, COUNT(*) AS events "
+            "FROM usage_events WHERE created_at >= ? GROUP BY day ORDER BY day",
+            (since,),
+        )
+    ]
     usage_total = sum(r["cost_usd"] or 0 for r in by_kind)
 
     today = datetime.now(timezone.utc)

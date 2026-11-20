@@ -1,4 +1,5 @@
 """Local load shedding must not open the Redis circuit breaker (no Redis needed)."""
+
 import asyncio
 
 from ram_online.core import OnlineOverloaded, OnlineUnavailable
@@ -14,7 +15,7 @@ class Gate:
             raise OnlineOverloaded("online capacity exceeded")
         if self.mode == "redis_down":
             raise OnlineUnavailable("Redis unavailable")
-        return False, "v1"          # number is on the deny list
+        return False, "v1"  # number is on the deny list
 
 
 def test_overload_burst_does_not_open_breaker_for_everyone():
@@ -24,15 +25,16 @@ def test_overload_burst_does_not_open_breaker_for_everyone():
         for _ in range(10):
             shed = await adapter.check_call_allowed("+84901234567")
             assert shed.status == "UNKNOWN"
-        assert adapter.breaker.state == "closed"     # before the fix: open after 2 shed requests
+        assert adapter.breaker.state == "closed"  # before the fix: open after 2 shed requests
         assert shed.reason == "online_overloaded"
         gate.mode = "ok"
         blocked = await adapter.check_call_allowed("+84901234567")
-        assert blocked.status == "BLOCK"          # before the fix: circuit open -> ALLOW for 60 s
+        assert blocked.status == "BLOCK"  # before the fix: circuit open -> ALLOW for 60 s
         gate.mode = "redis_down"
         for _ in range(2):
             await adapter.check_call_allowed("+84901234567")
-        assert adapter.breaker.state == "open"    # real dependency failures still open it
+        assert adapter.breaker.state == "open"  # real dependency failures still open it
+
     asyncio.run(scenario())
 
 

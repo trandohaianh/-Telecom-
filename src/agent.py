@@ -10,6 +10,7 @@ Detectors are deterministic rules over the live state (so every proposal is repr
 explainable); an LLM can be added later to word the summaries, fed only masked aggregates.
 Numbers and IMEIs in proposals are always masked; the full values stay server-side.
 """
+
 from __future__ import annotations
 
 import collections
@@ -21,16 +22,16 @@ import uuid
 from security import mask_imei, mask_number
 
 PROPOSAL_TTL_S = 30 * 60
-WINDOW_S = 10 * 60          # how far back the agent looks for related events
-INSIDER_REVEALS = 8         # full-number reveals per user per window before the agent raises it
+WINDOW_S = 10 * 60  # how far back the agent looks for related events
+INSIDER_REVEALS = 8  # full-number reveals per user per window before the agent raises it
 
 
 class OpsAgent:
     def __init__(self, engine, audit, interval_s: float = 3.0, clock=time.time, state_store=None):
         self.e, self.audit, self.interval_s, self.clock = engine, audit, interval_s, clock
         self.proposals: "collections.OrderedDict[str, dict]" = collections.OrderedDict()
-        self._open: dict[str, str] = {}        # dedup key -> id of the pending proposal
-        self._done_keys: set[str] = set()      # keys already decided (do not nag again)
+        self._open: dict[str, str] = {}  # dedup key -> id of the pending proposal
+        self._done_keys: set[str] = set()  # keys already decided (do not nag again)
         self.state_store = state_store
         self._persist_depth = 0
         self._stop = threading.Event()
@@ -61,9 +62,15 @@ class OpsAgent:
 
     def _persist(self):
         if self.state_store is not None and self._persist_depth == 0:
-            self.state_store.set("agent_state", {"proposals": list(self.proposals.values()),
-                                                "open": self._open, "done_keys": sorted(self._done_keys),
-                                                "retro_seen": self._retro_seen})
+            self.state_store.set(
+                "agent_state",
+                {
+                    "proposals": list(self.proposals.values()),
+                    "open": self._open,
+                    "done_keys": sorted(self._done_keys),
+                    "retro_seen": self._retro_seen,
+                },
+            )
 
     def _loop(self):
         while not self._stop.wait(self.interval_s):
@@ -97,9 +104,22 @@ class OpsAgent:
         if key in self._open or key in self._done_keys:
             return None
         pid = "P" + uuid.uuid4().hex[:16]
-        p = {"id": pid, "kind": kind, "severity": severity, "title": title, "why": list(why),
-             "action": action, "subjects": list(subjects), "created": self.clock(), "status": "pending",
-             "decided_by": None, "decided_at": None, "note": "", "result": None, "_params": params or {}}
+        p = {
+            "id": pid,
+            "kind": kind,
+            "severity": severity,
+            "title": title,
+            "why": list(why),
+            "action": action,
+            "subjects": list(subjects),
+            "created": self.clock(),
+            "status": "pending",
+            "decided_by": None,
+            "decided_at": None,
+            "note": "",
+            "result": None,
+            "_params": params or {},
+        }
         p["_key"] = key
         self.audit.record("ai_agent", "agent_proposal", id=pid, kind=kind, title=title)
         # A scan's finally block persists successful work even after failures.
@@ -124,8 +144,9 @@ class OpsAgent:
             self._open.pop(p["_key"], None)
             self._done_keys.add(p["_key"])
             p["result"] = result
-            self.audit.record(actor, "agent_decision", id=pid, kind=p["kind"],
-                              decision=p["status"], note=note, result=p["result"])
+            self.audit.record(
+                actor, "agent_decision", id=pid, kind=p["kind"], decision=p["status"], note=note, result=p["result"]
+            )
             self._persist()
             return self.public(p)
 
@@ -171,6 +192,7 @@ class OpsAgent:
             return "Đã khôi phục mô hình. Hàng đợi chấm lại sẽ được xử lý tự động."
         if kind == "suspend_user":
             import security
+
             security.suspend(prm["user"])
             return f"Đã tạm khóa tài khoản {prm['user']}."
         return "Đã ghi nhận."
@@ -192,11 +214,18 @@ class OpsAgent:
         if now - self._degraded_since < 5:
             return
         s = g.stats
-        self.propose("breaker", "restore", "high", "Mô hình không phản hồi kịp: hệ thống đang chạy chế độ dự phòng",
-                     [f"Circuit breaker: {g.cb.state}, kéo dài {now - self._degraded_since:.0f} giây",
-                      f"Luật dự phòng đã chặn {s['fallback_block']} sự kiện; phần còn lại đang được cho qua",
-                      f"{len(g.rescore_queue)} sự kiện chờ chấm lại sau khi hồi phục"],
-                     {"kind": "restore", "label": "Khôi phục mô hình / quay về phiên bản ổn định trước"})
+        self.propose(
+            "breaker",
+            "restore",
+            "high",
+            "Mô hình không phản hồi kịp: hệ thống đang chạy chế độ dự phòng",
+            [
+                f"Circuit breaker: {g.cb.state}, kéo dài {now - self._degraded_since:.0f} giây",
+                f"Luật dự phòng đã chặn {s['fallback_block']} sự kiện; phần còn lại đang được cho qua",
+                f"{len(g.rescore_queue)} sự kiện chờ chấm lại sau khi hồi phục",
+            ],
+            {"kind": "restore", "label": "Khôi phục mô hình / quay về phiên bản ổn định trước"},
+        )
 
     def _watch_groups(self):
         """One proposal per connected group of numbers and devices (number -- IMEI edges), not per device:
@@ -224,29 +253,48 @@ class OpsAgent:
             imeis = sorted(m[1:] for m in members if m[0] == "I")
             if len(nums) < 2:
                 continue
-            self.propose("group:" + ",".join(imeis), "block_group", "high",
-                         f"Nghi trang trại SIM box: {len(nums)} số trên {len(imeis)} thiết bị liên quan",
-                         [f"{len(nums)} số bị chặn / gắn cờ trong {WINDOW_S // 60} phút qua dùng chung "
-                          f"{'một thiết bị' if len(imeis) == 1 else f'{len(imeis)} thiết bị'} ({', '.join(mask_imei(i) for i in imeis[:3])})",
-                          "Nhiều SIM xoay vòng trên cùng thiết bị là dấu hiệu GSM gateway (SIM box)",
-                          "Chặn cả nhóm: kẻ gian thay SIM mới trên các thiết bị này cũng bị chặn ngay"],
-                         {"kind": "block_group", "label": f"Chặn cả nhóm ({len(nums)} số + {len(imeis)} thiết bị)"},
-                         subjects=[mask_number(n) for n in nums] + [mask_imei(i) for i in imeis],
-                         params={"numbers": nums, "imeis": imeis})
+            self.propose(
+                "group:" + ",".join(imeis),
+                "block_group",
+                "high",
+                f"Nghi trang trại SIM box: {len(nums)} số trên {len(imeis)} thiết bị liên quan",
+                [
+                    f"{len(nums)} số bị chặn / gắn cờ trong {WINDOW_S // 60} phút qua dùng chung "
+                    f"{'một thiết bị' if len(imeis) == 1 else f'{len(imeis)} thiết bị'} ({', '.join(mask_imei(i) for i in imeis[:3])})",
+                    "Nhiều SIM xoay vòng trên cùng thiết bị là dấu hiệu GSM gateway (SIM box)",
+                    "Chặn cả nhóm: kẻ gian thay SIM mới trên các thiết bị này cũng bị chặn ngay",
+                ],
+                {"kind": "block_group", "label": f"Chặn cả nhóm ({len(nums)} số + {len(imeis)} thiết bị)"},
+                subjects=[mask_number(n) for n in nums] + [mask_imei(i) for i in imeis],
+                params={"numbers": nums, "imeis": imeis},
+            )
 
     def _watch_false_positives(self):
         protected = self.e.g.fallback.protected
         allow = self.e.g.fallback.allow
         for h in self._recent_hits():
             age = h.get("caller_age_days") or 0
-            if h["decision"] == "BLOCK" and age >= 365 and h["party"] not in protected and h["party"] not in allow \
-                    and not h.get("human_override"):
-                self.propose(f"fp:{h['party']}", "unblock", "medium", "Có thể chặn nhầm: thuê bao lâu năm bị chặn",
-                             [f"Số {mask_number(h['party'])} đã hoạt động {int(age)} ngày nhưng vừa bị chặn",
-                              "Thuê bao lâu năm hiếm khi là SIM lừa đảo; cần chuyên viên xem lại",
-                              "Từ chối = giữ nguyên chặn"],
-                             {"kind": "unblock", "label": "Gỡ chặn, đưa vào danh sách tin cậy"},
-                             subjects=[mask_number(h["party"])], params={"number": h["party"]})
+            if (
+                h["decision"] == "BLOCK"
+                and age >= 365
+                and h["party"] not in protected
+                and h["party"] not in allow
+                and not h.get("human_override")
+            ):
+                self.propose(
+                    f"fp:{h['party']}",
+                    "unblock",
+                    "medium",
+                    "Có thể chặn nhầm: thuê bao lâu năm bị chặn",
+                    [
+                        f"Số {mask_number(h['party'])} đã hoạt động {int(age)} ngày nhưng vừa bị chặn",
+                        "Thuê bao lâu năm hiếm khi là SIM lừa đảo; cần chuyên viên xem lại",
+                        "Từ chối = giữ nguyên chặn",
+                    ],
+                    {"kind": "unblock", "label": "Gỡ chặn, đưa vào danh sách tin cậy"},
+                    subjects=[mask_number(h["party"])],
+                    params={"number": h["party"]},
+                )
 
     def _watch_reports(self):
         with self.e.lock:
@@ -255,12 +303,20 @@ class OpsAgent:
         manual = self.e.g.fallback.manual
         for n, k in reports.items():
             if k >= 2 and not rep[n].get("BLOCK") and n not in manual and n not in self.e.g.fallback.protected:
-                self.propose(f"rep:{n}", "block_group", "medium", f"{k} người dùng báo cáo một số mà hệ thống chưa chặn",
-                             [f"Số {mask_number(n)} bị {k} thuê bao khác nhau báo cáo lừa đảo",
-                              "Mô hình chưa thấy dấu hiệu đủ mạnh để chặn",
-                              "Báo cáo của người dùng không bao giờ tự động chặn số (tránh bị lợi dụng bôi xấu số sạch)"],
-                             {"kind": "block_group", "label": "Chặn số này"},
-                             subjects=[mask_number(n)], params={"numbers": [n], "imeis": []})
+                self.propose(
+                    f"rep:{n}",
+                    "block_group",
+                    "medium",
+                    f"{k} người dùng báo cáo một số mà hệ thống chưa chặn",
+                    [
+                        f"Số {mask_number(n)} bị {k} thuê bao khác nhau báo cáo lừa đảo",
+                        "Mô hình chưa thấy dấu hiệu đủ mạnh để chặn",
+                        "Báo cáo của người dùng không bao giờ tự động chặn số (tránh bị lợi dụng bôi xấu số sạch)",
+                    ],
+                    {"kind": "block_group", "label": "Chặn số này"},
+                    subjects=[mask_number(n)],
+                    params={"numbers": [n], "imeis": []},
+                )
 
     def _watch_retro(self):
         g = self.e.g
@@ -273,25 +329,39 @@ class OpsAgent:
         self._retro_seen = g.stats["retro_alerts"]
         review = [r for r in items if r.get("requires_review")]
         if review:
-            self.propose(f"retro-review:{self._retro_seen}", "investigate", "medium",
-                         "Retrospective results require a human review",
-                         [f"{len(review)} events were rescored against current history, not their original event-time state",
-                          "These scores do not create automatic deny-list entries or confirmed-fraud notifications"],
-                         {"kind": "investigate", "label": "Review retrospective evidence"},
-                         subjects=[mask_number(r.get("party")) for r in review[:8]])
+            self.propose(
+                f"retro-review:{self._retro_seen}",
+                "investigate",
+                "medium",
+                "Retrospective results require a human review",
+                [
+                    f"{len(review)} events were rescored against current history, not their original event-time state",
+                    "These scores do not create automatic deny-list entries or confirmed-fraud notifications",
+                ],
+                {"kind": "investigate", "label": "Review retrospective evidence"},
+                subjects=[mask_number(r.get("party")) for r in review[:8]],
+            )
         items = [r for r in items if not r.get("requires_review")]
         recips = sorted({r.get("counterparty") for r in items if r.get("counterparty")})
         if not recips:
             return
-        self.propose(f"retro:{self._retro_seen}", "notify", "medium",
-                     f"{len(items)} sự kiện lọt qua lúc sự cố nay được xác định là lừa đảo",
-                     [f"Các cuộc gọi / tin nhắn này đã tới {len(recips)} thuê bao trong lúc mô hình không phản hồi",
-                      "Không thể chặn lại (đã qua), nhưng có thể cảnh báo người nhận ngay"],
-                     {"kind": "notify", "label": f"Gửi cảnh báo tới {len(recips)} người nhận"},
-                     subjects=[mask_number(r) for r in recips[:8]],
-                     params={"recipients": recips,
-                             "message": "Bạn vừa nhận một cuộc gọi / tin nhắn mà nhà mạng xác định là lừa đảo. "
-                                        "Không làm theo yêu cầu, không chuyển tiền, không đọc OTP."})
+        self.propose(
+            f"retro:{self._retro_seen}",
+            "notify",
+            "medium",
+            f"{len(items)} sự kiện lọt qua lúc sự cố nay được xác định là lừa đảo",
+            [
+                f"Các cuộc gọi / tin nhắn này đã tới {len(recips)} thuê bao trong lúc mô hình không phản hồi",
+                "Không thể chặn lại (đã qua), nhưng có thể cảnh báo người nhận ngay",
+            ],
+            {"kind": "notify", "label": f"Gửi cảnh báo tới {len(recips)} người nhận"},
+            subjects=[mask_number(r) for r in recips[:8]],
+            params={
+                "recipients": recips,
+                "message": "Bạn vừa nhận một cuộc gọi / tin nhắn mà nhà mạng xác định là lừa đảo. "
+                "Không làm theo yêu cầu, không chuyển tiền, không đọc OTP.",
+            },
+        )
 
     def _watch_insider(self):
         cutoff = self.clock() - WINDOW_S
@@ -299,13 +369,20 @@ class OpsAgent:
             while q and q[0] < cutoff:
                 q.popleft()
             if len(q) > INSIDER_REVEALS:
-                self.propose(f"insider:{user}:{int(q[0])}", "suspend_user", "high",
-                             "Tài khoản xem số điện thoại đầy đủ nhiều bất thường",
-                             [f"Tài khoản {user} đã mở {len(q)} số đầy đủ trong {WINDOW_S // 60} phút",
-                              f"Ngưỡng bình thường: tối đa {INSIDER_REVEALS}",
-                              "Có thể là rò rỉ dữ liệu từ bên trong; mọi lần mở đều có trong nhật ký kèm lý do"],
-                             {"kind": "suspend_user", "label": f"Tạm khóa tài khoản {user}"},
-                             subjects=[user], params={"user": user})
+                self.propose(
+                    f"insider:{user}:{int(q[0])}",
+                    "suspend_user",
+                    "high",
+                    "Tài khoản xem số điện thoại đầy đủ nhiều bất thường",
+                    [
+                        f"Tài khoản {user} đã mở {len(q)} số đầy đủ trong {WINDOW_S // 60} phút",
+                        f"Ngưỡng bình thường: tối đa {INSIDER_REVEALS}",
+                        "Có thể là rò rỉ dữ liệu từ bên trong; mọi lần mở đều có trong nhật ký kèm lý do",
+                    ],
+                    {"kind": "suspend_user", "label": f"Tạm khóa tài khoản {user}"},
+                    subjects=[user],
+                    params={"user": user},
+                )
 
     def _watch_evidence_chain(self):
         now = self.clock()
@@ -314,9 +391,14 @@ class OpsAgent:
         self._last_chain_check = now
         ok, n, bad = self.e.verify_evidence()
         if ok is False:
-            self.propose(f"chain:{bad}", "investigate", "high", "Nhật ký bằng chứng bị sửa đổi",
-                         [f"Chuỗi hash gãy ở dòng {bad} (đã kiểm {n} bản ghi hợp lệ trước đó)",
-                          "Có người đã sửa hoặc xóa bằng chứng sau khi ghi; cần điều tra"],
-                         {"kind": "investigate", "label": "Ghi nhận và mở điều tra"})
-
-
+            self.propose(
+                f"chain:{bad}",
+                "investigate",
+                "high",
+                "Nhật ký bằng chứng bị sửa đổi",
+                [
+                    f"Chuỗi hash gãy ở dòng {bad} (đã kiểm {n} bản ghi hợp lệ trước đó)",
+                    "Có người đã sửa hoặc xóa bằng chứng sau khi ghi; cần điều tra",
+                ],
+                {"kind": "investigate", "label": "Ghi nhận và mở điều tra"},
+            )

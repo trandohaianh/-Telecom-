@@ -29,11 +29,13 @@ def test_slow_evidence_decoding_does_not_block_a_durable_writer(tmp_path, monkey
     try:
         seq, _ = state.reserve("VERDICT", {"event_id": "FIRST"})
         state.finish(seq, {"event_id": "FIRST", "slow_evidence_decode": True})
+
         def decode(value, *args, **kwargs):
             if "slow_evidence_decode" in value:
                 decoding.set()
                 assert release.wait(3), "background decode held the writer lock"
             return original(value, *args, **kwargs)
+
         monkeypatch.setattr(json, "loads", decode)
         with ThreadPoolExecutor(max_workers=2) as pool:
             export = pool.submit(state.pending_evidence)

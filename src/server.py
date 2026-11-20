@@ -6,6 +6,7 @@ Attack injection and chaos (latency / failure) endpoints drive the demo.
 
 Run:  python run_demo.py   ->  http://localhost:8080
 """
+
 # Docstring trên mô tả thread replay dữ liệu, detector có bảo vệ và các API demo.
 # Bật cú pháp annotation hiện đại mà không cần đánh giá một số kiểu ngay khi import module.
 from __future__ import annotations
@@ -82,16 +83,19 @@ from resilience import GuardedDetector
 from security import DEMO_MODE, AuditLog, mask_imei, mask_number, require, verify_audit
 
 # Tốc độ phát sự kiện mẫu trên giao diện; đây là tốc độ demo, không phải năng lực cực đại của engine.
-DEMO_RATE = 300          # sự kiện/giây hiển thị trên dashboard; engine đạt khoảng 15k/s mỗi lõi
+DEMO_RATE = 300  # sự kiện/giây hiển thị trên dashboard; engine đạt khoảng 15k/s mỗi lõi
 # Đặt file log bằng chứng trong thư mục log do cấu hình v2 quản lý.
-EVIDENCE_PATH = Path(os.environ.get("FRAUD_EVIDENCE_FILE", LOG_DIR / ("evidence_demo.jsonl" if DEMO_MODE else "evidence_live.jsonl")))
+EVIDENCE_PATH = Path(
+    os.environ.get("FRAUD_EVIDENCE_FILE", LOG_DIR / ("evidence_demo.jsonl" if DEMO_MODE else "evidence_live.jsonl"))
+)
 PROTECTED_NUMBERS = set(PROTECTED_CLI)
 
 
 class LiveEngine:
     # Chuẩn bị dữ liệu, mô hình, hàng đợi và các bộ đếm dùng chung cho phiên dashboard.
-    def __init__(self, *, demo_mode=None, state_path=None, evidence_path=None,
-                 detector_factory=Detector, start_workers=True):
+    def __init__(
+        self, *, demo_mode=None, state_path=None, evidence_path=None, detector_factory=Detector, start_workers=True
+    ):
         self.demo_mode = DEMO_MODE if demo_mode is None else demo_mode
         self._stop = threading.Event()
         self._stream_thread = None
@@ -110,19 +114,23 @@ class LiveEngine:
             det.prime(load_events(DATA_DIR / "test_warmup_24h_events.csv.gz"))
         det.warm_up()
         self.g = GuardedDetector(det, budget_ms=SLA_TIER1_MS, content_budget_ms=SLA_TIER2_MS)
-        self.store = BackendState(None if self.demo_mode else (
-            state_path or os.environ.get("FRAUD_STATE_DB", LOG_DIR / "live_state.sqlite3")))
+        self.store = BackendState(
+            None if self.demo_mode else (state_path or os.environ.get("FRAUD_STATE_DB", LOG_DIR / "live_state.sqlite3"))
+        )
         # The runtime acquires the exclusive owner before any live-state replay.
         self.evidence_path = evidence_path or EVIDENCE_PATH
         try:
             self.store.acquire_owner()
             # Demo evidence rotates (simulated traffic, ~1.25 GB/day otherwise); live evidence never does.
-            self.log = DurableEvidenceLog(self.evidence_path, self.store,
-                                          rotate_bytes=_demo_evidence_cap() if self.demo_mode else None)
+            self.log = DurableEvidenceLog(
+                self.evidence_path, self.store, rotate_bytes=_demo_evidence_cap() if self.demo_mode else None
+            )
         except BaseException:
             self.store.close()
             raise
-        self.sim = TrafficSimulator(seed=777, n_personal=300, n_callcentres=2, window="test") if self.demo_mode else None
+        self.sim = (
+            TrafficSimulator(seed=777, n_personal=300, n_callcentres=2, window="test") if self.demo_mode else None
+        )
         self.inject_q: queue.Queue = queue.Queue(maxsize=64)
         self.network_mode = "shadow"  # An operator must deliberately re-enable enforcement after restart.
         self.network_stats = collections.Counter()
@@ -149,8 +157,14 @@ class LiveEngine:
         self.guardians = collections.defaultdict(set)
         self.invites = collections.defaultdict(set)
         try:
-            self.runtime = InferenceRuntime(self.g, self.store, on_result=self._record_live_result,
-                                            on_retro=self._record_retro, execution_lock=self.det_lock, start=False)
+            self.runtime = InferenceRuntime(
+                self.g,
+                self.store,
+                on_result=self._record_live_result,
+                on_retro=self._record_retro,
+                execution_lock=self.det_lock,
+                start=False,
+            )
         except BaseException:
             self.log.close()
             self.store.close()
@@ -166,8 +180,11 @@ class LiveEngine:
                 self._stream_thread.start()
 
     async def submit_event(self, event, budget_ms=None):
-        budget = budget_ms if budget_ms is not None else (
-            SLA_TIER1_MS if event.get("event_type") == "CALL" else SLA_TIER2_MS)
+        budget = (
+            budget_ms
+            if budget_ms is not None
+            else (SLA_TIER1_MS if event.get("event_type") == "CALL" else SLA_TIER2_MS)
+        )
         return await self.runtime.submit("VERDICT", event, budget_ms=budget)
 
     async def record_observation(self, event, result):
@@ -191,7 +208,9 @@ class LiveEngine:
                 # A late delivery rewrites decision to fail-open ALLOW; drift compares MODEL decisions.
                 model = result.get("model_decision") if result.get("scored") else None
                 self.call_decisions[model or result["decision"]] += 1
-            self.counts["FAIL_OPEN" if result.get("fail_open") and result["decision"] == "ALLOW" else result["decision"]] += 1
+            self.counts[
+                "FAIL_OPEN" if result.get("fail_open") and result["decision"] == "ALLOW" else result["decision"]
+            ] += 1
             self.lat.append(result.get("latency_ms", 0.0))
             self._track(event, result)
             if result["decision"] != "ALLOW" or result.get("fail_open"):
@@ -264,7 +283,7 @@ class LiveEngine:
                 # Sao chép dict để không sửa trực tiếp dữ liệu đã nạp trong bộ nhớ.
                 ev = dict(self.events[self.pos])
                 # Dịch thời gian sự kiện nếu đã phát lại dataset một vòng trở lên.
-                ev["ts"] += self.offset                 # replay loops keep time moving forward
+                ev["ts"] += self.offset  # replay loops keep time moving forward
                 # Đổi ID ở các vòng lặp sau để tránh trùng khóa với lần phát đầu.
                 if self.offset:
                     ev["event_id"] = f'{ev["event_id"]}-L{self.loops}'
@@ -326,7 +345,7 @@ class LiveEngine:
             # Phân đoạn kết quả theo kích thước ban đầu và hoàn tất các request injection.
             i = 0
             for n, fut in futures:
-                fut.set_result(res[i:i + n])
+                fut.set_result(res[i : i + n])
                 i += n
             # Sau khi hồi phục, chấm lại các sự kiện đã lọt lúc fail-open (ngoài đường quyết định, có giới hạn thời gian).
             with self.det_lock:
@@ -343,9 +362,28 @@ class LiveEngine:
     # _alert đưa một quyết định cần chú ý lên danh sách cảnh báo của dashboard (gọi khi đang giữ self.lock).
     def _alert(self, r, ev):
         # Chọn các trường phục vụ hiển thị, không sao chép toàn bộ kết quả.
-        a = {k: r.get(k) for k in ("event_id", "event_type", "decision", "risk", "action_vi", "action_en", "reasons",
-                                   "party", "counterparty", "zero_day", "fail_open", "degraded", "retro", "anomaly_score",
-                                   "requires_review", "retro_context", "model_decision")}
+        a = {
+            k: r.get(k)
+            for k in (
+                "event_id",
+                "event_type",
+                "decision",
+                "risk",
+                "action_vi",
+                "action_en",
+                "reasons",
+                "party",
+                "counterparty",
+                "zero_day",
+                "fail_open",
+                "degraded",
+                "retro",
+                "anomaly_score",
+                "requires_review",
+                "retro_context",
+                "model_decision",
+            )
+        }
         # Đánh dấu sự kiện tiêm thử, loại gian lận mô phỏng (để đối chiếu) và đặc trưng làm căn cứ.
         a["injected"] = ev.get("injected", False)
         a["truth"] = ev.get("fraud_type", "")
@@ -355,10 +393,19 @@ class LiveEngine:
         a["human_override"] = r.get("human_override")
         self.alerts.appendleft(a)
         if r["decision"] != "ALLOW" and not r.get("requires_review"):
-            self.recent_hits.append({"wall": time.time(), "type": r["event_type"], "decision": r["decision"],
-                                     "party": r.get("party"), "imei": ev.get("imei"), "cell": ev.get("cell_id"),
-                                     "event_id": r["event_id"], "human_override": r.get("human_override"),
-                                     "caller_age_days": (r.get("evidence_features") or {}).get("caller_age_days")})
+            self.recent_hits.append(
+                {
+                    "wall": time.time(),
+                    "type": r["event_type"],
+                    "decision": r["decision"],
+                    "party": r.get("party"),
+                    "imei": ev.get("imei"),
+                    "cell": ev.get("cell_id"),
+                    "event_id": r["event_id"],
+                    "human_override": r.get("human_override"),
+                    "caller_age_days": (r.get("evidence_features") or {}).get("caller_age_days"),
+                }
+            )
         self._to_inbox(r, ev)
 
     # _track ghi uy tín số gọi/gửi; chỉ quyết định khác ALLOW mới được đếm để bộ nhớ không phình theo lưu lượng sạch.
@@ -382,12 +429,23 @@ class LiveEngine:
         who = r.get("counterparty")
         if who not in self.inbox:
             return
-        self._push_inbox(who, {
-            "id": r["event_id"], "type": r["event_type"], "from": r.get("party"), "time": time.strftime("%H:%M:%S"),
-            "decision": r["decision"], "action": r.get("action_vi"), "risk": r.get("risk"),
-            "reasons": [x["vi"] for x in r.get("reasons", [])][:4], "text": ev.get("text", ""),
-            "retro": bool(r.get("retro")), "degraded": bool(r.get("degraded")), "simulated": ev.get("app_kind", ""),
-        })
+        self._push_inbox(
+            who,
+            {
+                "id": r["event_id"],
+                "type": r["event_type"],
+                "from": r.get("party"),
+                "time": time.strftime("%H:%M:%S"),
+                "decision": r["decision"],
+                "action": r.get("action_vi"),
+                "risk": r.get("risk"),
+                "reasons": [x["vi"] for x in r.get("reasons", [])][:4],
+                "text": ev.get("text", ""),
+                "retro": bool(r.get("retro")),
+                "degraded": bool(r.get("degraded")),
+                "simulated": ev.get("app_kind", ""),
+            },
+        )
         # Bảo vệ người thân: báo cho người giám hộ khi người được bảo vệ gặp lừa đảo.
         # Chỉ gửi loại sự kiện và kết quả, không gửi nội dung tin nhắn (giữ riêng tư cho người được bảo vệ).
         if r["decision"] != "ALLOW" and r["event_type"] in ("CALL", "SMS", "AUDIO"):
@@ -395,11 +453,25 @@ class LiveEngine:
             verdict = "đã bị nhà mạng chặn" if r["decision"] == "BLOCK" else "nghi lừa đảo"
             for g in self.guardians.get(who, ()):
                 if g in self.inbox:
-                    self._push_inbox(g, {
-                        "id": f"FAM-{r['event_id']}", "type": "FAMILY", "from": who, "time": time.strftime("%H:%M:%S"),
-                        "decision": r["decision"], "action": f"Người thân của bạn vừa nhận một {what} {verdict}",
-                        "reasons": [f"Số gọi / gửi: {r.get('party')}", "Hãy gọi hỏi thăm người thân, nhắc không chuyển tiền, không đọc OTP"],
-                        "text": "", "retro": False, "degraded": False, "simulated": ""})
+                    self._push_inbox(
+                        g,
+                        {
+                            "id": f"FAM-{r['event_id']}",
+                            "type": "FAMILY",
+                            "from": who,
+                            "time": time.strftime("%H:%M:%S"),
+                            "decision": r["decision"],
+                            "action": f"Người thân của bạn vừa nhận một {what} {verdict}",
+                            "reasons": [
+                                f"Số gọi / gửi: {r.get('party')}",
+                                "Hãy gọi hỏi thăm người thân, nhắc không chuyển tiền, không đọc OTP",
+                            ],
+                            "text": "",
+                            "retro": False,
+                            "degraded": False,
+                            "simulated": "",
+                        },
+                    )
 
     # notify gửi cảnh báo do chuyên viên phê duyệt tới các thuê bao (người dùng app nhận ngay trong hộp thư).
     def notify(self, recipients, message):
@@ -407,10 +479,22 @@ class LiveEngine:
         with self.lock:
             for who in recipients:
                 if who in self.inbox:
-                    self._push_inbox(who, {
-                        "id": f"WARN-{int(time.time() * 1000)}-{n}", "type": "WARN", "from": "Nhà mạng",
-                        "time": time.strftime("%H:%M:%S"), "decision": "FLAG", "action": message, "reasons": [],
-                        "text": "", "retro": True, "degraded": False, "simulated": ""})
+                    self._push_inbox(
+                        who,
+                        {
+                            "id": f"WARN-{int(time.time() * 1000)}-{n}",
+                            "type": "WARN",
+                            "from": "Nhà mạng",
+                            "time": time.strftime("%H:%M:%S"),
+                            "decision": "FLAG",
+                            "action": message,
+                            "reasons": [],
+                            "text": "",
+                            "retro": True,
+                            "degraded": False,
+                            "simulated": "",
+                        },
+                    )
                     n += 1
         return n
 
@@ -423,12 +507,12 @@ class LiveEngine:
         full = now - getattr(self, "_ev_full_at", 0.0) > 1800
         state = {} if full else dict(getattr(self, "_ev_state", {}))
         if state and self.evidence_path.stat().st_size < state.get("pos", 0):
-            state = {}                  # the demo log rotated: start again from the new file's first line
+            state = {}  # the demo log rotated: start again from the new file's first line
         # Child process: the hash-chain re-check must not compete with the inference owner for the GIL.
         ok, n, bad, state = verify_in_subprocess(self.evidence_path, state)
         if ok is None:
             self.evidence_verify_errors = getattr(self, "evidence_verify_errors", 0) + 1
-            return True, n, None          # could not check: never report tampering without evidence
+            return True, n, None  # could not check: never report tampering without evidence
         if full and ok:
             self._ev_full_at = now
         if ok:
@@ -459,11 +543,14 @@ class LiveEngine:
             ev["ts"] = t0
             sim.events = [ev]
         elif kind == "SIM_BOX":
-            sim.simbox(t0, t1, 3, (600, 900), gateway_tac_p=1.0, tag="DEMO", active_h=(0.05, 0.05), dedicated_imei=False)
+            sim.simbox(
+                t0, t1, 3, (600, 900), gateway_tac_p=1.0, tag="DEMO", active_h=(0.05, 0.05), dedicated_imei=False
+            )
         elif kind == "CLI_SPOOF":
             sim.cli_spoof(t0, t1, 1, tag="DEMO")
         elif kind == "SMS_PHISH":
             from data_generator import SCAM_DOMAINS_TEST, TEST_LURES
+
             sim.sms_phish(t0, t1, 1, TEST_LURES, SCAM_DOMAINS_TEST, tag="DEMO")
         elif kind == "DEEPFAKE_VOICE":
             sim.deepfake(t0, t1, 3, tag="DEMO")
@@ -490,7 +577,7 @@ class LiveEngine:
                 audio = [e for e in evs if e["event_type"] == "AUDIO"]
                 a = audio[-1] if audio else None
                 mine = [e for e in evs if a and e["callee"] == a["callee"] and e["caller"] == a["caller"]] or mine[-1:]
-            for e in (mine[-1:] if spread else mine):
+            for e in mine[-1:] if spread else mine:
                 e["callee" if e["event_type"] != "SMS" else "recipient"] = target
                 e["app_kind"] = kind
         # Tạo Future rồi chuyển batch sang thread nền xử lý đồng bộ với dữ liệu đang phát.
@@ -502,10 +589,21 @@ class LiveEngine:
         # Chờ tối đa 10 giây; timeout sẽ báo lỗi thay vì giả vờ injection thành công.
         res = fut.result(timeout=10)
         # Chỉ trả các trường cần thiết để giao diện thống kê và hiển thị lý do.
-        return [{"event_id": e["event_id"], "event_type": e["event_type"], "decision": r["decision"], "risk": r.get("risk"),
-                 "reasons": r.get("reasons", []), "zero_day": r.get("zero_day", False),
-                 "to_target": bool(target) and r.get("counterparty") == target, "party": r.get("party"),
-                 "action": r.get("action_vi"), "text": e.get("text", "")} for e, r in zip(evs, res)]
+        return [
+            {
+                "event_id": e["event_id"],
+                "event_type": e["event_type"],
+                "decision": r["decision"],
+                "risk": r.get("risk"),
+                "reasons": r.get("reasons", []),
+                "zero_day": r.get("zero_day", False),
+                "to_target": bool(target) and r.get("counterparty") == target,
+                "party": r.get("party"),
+                "action": r.get("action_vi"),
+                "text": e.get("text", ""),
+            }
+            for e, r in zip(evs, res)
+        ]
 
     # Tạo bản chụp nhất quán các bộ đếm và số liệu mà API trạng thái trả về.
     def state(self, mask: bool = False):
@@ -514,27 +612,53 @@ class LiveEngine:
             alerts = list(self.alerts)[:40]
             # Vai trò người xem chỉ thấy số đã che, đủ để theo dõi cảnh báo nhưng không định danh được thuê bao.
             if mask:
-                alerts = [dict(a, party=mask_number(a.get("party")), counterparty=mask_number(a.get("counterparty")),
-                               imei=mask_imei(a.get("imei"))) for a in alerts]
+                alerts = [
+                    dict(
+                        a,
+                        party=mask_number(a.get("party")),
+                        counterparty=mask_number(a.get("counterparty")),
+                        imei=mask_imei(a.get("imei")),
+                    )
+                    for a in alerts
+                ]
             # Chuyển mẫu latency thành mảng để tính các phân vị; dùng 0 nếu chưa có mẫu.
             lat = np.array(self.lat) if self.lat else np.array([0.0])
             # Lấy trạng thái circuit breaker hiện tại từ lớp bảo vệ.
             cb = self.g.cb
             # Trả JSON-friendly values để API có thể mã hóa thành JSON.
             return {
-                "model_version": self.runtime.model_version, "model_identity": self.runtime.model_identity,
+                "model_version": self.runtime.model_version,
+                "model_identity": self.runtime.model_identity,
                 "model_manifest": getattr(self.g.det, "model_manifest", {"status": "legacy_unverified"}),
                 "uptime_s": round(time.time() - self.started),
-                "processed": self.processed, "decisions": dict(self.counts), "by_type": dict(self.by_type),
-                "ingest_unscored": dict(self.ingest_counts), "call_decisions": dict(self.call_decisions),
-                "eps": self.rate_hist[-1] if self.rate_hist else 0, "eps_history": list(self.rate_hist),
-                "latency_ms": {"p50": round(float(np.percentile(lat, 50)), 3), "p99": round(float(np.percentile(lat, 99)), 3)},
-                "breaker": {"state": cb.state, **cb.stats}, "chaos": {"delay_ms": self.g.chaos_delay_ms, "error": self.g.chaos_error},
-                "resilience": {**self.g.stats, "rescore_pending": len(self.g.rescore_queue),
-                               "rescore_capacity": self.g.rescore_queue.maxlen, "denylist_size": len(self.g.fallback.deny)},
-                "evidence_written": self.log.written, "truth": dict(self.truth), "alerts": alerts,
+                "processed": self.processed,
+                "decisions": dict(self.counts),
+                "by_type": dict(self.by_type),
+                "ingest_unscored": dict(self.ingest_counts),
+                "call_decisions": dict(self.call_decisions),
+                "eps": self.rate_hist[-1] if self.rate_hist else 0,
+                "eps_history": list(self.rate_hist),
+                "latency_ms": {
+                    "p50": round(float(np.percentile(lat, 50)), 3),
+                    "p99": round(float(np.percentile(lat, 99)), 3),
+                },
+                "breaker": {"state": cb.state, **cb.stats},
+                "chaos": {"delay_ms": self.g.chaos_delay_ms, "error": self.g.chaos_error},
+                "resilience": {
+                    **self.g.stats,
+                    "rescore_pending": len(self.g.rescore_queue),
+                    "rescore_capacity": self.g.rescore_queue.maxlen,
+                    "denylist_size": len(self.g.fallback.deny),
+                },
+                "evidence_written": self.log.written,
+                "truth": dict(self.truth),
+                "alerts": alerts,
                 "demo_mode": self.demo_mode,
-                "inference": {**self.runtime.stats, "queue_size": self.runtime.queue.qsize(), "queue_capacity": self.runtime.queue.maxsize},
+                "inference": {
+                    **self.runtime.stats,
+                    "queue_size": self.runtime.queue.qsize(),
+                    "queue_capacity": self.runtime.queue.maxsize,
+                },
             }
 
 
@@ -549,7 +673,8 @@ async def lifespan(_app):
     engine = await asyncio.to_thread(LiveEngine)
     portal.startup(lambda: engine)
     from gc_tuning import tune_gc_for_latency
-    engine.gc_tuned = tune_gc_for_latency()   # same GC settings the in-process SLA benchmark always used
+
+    engine.gc_tuned = tune_gc_for_latency()  # same GC settings the in-process SLA benchmark always used
     try:
         yield
     finally:
@@ -603,11 +728,17 @@ def health_ready():
     progress = engine.runtime.progress()
     if not progress["ready"]:
         raise HTTPException(503, {"message": "inference owner unavailable", "progress": progress})
-    return {"status": "ready", "progress": progress, "mode": engine.network_mode, "demo": engine.demo_mode,
-            "model_version": engine.runtime.model_version, "model_identity": engine.runtime.model_identity,
-            "model_manifest": getattr(engine.g.det, "model_manifest", {"status": "legacy_unverified"}),
-            # NORMAL is an opt-in durability trade-off (FRAUD_SQLITE_SYNCHRONOUS); operators must see it.
-            "journal_durability": getattr(engine.runtime.state, "synchronous", "FULL")}
+    return {
+        "status": "ready",
+        "progress": progress,
+        "mode": engine.network_mode,
+        "demo": engine.demo_mode,
+        "model_version": engine.runtime.model_version,
+        "model_identity": engine.runtime.model_identity,
+        "model_manifest": getattr(engine.g.det, "model_manifest", {"status": "legacy_unverified"}),
+        # NORMAL is an opt-in durability trade-off (FRAUD_SQLITE_SYNCHRONOUS); operators must see it.
+        "journal_durability": getattr(engine.runtime.state, "synchronous", "FULL"),
+    }
 
 
 @app.get("/")
@@ -704,8 +835,12 @@ def api_state(u=Depends(require("viewer"))):
 @app.post("/api/reveal")
 # Mở số đầy đủ của MỘT cảnh báo: chỉ chuyên viên trở lên, bắt buộc ghi lý do, ghi nhật ký có chữ ký,
 # và AI agent theo dõi số lần mở để phát hiện rò rỉ từ bên trong.
-def api_reveal(event_id: str | None = None, reason: str | None = None, body: dict | None = Body(default=None),
-               u=Depends(require("analyst"))):
+def api_reveal(
+    event_id: str | None = None,
+    reason: str | None = None,
+    body: dict | None = Body(default=None),
+    u=Depends(require("analyst")),
+):
     # Lý do (thường có thông tin cá nhân) nên đi trong body: query string bị ghi vào log proxy/truy cập.
     # Query vẫn được nhận để không làm hỏng client cũ.
     body = body if isinstance(body, dict) else {}
@@ -721,8 +856,13 @@ def api_reveal(event_id: str | None = None, reason: str | None = None, body: dic
         raise HTTPException(404, "alert no longer in the live window")
     audit.record(u["name"], "reveal_pii", event_id=event_id, reason=reason.strip()[:200])
     engine.agent.note_reveal(u["name"])
-    return {"event_id": event_id, "party": a.get("party"), "counterparty": a.get("counterparty"), "imei": a.get("imei"),
-            "note": "Lần mở này đã được ghi vào nhật ký thao tác kèm lý do."}
+    return {
+        "event_id": event_id,
+        "party": a.get("party"),
+        "counterparty": a.get("counterparty"),
+        "imei": a.get("imei"),
+        "note": "Lần mở này đã được ghi vào nhật ký thao tác kèm lý do.",
+    }
 
 
 @app.get("/api/agent")
@@ -733,8 +873,13 @@ def api_agent(u=Depends(require("viewer"))):
 
 @app.post("/api/agent/{pid}/decide")
 # Con người quyết định: duyệt thì hành động mới chạy, từ chối thì không có gì thay đổi. Cả hai đều ghi nhật ký có chữ ký.
-def api_agent_decide(pid: str, decision: str | None = None, note: str = "", body: dict | None = Body(default=None),
-                     u=Depends(require("admin"))):
+def api_agent_decide(
+    pid: str,
+    decision: str | None = None,
+    note: str = "",
+    body: dict | None = Body(default=None),
+    u=Depends(require("admin")),
+):
     body = body if isinstance(body, dict) else {}
     decision = str(body.get("decision") or decision or "")
     note = str(body.get("note") or note or "")
@@ -754,8 +899,13 @@ def api_metrics(u=Depends(require("viewer"))):
     # Đọc JSON nếu file tồn tại; nếu chưa sinh báo cáo thì trả null cho mục đó.
     def rd(p):
         return json.loads(p.read_text()) if p.exists() else None
-    return {"benchmark": rd(DATA_DIR / "benchmark_results.json"), "loadtest": rd(DATA_DIR / "loadtest_results.json"),
-            "training": rd(MODEL_DIR / "training_report.json"), "dataset": rd(DATA_DIR / "dataset_summary.json")}
+
+    return {
+        "benchmark": rd(DATA_DIR / "benchmark_results.json"),
+        "loadtest": rd(DATA_DIR / "loadtest_results.json"),
+        "training": rd(MODEL_DIR / "training_report.json"),
+        "dataset": rd(DATA_DIR / "dataset_summary.json"),
+    }
 
 
 @app.post("/api/inject")
@@ -834,7 +984,7 @@ def _tail_evidence(path, n, chunk=1 << 16):
             break
         try:
             rows.append(json.loads(line))
-        except ValueError:        # empty, torn (being written) or the partial first line of the chunk
+        except ValueError:  # empty, torn (being written) or the partial first line of the chunk
             continue
     return rows[::-1]
 
@@ -854,9 +1004,12 @@ def api_latest(n: int = 5, u=Depends(require("analyst"))):
 
 @app.get("/api/audit")
 # Nhật ký thao tác: ai đã làm gì, kèm kết quả kiểm tra chuỗi hash và chữ ký của từng dòng (chỉ admin).
-def api_audit(n: int = Query(default=20, ge=1, le=500), anchor_records: int | None = Query(default=None, ge=1),
-              anchor_hash: str | None = Query(default=None, pattern="^[0-9a-f]{64}$"),
-              u=Depends(require("admin"))):
+def api_audit(
+    n: int = Query(default=20, ge=1, le=500),
+    anchor_records: int | None = Query(default=None, ge=1),
+    anchor_hash: str | None = Query(default=None, pattern="^[0-9a-f]{64}$"),
+    u=Depends(require("admin")),
+):
     # verify.head nên được chép định kỳ ra hệ thống ngoài; gửi lại qua anchor_* để phát hiện xoá đuôi log.
     if (anchor_records is None) != (anchor_hash is None):
         raise HTTPException(422, "anchor_records and anchor_hash must be given together")
@@ -908,25 +1061,48 @@ async def network_verdict(request: Request):
         result = await engine.submit_event(ev)
     except EventConflict as exc:
         raise HTTPException(409, str(exc)) from exc
-    action = result["decision"] if (engine.network_mode == "enforce" and result.get("ingest") == "ADMITTED"
-                                      and result.get("actionable") and not result.get("duplicate")) else "NONE"
+    action = (
+        result["decision"]
+        if (
+            engine.network_mode == "enforce"
+            and result.get("ingest") == "ADMITTED"
+            and result.get("actionable")
+            and not result.get("duplicate")
+        )
+        else "NONE"
+    )
     # These fields are already JSON-native. Returning the response directly avoids
     # FastAPI recursively copying/encoding the model identity on the event loop.
-    return JSONResponse({"event_id": ev["event_id"], "decision": result["decision"], "recommended_action": action,
-            "mode": engine.network_mode, "advisory": True, "risk": result.get("risk"),
+    return JSONResponse(
+        {
+            "event_id": ev["event_id"],
+            "decision": result["decision"],
+            "recommended_action": action,
+            "mode": engine.network_mode,
+            "advisory": True,
+            "risk": result.get("risk"),
             "reason_codes": [x["code"] for x in result.get("reasons", [])],
-            "fail_open": bool(result.get("fail_open")), "pending": bool(result.get("pending")),
+            "fail_open": bool(result.get("fail_open")),
+            "pending": bool(result.get("pending")),
             "observed_without_model": bool(result.get("observed_without_model")),
-            "duplicate": bool(result.get("duplicate")), "ingest": result.get("ingest"),
+            "duplicate": bool(result.get("duplicate")),
+            "ingest": result.get("ingest"),
             "model_version": result.get("model_version") or engine.runtime.model_version,
             "artifact_status": result.get("artifact_status", "legacy_unverified"),
             "model_identity": result.get("model_identity", engine.runtime.model_identity),
             "latency_ms": result.get("latency_ms", 0.0),
-            "scored": bool(result.get("scored")), "scored_before_deadline": bool(result.get("scored_before_deadline")),
-            "durable": bool(result.get("durable")), "admitted": bool(result.get("admitted")),
-            "retryable": bool(result.get("retryable")), "delivery_status": result.get("delivery_status"),
-            "delivery_expired": bool(result.get("delivery_expired")), "model_decision": result.get("model_decision"),
-            "commit_ms": result.get("commit_ms", 0.0), "queue_ms": result.get("queue_ms", 0.0)})
+            "scored": bool(result.get("scored")),
+            "scored_before_deadline": bool(result.get("scored_before_deadline")),
+            "durable": bool(result.get("durable")),
+            "admitted": bool(result.get("admitted")),
+            "retryable": bool(result.get("retryable")),
+            "delivery_status": result.get("delivery_status"),
+            "delivery_expired": bool(result.get("delivery_expired")),
+            "model_decision": result.get("model_decision"),
+            "commit_ms": result.get("commit_ms", 0.0),
+            "queue_ms": result.get("queue_ms", 0.0),
+        }
+    )
 
 
 @app.post("/api/v1/cdr")
@@ -974,10 +1150,14 @@ async def lookup_voice_observation(event):
 
 from voice_api import create_voice_router  # noqa: E402
 
-app.include_router(create_voice_router(submit_event=submit_voice_event,
-                                      mode=lambda: engine.network_mode if engine else "shadow",
-                                      record_observation=record_voice_observation,
-                                      lookup_observation=lookup_voice_observation))
+app.include_router(
+    create_voice_router(
+        submit_event=submit_voice_event,
+        mode=lambda: engine.network_mode if engine else "shadow",
+        record_observation=record_voice_observation,
+        lookup_observation=lookup_voice_observation,
+    )
+)
 
 
 @app.get("/api/network/mode")
@@ -991,7 +1171,9 @@ def network_mode_set(mode: str, u=Depends(require("admin"))):
     if mode not in ("shadow", "enforce"):
         raise HTTPException(400, "mode must be shadow | enforce")
     if mode == "enforce" and os.environ.get("FRAUD_REAL_TRAFFIC_VALIDATED") != "1":
-        raise HTTPException(409, "enforce requires domain validation on labelled real traffic (FRAUD_REAL_TRAFFIC_VALIDATED=1)")
+        raise HTTPException(
+            409, "enforce requires domain validation on labelled real traffic (FRAUD_REAL_TRAFFIC_VALIDATED=1)"
+        )
     audit.record(u["name"], "network_mode", mode=mode, previous=engine.network_mode)
     engine.network_mode = mode
     return {"mode": mode}
@@ -1007,7 +1189,9 @@ def app_user(authorization: str = Header(default="")):
     token = authorization[7:] if authorization.lower().startswith("bearer ") else ""
     session = engine.app_sessions.get(token) if engine and token else None
     now = time.time()
-    if session and (now - session["created"] > security.SESSION_TTL_S or now - session["last"] > security.SESSION_IDLE_S):
+    if session and (
+        now - session["created"] > security.SESSION_TTL_S or now - session["last"] > security.SESSION_IDLE_S
+    ):
         engine.app_sessions.pop(token, None)
         session = None
     msisdn = session["msisdn"] if session else None
@@ -1034,7 +1218,7 @@ def app_session(msisdn: str, _=Depends(legacy_demo_login)):
     token = secrets.token_urlsafe(24)
     with engine.lock:
         engine.app_sessions[token] = {"msisdn": msisdn, "created": time.time(), "last": time.time()}
-        engine.inbox[msisdn]                     # touch: from now on events to this number reach its inbox
+        engine.inbox[msisdn]  # touch: from now on events to this number reach its inbox
     return {"token": token, "msisdn": msisdn}
 
 
@@ -1045,7 +1229,11 @@ def app_inbox(msisdn=Depends(app_user)):
         items = list(engine.inbox[msisdn])
     # Thống kê chỉ tính sự kiện tới chính số này (không tính cảnh báo về người thân / thông báo của nhà mạng).
     stats = collections.Counter(i["decision"] for i in items if i["type"] in ("CALL", "SMS", "AUDIO"))
-    return {"msisdn": msisdn, "items": items, "stats": {"blocked": stats["BLOCK"], "warned": stats["FLAG"], "allowed": stats["ALLOW"]}}
+    return {
+        "msisdn": msisdn,
+        "items": items,
+        "stats": {"blocked": stats["BLOCK"], "warned": stats["FLAG"], "allowed": stats["ALLOW"]},
+    }
 
 
 @app.post("/api/app/simulate")
@@ -1061,8 +1249,18 @@ def app_simulate(kind: str, msisdn=Depends(app_user), _=Depends(demo_only)):
 # Kịch bản chạy thử một phút: cuộc gọi/tin nhắn bình thường xen lẫn các kiểu lừa đảo, gửi tới số của người dùng
 # với khoảng nghỉ ngẫu nhiên như ngoài đời. Mỗi sự kiện vẫn đi qua đúng hệ thống AI (engine.inject), app nhận qua
 # hộp thư như cuộc gọi thật, KHÔNG qua phản hồi của nút bấm.
-APP_STREAM_KINDS = ["LEGIT", "SMS_PHISH", "LEGIT", "CLI_SPOOF", "LEGIT", "SIM_BOX", "WANGIRI", "LEGIT",
-                    "DEEPFAKE_VOICE", "VOICE_HARVEST"]
+APP_STREAM_KINDS = [
+    "LEGIT",
+    "SMS_PHISH",
+    "LEGIT",
+    "CLI_SPOOF",
+    "LEGIT",
+    "SIM_BOX",
+    "WANGIRI",
+    "LEGIT",
+    "DEEPFAKE_VOICE",
+    "VOICE_HARVEST",
+]
 _app_streams: dict[str, float] = {}
 _app_streams_lock = threading.Lock()
 
@@ -1073,7 +1271,7 @@ def _run_app_stream(msisdn: str, kinds: list[str], gaps: list[float]) -> None:
             time.sleep(gap)
             try:
                 engine.inject(kind, target=msisdn)
-            except Exception:                    # một sự kiện lỗi (hàng đợi đầy) không dừng cả kịch bản
+            except Exception:  # một sự kiện lỗi (hàng đợi đầy) không dừng cả kịch bản
                 continue
     finally:
         with _app_streams_lock:
@@ -1093,14 +1291,13 @@ def app_simulate_stream(msisdn=Depends(app_user), _=Depends(demo_only)):
         gaps = [float(g) for g in rng.uniform(4.0, 8.0, size=len(kinds))]
         _app_streams[msisdn] = time.time() + sum(gaps) + 15
     threading.Thread(target=_run_app_stream, args=(msisdn, kinds, gaps), daemon=True, name="app-stream").start()
-    return {"started": True, "events": len(kinds), "seconds": round(sum(gaps)),
-            "kinds": collections.Counter(kinds)}
+    return {"started": True, "events": len(kinds), "seconds": round(sum(gaps)), "kinds": collections.Counter(kinds)}
 
 
 @app.get("/api/app/lookup")
 # Tra cứu một số: chỉ trả số liệu tổng hợp về số đó, không trả ai đã nhận cuộc gọi của nó.
 def app_lookup(number: str, msisdn=Depends(app_user)):
-    accounts.limiter.hit("app_lookup", msisdn, 120, 3600)   # không cho dò hàng loạt uy tín / số báo cáo
+    accounts.limiter.hit("app_lookup", msisdn, 120, 3600)  # không cho dò hàng loạt uy tín / số báo cáo
     keys = _number_keys(number)
     with engine.lock:
         rep = collections.Counter()
@@ -1110,8 +1307,10 @@ def app_lookup(number: str, msisdn=Depends(app_user)):
     blocked, flagged = rep.get("BLOCK", 0), rep.get("FLAG", 0) + rep.get("RETRO", 0)
     if keys & PROTECTED_NUMBERS:
         # Số tổng đài chính thức: bản thân số không xấu, kẻ gian giả mạo hiển thị số này. Không bao giờ báo "số lừa đảo".
-        verdict = (f"Đây là số tổng đài chính thức. Kẻ gian có thể giả mạo hiển thị số này; nhà mạng đã chặn {blocked} cuộc "
-                   "giả mạo. Cuộc gọi thật từ số này đi qua đường truyền riêng của ngân hàng/cơ quan.")
+        verdict = (
+            f"Đây là số tổng đài chính thức. Kẻ gian có thể giả mạo hiển thị số này; nhà mạng đã chặn {blocked} cuộc "
+            "giả mạo. Cuộc gọi thật từ số này đi qua đường truyền riêng của ngân hàng/cơ quan."
+        )
         level = "info"
     elif blocked:
         verdict, level = "Nhà mạng đã chặn số này vì dấu hiệu lừa đảo", "danger"
@@ -1120,8 +1319,14 @@ def app_lookup(number: str, msisdn=Depends(app_user)):
     else:
         verdict, level = "Chưa ghi nhận dấu hiệu lừa đảo", "ok"
     # Báo cáo của người dùng chỉ để tham khảo: không tự động chặn (tránh bị báo cáo hàng loạt để bôi xấu số sạch).
-    return {"number": min(keys, key=len), "verdict": verdict, "level": level, "blocked": blocked, "flagged": flagged,
-            "user_reports": n_reports}
+    return {
+        "number": min(keys, key=len),
+        "verdict": verdict,
+        "level": level,
+        "blocked": blocked,
+        "flagged": flagged,
+        "user_reports": n_reports,
+    }
 
 
 # _number_keys trả mọi cách viết của cùng một số (0xxx / 84xxx / nguyên dạng) để tra cứu không phụ thuộc kiểu nhập.
@@ -1160,7 +1365,11 @@ def app_report(number: str, reason: str = "", msisdn=Depends(app_user)):
         engine.reports[number].add(msisdn)
         n = len(engine.reports[number])
     portal.persist_report(number, msisdn, reason)
-    return {"number": number, "user_reports": n, "note": "Báo cáo được chuyển cho chuyên viên xem xét, không tự động chặn số."}
+    return {
+        "number": number,
+        "user_reports": n,
+        "note": "Báo cáo được chuyển cho chuyên viên xem xét, không tự động chặn số.",
+    }
 
 
 @app.get("/api/app/family")
@@ -1168,9 +1377,12 @@ def app_report(number: str, reason: str = "", msisdn=Depends(app_user)):
 def app_family(msisdn=Depends(app_user)):
     with engine.lock:
         protecting = sorted(p for p, gs in engine.guardians.items() if msisdn in gs)
-        return {"protecting": protecting, "guardians": sorted(engine.guardians.get(msisdn, ())),
-                "invites_sent": sorted(p for p, inv in engine.invites.items() if msisdn in inv),
-                "invites_received": sorted(engine.invites.get(msisdn, ()))}
+        return {
+            "protecting": protecting,
+            "guardians": sorted(engine.guardians.get(msisdn, ())),
+            "invites_sent": sorted(p for p, inv in engine.invites.items() if msisdn in inv),
+            "invites_received": sorted(engine.invites.get(msisdn, ())),
+        }
 
 
 @app.post("/api/app/family/invite")
@@ -1186,8 +1398,11 @@ def app_family_invite(number: str, msisdn=Depends(app_user)):
             return {"status": "already_linked"}
         engine.invites[target].add(msisdn)
     portal.persist_invite(target, msisdn)
-    return {"status": "invited", "number": target,
-            "note": "Người thân cần mở app và đồng ý. Không có sự đồng ý thì bạn không nhận được thông tin nào của họ."}
+    return {
+        "status": "invited",
+        "number": target,
+        "note": "Người thân cần mở app và đồng ý. Không có sự đồng ý thì bạn không nhận được thông tin nào của họ.",
+    }
 
 
 @app.post("/api/app/family/respond")
@@ -1195,7 +1410,7 @@ def app_family_invite(number: str, msisdn=Depends(app_user)):
 def app_family_respond(guardian: str, accept: bool, msisdn=Depends(app_user)):
     accounts.limiter.hit("family_respond", msisdn, 30, 3600)
     if not _NUMBER_RE.match(guardian or ""):
-        raise HTTPException(404, "no pending invite from this number")   # same answer as an unknown number
+        raise HTTPException(404, "no pending invite from this number")  # same answer as an unknown number
     with engine.lock:
         # Chỉ chấp nhận lời mời đang chờ: không thì bất kỳ chuỗi nào cũng thành "người giám hộ" (và một inbox mới).
         invited = guardian in engine.invites.get(msisdn, ())
@@ -1207,7 +1422,7 @@ def app_family_respond(guardian: str, accept: bool, msisdn=Depends(app_user)):
         engine.invites[msisdn].discard(guardian)
         if accept:
             engine.guardians[msisdn].add(guardian)
-            engine.inbox[guardian]             # the guardian's app will receive alerts from now on
+            engine.inbox[guardian]  # the guardian's app will receive alerts from now on
         else:
             engine.guardians[msisdn].discard(guardian)
     portal.persist_family_response(msisdn, guardian, accept)
@@ -1218,5 +1433,3 @@ def app_family_respond(guardian: str, accept: bool, msisdn=Depends(app_user)):
 app.mount("/app", StaticFiles(directory=STATIC_DIR / "app", html=True), name="app")
 # Scripts of /admin/ and /admin/manage (moved out of the HTML so the CSP can refuse inline scripts).
 app.mount("/admin/assets", StaticFiles(directory=STATIC_DIR / "admin" / "assets"), name="admin-assets")
-
-

@@ -28,6 +28,7 @@ The conventional reading, which this module uses:
     0.10 <= PSI < 0.25    moderate shift, worth watching
     PSI >= 0.25           large shift, investigate before trusting the model
 """
+
 from __future__ import annotations
 
 import json
@@ -40,7 +41,7 @@ PSI_WATCH = 0.10
 # PSI_ALERT là ngưỡng cảnh báo nặng: feature hoặc decision band đã lệch rõ so với baseline.
 PSI_ALERT = 0.25
 N_BINS = 10
-ZERO_REF_BLOCK_SHARE = 0.001     # block share that counts as "moved" when the reference had none
+ZERO_REF_BLOCK_SHARE = 0.001  # block share that counts as "moved" when the reference had none
 EPS = 1e-6
 MIN_MONITOR_EVENTS = 100
 
@@ -59,7 +60,7 @@ def _edges(ref: np.ndarray, n_bins: int = N_BINS):
         return None
     qs = np.linspace(0.0, 1.0, n_bins + 1)
     e = np.unique(np.quantile(ref, qs))
-    if e.size < 3:                      # constant or binary: compare the two values directly
+    if e.size < 3:  # constant or binary: compare the two values directly
         e = np.unique(ref)
         if e.size < 2:
             # Isolate a constant value so a new nonzero population can still trigger drift.
@@ -128,7 +129,7 @@ def null_psi(features: dict, seed: int = 0, n_bins: int = N_BINS) -> dict:
         if x.size < 100:
             continue
         idx = rng.permutation(x.size)
-        v = psi(x[idx[: x.size // 2]], x[idx[x.size // 2:]], n_bins)
+        v = psi(x[idx[: x.size // 2]], x[idx[x.size // 2 :]], n_bins)
         if v is not None:
             out[name] = round(v, 4)
     return out
@@ -141,8 +142,12 @@ def build_baseline(features: dict, scores=None, decisions=None, thresholds=None,
     ``features`` maps a feature name to its reference sample. Only quantile edges and shares are
     stored, never the raw rows, so the baseline carries no subscriber data.
     """
-    out = {"version": 2, "features": {}, "n_bins": N_BINS,
-           "quality": {name: _sample_quality(sample) for name, sample in features.items()}}
+    out = {
+        "version": 2,
+        "features": {},
+        "n_bins": N_BINS,
+        "quality": {name: _sample_quality(sample) for name, sample in features.items()},
+    }
     for name, sample in features.items():
         edges = _edges(sample)
         if edges is None:
@@ -170,7 +175,8 @@ def build_baseline(features: dict, scores=None, decisions=None, thresholds=None,
                 {k: np.asarray(v)[mask] for k, v in features.items()},
                 np.asarray(scores)[mask] if scores is not None else None,
                 np.asarray(decisions)[mask].tolist() if decisions is not None else None,
-                thresholds)
+                thresholds,
+            )
     return out
 
 
@@ -201,8 +207,17 @@ def _psi_from_spec(spec, current) -> float:
 
 
 # evaluate_drift so sánh cửa sổ hiện tại với baseline và trả về báo cáo drift không có side effect.
-def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, *,
-                   segments=None, event_times=None, as_of_ts=None, max_age_s=300.0) -> dict:
+def evaluate_drift(
+    baseline: dict,
+    features: dict,
+    scores=None,
+    decisions=None,
+    *,
+    segments=None,
+    event_times=None,
+    as_of_ts=None,
+    max_age_s=300.0,
+) -> dict:
     """Compare a current window against the baseline. Returns one report, no side effects."""
     per_feature, quality = {}, {}
     expected = set(baseline.get("features", {})) | set(baseline.get("quality", {}))
@@ -218,11 +233,18 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
         if name in baseline.get("features", {}) and q["finite"] >= MIN_MONITOR_EVENTS:
             per_feature[name] = round(_psi_from_spec(baseline["features"][name], features[name]), 4)
 
-    report = {"features": per_feature,
-              "watch": sorted([k for k, v in per_feature.items() if PSI_WATCH <= v < PSI_ALERT]),
-              "alert": sorted([k for k, v in per_feature.items() if v >= PSI_ALERT])}
-    report.update(quality=quality, missing_features=missing, insufficient_features=insufficient,
-                  quality_alert=quality_alert, min_monitor_events=MIN_MONITOR_EVENTS)
+    report = {
+        "features": per_feature,
+        "watch": sorted([k for k, v in per_feature.items() if PSI_WATCH <= v < PSI_ALERT]),
+        "alert": sorted([k for k, v in per_feature.items() if v >= PSI_ALERT]),
+    }
+    report.update(
+        quality=quality,
+        missing_features=missing,
+        insufficient_features=insufficient,
+        quality_alert=quality_alert,
+        min_monitor_events=MIN_MONITOR_EVENTS,
+    )
     report["max_feature_psi"] = max(per_feature.values(), default=0.0)
 
     report["null_psi_max"] = max(baseline.get("null_psi", {}).values(), default=0.0)
@@ -236,8 +258,9 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
         now = band_shares(scores, baseline["thresholds"])
         ref = baseline["band_shares"]
         report["band_shares"] = {k: round(v, 6) for k, v in now.items()}
-        report["band_share_ratio"] = {k: (round(now[k] / ref[k], 3) if ref.get(k) else None)
-                                      for k in ("BLOCK", "FLAG", "ALLOW")}
+        report["band_share_ratio"] = {
+            k: (round(now[k] / ref[k], 3) if ref.get(k) else None) for k in ("BLOCK", "FLAG", "ALLOW")
+        }
         # The block band is the one subscribers feel. Doubling or halving it is a human question,
         # whatever the feature distributions say.
         r = report["band_share_ratio"]["BLOCK"]
@@ -251,13 +274,15 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
         now = {d: decisions.count(d) / n for d in ("ALLOW", "FLAG", "BLOCK")}
         ref = baseline["decision_rates"]
         report["decision_rates"] = {k: round(v, 6) for k, v in now.items()}
-        report["decision_rate_delta"] = {k: round(now.get(k, 0.0) - ref.get(k, 0.0), 6)
-                                         for k in ("ALLOW", "FLAG", "BLOCK")}
+        report["decision_rate_delta"] = {
+            k: round(now.get(k, 0.0) - ref.get(k, 0.0), 6) for k in ("ALLOW", "FLAG", "BLOCK")
+        }
         # A block rate that moves by more than half of itself is worth a human look even when the
         # feature distributions look stable: it is the number customers feel.
         ref_block = ref.get("BLOCK", 0.0)
-        report["block_rate_doubled"] = bool(now.get("BLOCK", 0.0) > 2 * ref_block if ref_block > 0
-                                            else now.get("BLOCK", 0.0) > ZERO_REF_BLOCK_SHARE)
+        report["block_rate_doubled"] = bool(
+            now.get("BLOCK", 0.0) > 2 * ref_block if ref_block > 0 else now.get("BLOCK", 0.0) > ZERO_REF_BLOCK_SHARE
+        )
 
     if event_times is not None:
         times = np.asarray(event_times, dtype=float)
@@ -269,9 +294,12 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
             if not np.isfinite(as_of) or not np.isfinite(max_age_s) or max_age_s < 0:
                 raise ValueError("freshness bounds must be finite and max_age_s non-negative")
             lag = max(0.0, as_of - float(np.max(finite_times)))
-            report["freshness"] = {"event_lag_s": lag, "max_age_s": max_age_s,
-                                   "stale": lag > max_age_s,
-                                   "as_of_source": "explicit" if as_of_ts is not None else "window_event_time"}
+            report["freshness"] = {
+                "event_lag_s": lag,
+                "max_age_s": max_age_s,
+                "stale": lag > max_age_s,
+                "as_of_source": "explicit" if as_of_ts is not None else "window_event_time",
+            }
     if segments is not None and baseline.get("segments"):
         labels = np.asarray(segments, dtype=str)
         if any(len(sample) != len(labels) for sample in features.values()):
@@ -290,9 +318,11 @@ def evaluate_drift(baseline: dict, features: dict, scores=None, decisions=None, 
                 report["segments"][name] = {"rows": 0, "recommendation": NO_ACTION}
                 continue
             report["segments"][name] = evaluate_drift(
-                ref, {k: np.asarray(v)[mask] for k, v in features.items()},
+                ref,
+                {k: np.asarray(v)[mask] for k, v in features.items()},
                 np.asarray(scores)[mask] if scores is not None else None,
-                np.asarray(decisions)[mask].tolist() if decisions is not None else None)
+                np.asarray(decisions)[mask].tolist() if decisions is not None else None,
+            )
         report["unknown_segments"] = sorted(set(labels) - set(baseline["segments"]))
     report["recommendation"] = _recommend(report)
     return report
@@ -314,7 +344,13 @@ def _recommend(report: dict) -> str:
         return RETRAIN_RECOMMENDED
     if report["alert"] or report.get("block_band_moved"):
         return INVESTIGATE
-    if report["watch"] or report.get("block_rate_doubled") or report.get("insufficient_features") or report.get("unknown_segments") or WATCH in segment_recommendations:
+    if (
+        report["watch"]
+        or report.get("block_rate_doubled")
+        or report.get("insufficient_features")
+        or report.get("unknown_segments")
+        or WATCH in segment_recommendations
+    ):
         return WATCH
     return NO_ACTION
 

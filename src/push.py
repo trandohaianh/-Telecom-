@@ -8,6 +8,7 @@ tab cannot either (only an installed home-screen app).
 Privacy: the payload carries NO phone number or SMS text — only the verdict level and an action line.
 The full alert stays behind the authenticated /api/app/inbox.
 """
+
 from __future__ import annotations
 
 import base64
@@ -25,12 +26,12 @@ logger = logging.getLogger("fraud.push")
 ROOT = Path(__file__).resolve().parents[1]
 KEY_FILE = Path(os.environ.get("FRAUD_VAPID_PRIVATE_KEY_FILE") or ROOT / "secrets" / "vapid_private.pem")
 SUBJECT = os.environ.get("FRAUD_VAPID_SUBJECT") or "mailto:security@example.invalid"
-MIN_INTERVAL_S = 10.0          # at most one push per subscription per 10 s (bursts collapse)
+MIN_INTERVAL_S = 10.0  # at most one push per subscription per 10 s (bursts collapse)
 
-try:                            # optional dependency: the API works without it, push is just disabled
+try:  # optional dependency: the API works without it, push is just disabled
     from py_vapid import Vapid01
     from pywebpush import WebPushException, webpush
-except Exception:               # pragma: no cover - exercised when the package is absent
+except Exception:  # pragma: no cover - exercised when the package is absent
     Vapid01 = None
     webpush = None
     WebPushException = Exception
@@ -71,6 +72,7 @@ def public_key() -> str | None:
     if v is None:
         return None
     from cryptography.hazmat.primitives import serialization
+
     raw = v.public_key.public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
@@ -85,8 +87,14 @@ def validate_subscription(sub: dict) -> dict:
         raise ValueError("invalid endpoint")
     parsed = urlparse(endpoint)
     host = (parsed.hostname or "").lower()
-    if parsed.scheme != "https" or not host or host in ("localhost",) or host.endswith((".local", ".internal")) \
-            or host.replace(".", "").isdigit() or ":" in host:
+    if (
+        parsed.scheme != "https"
+        or not host
+        or host in ("localhost",)
+        or host.endswith((".local", ".internal"))
+        or host.replace(".", "").isdigit()
+        or ":" in host
+    ):
         raise ValueError("endpoint must be a public https push service")
     p256dh, auth = keys.get("p256dh"), keys.get("auth")
     for value, lo, hi in ((p256dh, 80, 100), (auth, 16, 32)):
@@ -97,8 +105,11 @@ def validate_subscription(sub: dict) -> dict:
 
 def payload_for(item: dict) -> dict:
     level = item.get("decision") or item.get("level") or "FLAG"
-    title = {"BLOCK": "Đã chặn cuộc gọi/tin nhắn lừa đảo", "FLAG": "Cảnh báo: có dấu hiệu lừa đảo",
-             "FAMILY": "Người thân của bạn vừa gặp lừa đảo"}.get(item.get("type") or level, "Cảnh báo lừa đảo")
+    title = {
+        "BLOCK": "Đã chặn cuộc gọi/tin nhắn lừa đảo",
+        "FLAG": "Cảnh báo: có dấu hiệu lừa đảo",
+        "FAMILY": "Người thân của bạn vừa gặp lừa đảo",
+    }.get(item.get("type") or level, "Cảnh báo lừa đảo")
     body = str(item.get("action") or "Mở app để xem chi tiết.")[:120]
     return {"title": title, "body": body, "url": "/app/", "tag": "fraud-alert"}
 
@@ -121,14 +132,21 @@ class PushSender:
             self.stats["dropped"] += 1
 
     def _webpush(self, sub: dict, data: dict) -> None:
-        webpush(subscription_info={"endpoint": sub["endpoint"], "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}},
-                data=json.dumps(data, ensure_ascii=False), vapid_private_key=str(KEY_FILE),
-                vapid_claims={"sub": SUBJECT}, ttl=3600, timeout=10)
+        webpush(
+            subscription_info={"endpoint": sub["endpoint"], "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}},
+            data=json.dumps(data, ensure_ascii=False),
+            vapid_private_key=str(KEY_FILE),
+            vapid_claims={"sub": SUBJECT},
+            ttl=3600,
+            timeout=10,
+        )
 
     def deliver(self, msisdn: str, data: dict) -> None:
-        rows = self.db().query("SELECT p.id, p.endpoint, p.p256dh, p.auth FROM push_subscriptions p "
-                               "JOIN subscribers s ON s.id = p.subscriber_id WHERE s.msisdn=? AND s.disabled_at IS NULL",
-                               (msisdn,))
+        rows = self.db().query(
+            "SELECT p.id, p.endpoint, p.p256dh, p.auth FROM push_subscriptions p "
+            "JOIN subscribers s ON s.id = p.subscriber_id WHERE s.msisdn=? AND s.disabled_at IS NULL",
+            (msisdn,),
+        )
         now = time.time()
         for r in rows:
             if now - self._last.get(r["endpoint"], 0.0) < MIN_INTERVAL_S:
@@ -138,7 +156,7 @@ class PushSender:
             try:
                 self._send(dict(r), data)
                 self.stats["sent"] += 1
-            except WebPushException as exc:   # 404/410: the browser dropped the subscription
+            except WebPushException as exc:  # 404/410: the browser dropped the subscription
                 status = getattr(getattr(exc, "response", None), "status_code", None)
                 if status in (404, 410):
                     with self.db().tx() as c:

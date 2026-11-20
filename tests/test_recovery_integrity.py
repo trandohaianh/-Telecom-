@@ -1,4 +1,5 @@
 """Regressions for rescore rollback and acknowledged evidence-tail integrity."""
+
 import json
 import sys
 from collections import deque
@@ -14,8 +15,13 @@ from resilience import CircuitBreaker, GuardedDetector, RescoreStateRestoreError
 
 
 def event(identity="A", timestamp=100.0):
-    return {"event_id": identity, "event_type": "CALL", "ts": timestamp,
-            "caller": "84900000001", "callee": "84900000002"}
+    return {
+        "event_id": identity,
+        "event_type": "CALL",
+        "ts": timestamp,
+        "caller": "84900000001",
+        "callee": "84900000002",
+    }
 
 
 class Features:
@@ -198,9 +204,16 @@ def test_sampled_allow_and_fail_open_are_required_but_skipped_allow_and_cdr_are_
     state = BackendState(tmp_path / "state.sqlite3")
     path = tmp_path / "evidence.jsonl"
     try:
-        add_results(state, [("VERDICT", {"decision": "ALLOW"}), ("CDR", {"ok": True}),
-                            ("VERDICT", {"decision": "BLOCK"}), ("VERDICT", {"decision": "ALLOW"}),
-                            ("VERDICT", {"decision": "ALLOW", "fail_open": True})])
+        add_results(
+            state,
+            [
+                ("VERDICT", {"decision": "ALLOW"}),
+                ("CDR", {"ok": True}),
+                ("VERDICT", {"decision": "BLOCK"}),
+                ("VERDICT", {"decision": "ALLOW"}),
+                ("VERDICT", {"decision": "ALLOW", "fail_open": True}),
+            ],
+        )
         logger = DurableEvidenceLog(path, state, sample_allow_every=2)
         logger.close()
         assert verify(path) == (True, 3, None)

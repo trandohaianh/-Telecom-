@@ -4,6 +4,7 @@ Trước vòng này mọi SIM box bị bỏ sót trong eval gộp đều là far
 3-6 cuộc/giờ: không đặc trưng theo-từng-SIM nào tách được. Mỗi test dưới đây thất bại trên mã cũ.
 Run: python -B -m pytest -q tests/test_round6_simfarm.py
 """
+
 import json
 import random
 
@@ -17,9 +18,19 @@ CELL = "HN-0001"
 
 
 def call(i, ts, caller, callee, age=20.0, cell=CELL):
-    return {"event_type": "CALL", "event_id": f"E{i}", "ts": ts, "caller": caller, "callee": callee, "cell_id": cell,
-            "imei": "3539111" + caller[-8:], "origin_trunk": "LOCAL", "network": "4G", "caller_age_days": age,
-            "duration_s": 40.0}
+    return {
+        "event_type": "CALL",
+        "event_id": f"E{i}",
+        "ts": ts,
+        "caller": caller,
+        "callee": callee,
+        "cell_id": cell,
+        "imei": "3539111" + caller[-8:],
+        "origin_trunk": "LOCAL",
+        "network": "4G",
+        "caller_age_days": age,
+        "duration_s": 40.0,
+    }
 
 
 def farm_stream():
@@ -48,25 +59,33 @@ def test_farm_feature_counts_colocated_outgoing_only_fresh_sims():
 def test_lone_new_subscriber_and_subscriber_with_incoming_calls_are_not_a_farm():
     fs = FeatureStore()
     lone = run(fs, [call(i, 1000.0 + 600 * i, "84900000003", f"8493000{i:04d}") for i in range(4)])
-    assert max(x["farm_cell_sims_1h"] for x in lone) == 1          # one SIM is never a farm
+    assert max(x["farm_cell_sims_1h"] for x in lone) == 1  # one SIM is never a farm
     fs = FeatureStore()
     evs = farm_stream()
-    evs.insert(0, call(99, 900.0, "84977777777", "84900000002", age=900))   # someone calls SIM 2
+    evs.insert(0, call(99, 900.0, "84977777777", "84900000002", age=900))  # someone calls SIM 2
     f = run(fs, evs)
     sim2 = [x["farm_cell_sims_1h"] for ev, x in zip(evs, f) if ev["caller"] == "84900000002"]
-    assert sim2 == [0, 0, 0, 0]                                    # it received a call: not outgoing-only
-    old = run(FeatureStore(), [dict(e, caller_age_days=900) for e in farm_stream()])   # old, long-active SIMs
-    assert max(x["farm_cell_sims_1h"] for x in old) == 2           # newly active (< 6 h) still counts as fresh
+    assert sim2 == [0, 0, 0, 0]  # it received a call: not outgoing-only
+    old = run(FeatureStore(), [dict(e, caller_age_days=900) for e in farm_stream()])  # old, long-active SIMs
+    assert max(x["farm_cell_sims_1h"] for x in old) == 2  # newly active (< 6 h) still counts as fresh
     trunk = run(FeatureStore(), [dict(e, cell_id="TRUNK") for e in farm_stream()])
-    assert max(x["farm_cell_sims_1h"] for x in trunk) == 0         # only radio cells
+    assert max(x["farm_cell_sims_1h"] for x in trunk) == 0  # only radio cells
 
 
 def test_farm_feature_is_exact_under_scale_out():
     rng = random.Random(3)
     events = farm_stream()
     for i in range(400):
-        events.append(call(100 + i, rng.uniform(800, 5000), f"8495{rng.randrange(30):07d}", f"8496{rng.randrange(60):07d}",
-                           age=rng.choice([5.0, 30.0, 400.0]), cell=rng.choice([CELL, "HN-0002"])))
+        events.append(
+            call(
+                100 + i,
+                rng.uniform(800, 5000),
+                f"8495{rng.randrange(30):07d}",
+                f"8496{rng.randrange(60):07d}",
+                age=rng.choice([5.0, 30.0, 400.0]),
+                cell=rng.choice([CELL, "HN-0002"]),
+            )
+        )
     events.sort(key=lambda e: e["ts"])
     expected = run(FeatureStore(), events)
     assert max(x["farm_cell_sims_1h"] for x in expected) >= 2
@@ -107,6 +126,7 @@ def test_farm_state_survives_checkpoint_and_delta():
 
 def test_detector_flags_a_colocated_farm_with_its_own_reason_and_not_as_zero_day():
     from test_feature_contracts import detector
+
     d = detector()
     out = d.process(farm_stream())
     assert [r["decision"] for r in out][3:] == ["FLAG"] * 5
@@ -117,6 +137,7 @@ def test_detector_flags_a_colocated_farm_with_its_own_reason_and_not_as_zero_day
 
 def test_three_colocated_farm_sims_count_as_behavioural_evidence():
     from detector import has_behavioural_evidence
+
     plain = dict.fromkeys(CALL_FEATURES, 0.0)
     assert not has_behavioural_evidence(plain | {"farm_cell_sims_1h": 2})
     assert has_behavioural_evidence(plain | {"farm_cell_sims_1h": 3})
@@ -131,8 +152,10 @@ def test_every_call_feature_has_a_distinct_reason_code():
 def test_spark_cell_partition_matches_feature_store_for_a_farm():
     import sys
     from pathlib import Path
+
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "spark"))
     from test_distributed_stream import stage
+
     rows = [dict(e, imei="353911100000001", duration_s=40.0) for e in farm_stream()]
     expected = run(FeatureStore(), [dict(r) for r in rows])
     states = {"subscriber": {}, "cell": {}}
@@ -160,8 +183,9 @@ def _brute_force(events):
         fresh = 0 <= ev["caller_age_days"] < 60 or f["active_hours_on_network"] < 6
         if fresh and ev["cell_id"] in ("HN-0001", "HN-0002"):
             seen.append((ev["ts"], ev["caller"], ev["callee"], ev["cell_id"]))
-        profile = (fresh and f["incoming_24h"] == 0 and f["callee_dispersion_1h"] == 1.0
-                   and f["new_callee_ratio_24h"] == 1.0)
+        profile = (
+            fresh and f["incoming_24h"] == 0 and f["callee_dispersion_1h"] == 1.0 and f["new_callee_ratio_24h"] == 1.0
+        )
         calls, dialled = {}, {}
         for t, sim, b, c in seen:
             if c == ev["cell_id"] and ev["ts"] - 3600 <= t <= ev["ts"]:
@@ -176,8 +200,16 @@ def test_incremental_farm_counts_equal_brute_force_definition():
     rng = random.Random(11)
     events = farm_stream()
     for i in range(600):
-        events.append(call(1000 + i, rng.uniform(800, 9000), f"8495{rng.randrange(25):07d}", f"8496{rng.randrange(400):07d}",
-                           age=rng.choice([5.0, 30.0, 400.0]), cell=rng.choice([CELL, "HN-0002"])))
+        events.append(
+            call(
+                1000 + i,
+                rng.uniform(800, 9000),
+                f"8495{rng.randrange(25):07d}",
+                f"8496{rng.randrange(400):07d}",
+                age=rng.choice([5.0, 30.0, 400.0]),
+                cell=rng.choice([CELL, "HN-0002"]),
+            )
+        )
     events.sort(key=lambda e: e["ts"])
     got = [x["farm_cell_sims_1h"] for x in run(FeatureStore(), events)]
     assert got == _brute_force(events) and max(got) >= 2
@@ -191,8 +223,9 @@ def test_farm_feature_cost_does_not_grow_with_a_busy_cell():
         evs = [call(i, 1000.0 + i * 0.5, f"8497{i % 300:07d}", f"8498{i:07d}") for i in range(n)]
         run(fs, evs[: n - 200])
         t0 = _t.perf_counter()
-        last = run(fs, evs[n - 200:])
-        assert last[-1]["farm_cell_sims_1h"] >= 2        # the busy cell really is counted
+        last = run(fs, evs[n - 200 :])
+        assert last[-1]["farm_cell_sims_1h"] >= 2  # the busy cell really is counted
         return (_t.perf_counter() - t0) / 200 * 1e6
+
     small, big = min(per_call_us(400) for _ in range(3)), min(per_call_us(6400) for _ in range(3))
-    assert big < 4 * small, (small, big)      # O(window) per call would be ~16x slower
+    assert big < 4 * small, (small, big)  # O(window) per call would be ~16x slower

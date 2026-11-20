@@ -12,6 +12,7 @@ and compares B and C against A, decision by decision.
 
 Run:  python src/experiment_guard.py   ->  data/guard_experiment.json
 """
+
 # Nạp bộ thư viện và thành phần để tạo stream nhiễu, chạy detector và đánh giá guard.
 from __future__ import annotations
 
@@ -26,9 +27,9 @@ from events_io import load_events
 from ingest_guard import IngestGuard
 
 RANK = {"ALLOW": 0, "FLAG": 1, "BLOCK": 2}
-DUP_RATE = 0.05          # share of events redelivered once
-LATE_RATE = 0.02         # share of events held back and delivered out of order
-LATE_DELAY_S = 300.0     # how far behind the stream a held-back event reappears
+DUP_RATE = 0.05  # share of events redelivered once
+LATE_RATE = 0.02  # share of events held back and delivered out of order
+LATE_DELAY_S = 300.0  # how far behind the stream a held-back event reappears
 SEED = 20261008
 
 
@@ -56,7 +57,7 @@ def corrupt(events, dup_rate=DUP_RATE, late_rate=LATE_RATE, delay_s=LATE_DELAY_S
             continue
         out.append(ev)
         if rng.random() < dup_rate:
-            out.append(dict(ev))       # the retry: same event_id, same content
+            out.append(dict(ev))  # the retry: same event_id, same content
             n_dup += 1
     # Cuối luồng, giao các sự kiện còn giữ và trả thống kê số bản nhiễu.
     out.extend(ev for _, ev in held)
@@ -70,7 +71,7 @@ def run(events, warmup, guard=None, batch=256):
     results = []
     for i in range(0, len(events), batch):
         # Nối kết quả xử lý lô hiện tại vào danh sách theo thứ tự stream.
-        results += det.process(events[i:i + batch])
+        results += det.process(events[i : i + batch])
     return det, results
 
 
@@ -84,7 +85,7 @@ def strongest_by_event(events, results):
     out = {}
     for ev, r in zip(events, results):
         if not r.get("enforced", False) and r["decision"] != "ALLOW":
-            d = "ALLOW"          # scored, but never executed (late, duplicate, or shadow mode)
+            d = "ALLOW"  # scored, but never executed (late, duplicate, or shadow mode)
         else:
             d = r["decision"]
         k = ev["event_id"]
@@ -96,8 +97,9 @@ def strongest_by_event(events, results):
 def compare(base, other, labels):
     # Xác định thay đổi so với baseline và tách ảnh hưởng lên mẫu hợp lệ/gian lận.
     changed = [k for k in base if base[k] != other.get(k, base[k])]
-    legit_newly_blocked = [k for k in changed
-                           if labels.get(k) == 0 and RANK[other[k]] > RANK[base[k]] and other[k] == "BLOCK"]
+    legit_newly_blocked = [
+        k for k in changed if labels.get(k) == 0 and RANK[other[k]] > RANK[base[k]] and other[k] == "BLOCK"
+    ]
     legit_newly_actioned = [k for k in changed if labels.get(k) == 0 and RANK[other[k]] > RANK[base[k]]]
     fraud_now_missed = [k for k in changed if labels.get(k) == 1 and RANK[other[k]] < RANK[base[k]]]
     # Đếm tổng mẫu hợp lệ/gian lận, số hợp lệ bị chặn và số gian lận được bắt.
@@ -130,8 +132,10 @@ def main():
 
     # Tạo luồng trùng/lệch thời gian và in thống kê mức độ hỏng dữ liệu.
     dirty, info = corrupt(events)
-    print(f'dirty stream: {info["stream_length"]:,} deliveries '
-          f'({info["duplicates_injected"]:,} redelivered, {info["late_injected"]:,} late)')
+    print(
+        f'dirty stream: {info["stream_length"]:,} deliveries '
+        f'({info["duplicates_injected"]:,} redelivered, {info["late_injected"]:,} late)'
+    )
 
     # Chạy luồng nhiễu khi guard tắt để đo mức thiệt hại không được kiểm soát.
     _, res_b = run(dirty, warmup)
@@ -145,8 +149,7 @@ def main():
     # Tập hợp cấu hình, thông tin nhiễu và các phép so sánh vào kết quả chính.
     out = {
         "window": {"seed": WINDOWS["test"][0], "events": len(events)},
-        "injection": {"duplicate_rate": DUP_RATE, "late_rate": LATE_RATE,
-                      "late_delay_s": LATE_DELAY_S, **info},
+        "injection": {"duplicate_rate": DUP_RATE, "late_rate": LATE_RATE, "late_delay_s": LATE_DELAY_S, **info},
         "guard_config": guard.state(),
         "A_clean_baseline": {
             "block_fpr_pct": compare(base, base, labels)["block_fpr_pct"],
@@ -167,17 +170,29 @@ def main():
         _, rc = run(d2, warmup, guard=IngestGuard())
         off2, on2 = strongest_by_event(d2, rb), strongest_by_event(d2, rc)
         # Lưu kết quả đối chiếu và in nhanh số quyết định thay đổi.
-        sweep.append({"duplicate_rate": rate, "deliveries": i2["stream_length"],
-                      "guard_off": compare(base, off2, labels),
-                      "guard_on": compare(base, on2, labels)})
-        print(f'  dup {rate:.0%}: guard off changed {sweep[-1]["guard_off"]["decisions_changed"]}, '
-              f'on changed {sweep[-1]["guard_on"]["decisions_changed"]}')
+        sweep.append(
+            {
+                "duplicate_rate": rate,
+                "deliveries": i2["stream_length"],
+                "guard_off": compare(base, off2, labels),
+                "guard_on": compare(base, on2, labels),
+            }
+        )
+        print(
+            f'  dup {rate:.0%}: guard off changed {sweep[-1]["guard_off"]["decisions_changed"]}, '
+            f'on changed {sweep[-1]["guard_on"]["decisions_changed"]}'
+        )
     out["sweep_duplicate_rate"] = sweep
 
     # Ghi JSON đầy đủ và in các phần chính của so sánh.
     (DATA_DIR / "guard_experiment.json").write_text(json.dumps(out, indent=1, ensure_ascii=False))
-    print(json.dumps({k: out[k] for k in ("B_dirty_guard_off", "C_dirty_guard_on", "ingest_counters")},
-                     indent=1, ensure_ascii=False))
+    print(
+        json.dumps(
+            {k: out[k] for k in ("B_dirty_guard_off", "C_dirty_guard_on", "ingest_counters")},
+            indent=1,
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":

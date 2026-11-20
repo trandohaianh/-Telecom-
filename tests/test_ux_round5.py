@@ -2,6 +2,7 @@
 
 Không import gì nặng: mỗi test chỉ đọc HTML/XML/Kotlin/Python dưới dạng chuỗi.
 """
+
 from __future__ import annotations
 
 import re
@@ -12,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def read(rel: str) -> str:
     from _pages import page_source  # HTML + the page's local .js files (scripts moved out for the CSP)
+
     return page_source(rel)
 
 
@@ -178,7 +180,9 @@ def test_android_server_input_uri_hint_and_progress():
     kt = read(f"{ANDROID}/java/vn/lachan/fraudshield/MainActivity.kt")
     assert "TYPE_TEXT_VARIATION_URI" in kt and "import android.text.InputType" in kt
     assert "setHint(R.string.server_input_hint)" in kt
-    assert "R.id.progress" in kt and "progress.visibility = View.VISIBLE" in kt and "progress.visibility = View.GONE" in kt
+    assert (
+        "R.id.progress" in kt and "progress.visibility = View.VISIBLE" in kt and "progress.visibility = View.GONE" in kt
+    )
     layout = read(f"{ANDROID}/res/layout/activity_main.xml")
     assert '<ProgressBar' in layout and 'android:id="@+id/progress"' in layout
     assert 'android:contentDescription="@string/error_icon_desc"' in layout
@@ -220,6 +224,7 @@ def test_edu_ui_jwt_decode_is_display_only_and_safe():
     """Chạy hàm giải mã trên chuỗi mẫu mà không import streamlit/httpx."""
     import base64
     import json as _json
+
     src = read("edu_dss/ui/app.py")
     fn = src.split("def jwt_claims")[1].split("\nROLE_FROM_CLAIM")[0]
     ns: dict = {"base64": base64, "json": _json}

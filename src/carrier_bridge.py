@@ -21,6 +21,7 @@ Usage
 The signing key is never printed. Metrics lines never contain subscriber numbers.
 Dependencies: httpx (+ confluent-kafka for the Kafka source). No import of the server code.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -113,8 +114,14 @@ def normalize_mapping(spec: dict | None) -> dict:
     values = spec.get("values") or {}
     if not isinstance(values, dict) or not all(isinstance(v, dict) for v in values.values()):
         raise ValueError("values must be {api_field: {carrier_value: api_value}}")
-    return {"fields": fields, **units, "defaults": dict(spec.get("defaults") or {}),
-            "drop": set(spec.get("drop") or ()), "values": values, "kind_field": spec.get("kind_field", "kind")}
+    return {
+        "fields": fields,
+        **units,
+        "defaults": dict(spec.get("defaults") or {}),
+        "drop": set(spec.get("drop") or ()),
+        "values": values,
+        "kind_field": spec.get("kind_field", "kind"),
+    }
 
 
 def load_mapping(path) -> dict:
@@ -137,7 +144,7 @@ def _number(name, value):
 def _seconds(name, value, unit):
     if unit == "iso":
         if not isinstance(value, str):
-            return _number(name, value)          # already numeric: assume seconds
+            return _number(name, value)  # already numeric: assume seconds
         try:
             parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
@@ -215,7 +222,7 @@ def classify(status: int, payload: Any = None) -> str:
         return "ok"
     if status in (401, 408, 425, 429) or status >= 500:
         return "retry"
-    return "dead"                                   # other 4xx incl. 409 conflicting duplicate
+    return "dead"  # other 4xx incl. 409 conflicting duplicate
 
 
 def backoff_delay(attempt: int, base: float, cap: float, retry_after: str | None = None, rng=random.random) -> float:
@@ -224,7 +231,7 @@ def backoff_delay(attempt: int, base: float, cap: float, retry_after: str | None
             return min(cap, max(0.0, float(retry_after)))
         except ValueError:
             pass
-    return min(cap, base * (2 ** attempt)) * (0.5 + rng() / 2)
+    return min(cap, base * (2**attempt)) * (0.5 + rng() / 2)
 
 
 def percentile(values: list, q: float):
@@ -245,11 +252,20 @@ class Metrics:
         lat, c = self.latencies, self.counts
         if reset_window:
             self.latencies = []
-        return {"ts": round(time.time(), 3), "received": c["received"], "sent": c["sent"], "ok": c["ok"],
-                "duplicates": c["duplicates"], "retried": c["retried"], "dead_lettered": c["dead_lettered"],
-                "inflight": self.inflight, "window_requests": len(lat),
-                "latency_p50_ms": percentile(lat, .50), "latency_p99_ms": percentile(lat, .99),
-                "status": {k[7:]: v for k, v in sorted(c.items()) if k.startswith("status_")}}
+        return {
+            "ts": round(time.time(), 3),
+            "received": c["received"],
+            "sent": c["sent"],
+            "ok": c["ok"],
+            "duplicates": c["duplicates"],
+            "retried": c["retried"],
+            "dead_lettered": c["dead_lettered"],
+            "inflight": self.inflight,
+            "window_requests": len(lat),
+            "latency_p50_ms": percentile(lat, 0.50),
+            "latency_p99_ms": percentile(lat, 0.99),
+            "status": {k[7:]: v for k, v in sorted(c.items()) if k.startswith("status_")},
+        }
 
 
 class DeadLetter:
@@ -266,8 +282,13 @@ class DeadLetter:
             return
         if isinstance(record, (bytes, bytearray)):
             record = record.decode("utf-8", errors="replace")
-        line = json.dumps({"at": round(time.time(), 3), "reason": reason[:500], "status": status, "kind": kind,
-                           "record": record}, ensure_ascii=False) + "\n"
+        line = (
+            json.dumps(
+                {"at": round(time.time(), 3), "reason": reason[:500], "status": status, "kind": kind, "record": record},
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
         with self._lock:
             if self._fh is None:
                 self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -291,10 +312,22 @@ class Item:
 
 
 class Bridge:
-    def __init__(self, api: str, key: bytes, *, mapping: dict | None = None, client: httpx.AsyncClient | None = None,
-                 concurrency: int = 32, timeout: float = 5.0, dead_letter: DeadLetter | None = None,
-                 max_retries: int = 0, backoff_base: float = 0.2, backoff_max: float = 10.0,
-                 sleep=asyncio.sleep, drain_timeout: float = 30.0):
+    def __init__(
+        self,
+        api: str,
+        key: bytes,
+        *,
+        mapping: dict | None = None,
+        client: httpx.AsyncClient | None = None,
+        concurrency: int = 32,
+        timeout: float = 5.0,
+        dead_letter: DeadLetter | None = None,
+        max_retries: int = 0,
+        backoff_base: float = 0.2,
+        backoff_max: float = 10.0,
+        sleep=asyncio.sleep,
+        drain_timeout: float = 30.0,
+    ):
         if concurrency < 1:
             raise ValueError("concurrency must be >= 1")
         self.api = api.rstrip("/")
@@ -302,11 +335,12 @@ class Bridge:
         self.mapping = mapping or normalize_mapping(None)
         self.client = client or httpx.AsyncClient(
             timeout=httpx.Timeout(timeout),
-            limits=httpx.Limits(max_connections=concurrency, max_keepalive_connections=concurrency))
+            limits=httpx.Limits(max_connections=concurrency, max_keepalive_connections=concurrency),
+        )
         self._own_client = client is None
         self.concurrency = concurrency
         self.dead = dead_letter or DeadLetter(None)
-        self.max_retries = max_retries               # 0 = retry until acknowledged (back-pressure)
+        self.max_retries = max_retries  # 0 = retry until acknowledged (back-pressure)
         self.backoff_base, self.backoff_max = backoff_base, backoff_max
         self.sleep = sleep
         self.drain_timeout = drain_timeout
@@ -314,7 +348,7 @@ class Bridge:
         self.stop = asyncio.Event()
         self.fatal: BaseException | None = None
 
-    def __repr__(self):                              # never expose the key
+    def __repr__(self):  # never expose the key
         return f"Bridge(api={self.api!r}, concurrency={self.concurrency})"
 
     async def deliver(self, record: Any) -> str:
@@ -377,7 +411,7 @@ class Bridge:
                 item.ack()
         except asyncio.CancelledError:
             raise
-        except Exception as exc:                     # e.g. dead-letter disk full: stop, do not ack
+        except Exception as exc:  # e.g. dead-letter disk full: stop, do not ack
             log.error("fatal delivery error: %s", type(exc).__name__)
             self.fatal = exc
             self.stop.set()
@@ -394,7 +428,7 @@ class Bridge:
         try:
             async for item in items:
                 self.metrics.counts["received"] += 1
-                await sem.acquire()                  # back-pressure: bounded in-flight
+                await sem.acquire()  # back-pressure: bounded in-flight
                 task = asyncio.create_task(self._one(item, sem))
                 tasks.add(task)
                 task.add_done_callback(tasks.discard)
@@ -404,7 +438,7 @@ class Bridge:
             await items.aclose()
             if tasks:
                 done, pending = await asyncio.wait(set(tasks), timeout=self.drain_timeout)
-                for task in pending:                 # not acked -> redelivered next run (at-least-once)
+                for task in pending:  # not acked -> redelivered next run (at-least-once)
                     task.cancel()
                 if pending:
                     log.warning("drain timeout: %d deliveries left unacknowledged", len(pending))
@@ -444,7 +478,7 @@ class FileSource:
                 line = fh.readline()
                 if line:
                     if not line.endswith(b"\n") and self.follow:
-                        partial += line              # writer has not finished the line yet
+                        partial += line  # writer has not finished the line yet
                         continue
                     line, partial = partial + line, b""
                     if line.strip():
@@ -460,7 +494,7 @@ class FileSource:
                 except FileNotFoundError:
                     continue
                 if (now.st_ino, now.st_dev) != (ident.st_ino, ident.st_dev) or now.st_size < fh.tell():
-                    fh.close()                       # rotated or truncated: start the new file from the top
+                    fh.close()  # rotated or truncated: start the new file from the top
                     fh = open(self.path, "rb")
                     ident, partial = os.fstat(fh.fileno()), b""
         finally:
@@ -493,9 +527,9 @@ class OffsetTracker:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._pending: dict = {}    # (topic, partition) -> list of offsets in arrival order
-        self._done: dict = {}       # (topic, partition) -> set of finished offsets
-        self._ready: dict = {}      # (topic, partition) -> next offset to commit
+        self._pending: dict = {}  # (topic, partition) -> list of offsets in arrival order
+        self._done: dict = {}  # (topic, partition) -> set of finished offsets
+        self._ready: dict = {}  # (topic, partition) -> next offset to commit
 
     def add(self, topic, partition, offset):
         with self._lock:
@@ -506,7 +540,7 @@ class OffsetTracker:
         with self._lock:
             key = (topic, partition)
             if key not in self._pending:
-                return                               # partition was revoked meanwhile
+                return  # partition was revoked meanwhile
             self._done[key].add(offset)
             pending, finished = self._pending[key], self._done[key]
             advanced = None
@@ -542,24 +576,33 @@ class KafkaSource:
 
     def __init__(self, consumer, topic: str, poll_s: float = 0.5, topic_partition=None):
         from concurrent.futures import ThreadPoolExecutor
+
         self.consumer, self.topic, self.poll_s = consumer, topic, poll_s
         self.tracker = OffsetTracker()
         self._tp = topic_partition
         self._exec = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kafka")
-        self.committed: list = []                    # (topic, partition, offset) history, for tests/ops
+        self.committed: list = []  # (topic, partition, offset) history, for tests/ops
 
     @classmethod
     def connect(cls, bootstrap, topic, group, offset_reset="earliest", extra: dict | None = None):
         from confluent_kafka import Consumer, TopicPartition
-        conf = {"bootstrap.servers": bootstrap, "group.id": group, "enable.auto.commit": False,
-                "enable.auto.offset.store": False, "auto.offset.reset": offset_reset, **(extra or {})}
-        conf["enable.auto.commit"] = False           # never overridable: at-least-once depends on it
+
+        conf = {
+            "bootstrap.servers": bootstrap,
+            "group.id": group,
+            "enable.auto.commit": False,
+            "enable.auto.offset.store": False,
+            "auto.offset.reset": offset_reset,
+            **(extra or {}),
+        }
+        conf["enable.auto.commit"] = False  # never overridable: at-least-once depends on it
         return cls(Consumer(conf), topic, topic_partition=TopicPartition)
 
     def _subscribe(self):
         def on_revoke(_consumer, partitions):
-            self._commit_ready()                     # commit what is done before losing the partitions
+            self._commit_ready()  # commit what is done before losing the partitions
             self.tracker.revoke([(p.topic, p.partition) for p in partitions])
+
         self.consumer.subscribe([self.topic], on_revoke=on_revoke)
 
     def _commit_ready(self):
@@ -570,7 +613,7 @@ class KafkaSource:
         offsets = [tp(t, p, off) for (t, p), off in sorted(ready.items())]
         try:
             self.consumer.commit(offsets=offsets, asynchronous=False)
-        except Exception as exc:                     # e.g. rebalance in progress: retry next round
+        except Exception as exc:  # e.g. rebalance in progress: retry next round
             log.warning("offset commit failed: %s", type(exc).__name__)
             self.tracker.restore(ready)
             return
@@ -613,6 +656,7 @@ class _SimpleTP:
 def _is_partition_eof(err) -> bool:
     try:
         from confluent_kafka import KafkaError
+
         return err.code() == KafkaError._PARTITION_EOF
     except Exception:
         return False
@@ -630,8 +674,13 @@ def build_parser():
     p.add_argument("--kafka-topic")
     p.add_argument("--kafka-group")
     p.add_argument("--kafka-offset-reset", default="earliest", choices=("earliest", "latest"))
-    p.add_argument("--kafka-config", action="append", default=[], metavar="KEY=VALUE",
-                   help="extra librdkafka setting (e.g. security.protocol=SASL_SSL); repeatable")
+    p.add_argument(
+        "--kafka-config",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="extra librdkafka setting (e.g. security.protocol=SASL_SSL); repeatable",
+    )
     p.add_argument("--mapping", help="JSON field-mapping file")
     p.add_argument("--dead-letter", help="JSONL file for undeliverable records")
     p.add_argument("--concurrency", type=int, default=32)
@@ -650,7 +699,7 @@ def _install_signals(stop: asyncio.Event):
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
             loop.add_signal_handler(sig, stop.set)
-        except (NotImplementedError, RuntimeError, ValueError):   # Windows
+        except (NotImplementedError, RuntimeError, ValueError):  # Windows
             signal.signal(sig, lambda *_: loop.call_soon_threadsafe(stop.set))
 
 
@@ -658,20 +707,32 @@ async def main_async(args) -> int:
     key = load_key(args.key_file)
     mapping = load_mapping(args.mapping)
     verify = {"true": True, "false": False}.get(args.verify.lower(), args.verify)
-    client = httpx.AsyncClient(timeout=httpx.Timeout(args.timeout), verify=verify,
-                               limits=httpx.Limits(max_connections=args.concurrency,
-                                                   max_keepalive_connections=args.concurrency))
+    client = httpx.AsyncClient(
+        timeout=httpx.Timeout(args.timeout),
+        verify=verify,
+        limits=httpx.Limits(max_connections=args.concurrency, max_keepalive_connections=args.concurrency),
+    )
     if args.kafka_bootstrap:
         if not (args.kafka_topic and args.kafka_group):
             raise SystemExit("--kafka-topic and --kafka-group are required with --kafka-bootstrap")
         extra = dict(item.split("=", 1) for item in args.kafka_config)
-        source = KafkaSource.connect(args.kafka_bootstrap, args.kafka_topic, args.kafka_group,
-                                     args.kafka_offset_reset, extra)
+        source = KafkaSource.connect(
+            args.kafka_bootstrap, args.kafka_topic, args.kafka_group, args.kafka_offset_reset, extra
+        )
     else:
         source = FileSource(args.input, follow=args.follow)
-    bridge = Bridge(args.api, key, mapping=mapping, client=client, concurrency=args.concurrency,
-                    dead_letter=DeadLetter(args.dead_letter), max_retries=args.max_retries,
-                    backoff_base=args.backoff_base, backoff_max=args.backoff_max, drain_timeout=args.drain_timeout)
+    bridge = Bridge(
+        args.api,
+        key,
+        mapping=mapping,
+        client=client,
+        concurrency=args.concurrency,
+        dead_letter=DeadLetter(args.dead_letter),
+        max_retries=args.max_retries,
+        backoff_base=args.backoff_base,
+        backoff_max=args.backoff_max,
+        drain_timeout=args.drain_timeout,
+    )
     _install_signals(bridge.stop)
     try:
         return await bridge.run(source, metrics_every=args.metrics_every)

@@ -1,4 +1,5 @@
 """Artifact/provenance validation uses temporary dummy files and never fits a model."""
+
 import json
 import sys
 from pathlib import Path
@@ -21,7 +22,9 @@ from train import calibration_frame, calibration_report
 
 def bundle(path):
     for name in MODEL_ARTIFACTS:
-        (path / name).write_text(json.dumps({"model_version": "test-v1"}) if name == "thresholds.json" else name, encoding="utf-8")
+        (path / name).write_text(
+            json.dumps({"model_version": "test-v1"}) if name == "thresholds.json" else name, encoding="utf-8"
+        )
 
 
 def test_model_checksum_mismatch_fails_before_deserialization(tmp_path):
@@ -92,6 +95,7 @@ def test_strict_mode_rejects_bundle_from_unverified_legacy_features(tmp_path):
 
 def test_threshold_never_spends_a_fractional_false_positive_budget():
     import numpy as np
+
     scores = np.linspace(0.0, 1.0, 1000)
     threshold = train.threshold_for_fpr(scores, 0.0001)
     assert int((scores >= threshold).sum()) == 0

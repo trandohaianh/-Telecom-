@@ -1,11 +1,18 @@
 """Stable serving identity for checkpoints, including legacy bundles without a manifest."""
+
 from __future__ import annotations
 
 import hashlib
 from pathlib import Path
 
-ARTIFACTS = ("tier1_call_lgbm.txt", "tier2_audio_lgbm.txt", "tier1_zero_day_iforest.joblib",
-             "sms_text_lr.joblib", "thresholds.json", "training_report.json")
+ARTIFACTS = (
+    "tier1_call_lgbm.txt",
+    "tier2_audio_lgbm.txt",
+    "tier1_zero_day_iforest.joblib",
+    "sms_text_lr.joblib",
+    "thresholds.json",
+    "training_report.json",
+)
 
 
 def loaded_model_identity(detector, model_dir=None):
@@ -27,6 +34,9 @@ def loaded_model_identity(detector, model_dir=None):
                 digest.update(b"missing")
             digest.update(b"\0")
         bundle = "legacy:" + digest.hexdigest()
-    return {"version": 1, "model_version": getattr(detector, "model_version", None),
-            "bundle_sha256": bundle,
-            "feature_contract": getattr(getattr(detector, "fs", None), "FEATURE_CONTRACT", None)}
+    return {
+        "version": 1,
+        "model_version": getattr(detector, "model_version", None),
+        "bundle_sha256": bundle,
+        "feature_contract": getattr(getattr(detector, "fs", None), "FEATURE_CONTRACT", None),
+    }

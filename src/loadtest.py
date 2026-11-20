@@ -9,6 +9,7 @@ released by the switch without a verdict (fail-open) and is counted as such.
 Run:  python loadtest.py                 (single process, several rates)
       python loadtest.py --partitions 2  (throughput scale-out, key-partitioned)
 """
+
 # Nạp thư viện đồng thời, đo thời gian, tính thống kê và xử lý dữ liệu sự kiện.
 from __future__ import annotations
 
@@ -46,6 +47,7 @@ def run_rate(events, warm, rate, max_batch=MAX_BATCH, log_path=None):
     # Low-latency Python: move the (large, long-lived) feature-store state out of the cyclic GC's
     # reach and collect young objects less often, otherwise full collections cause 100+ ms stalls.
     from gc_tuning import THRESHOLDS
+
     gc.collect()
     gc.freeze()
     gc.set_threshold(*THRESHOLDS)
@@ -89,14 +91,25 @@ def run_rate(events, warm, rate, max_batch=MAX_BATCH, log_path=None):
     def pct(m):
         # Tính các phân vị cùng cực đại độ trễ cho tập con được chọn.
         v = lat[m]
-        return {"p50": round(float(np.percentile(v, 50)), 2), "p95": round(float(np.percentile(v, 95)), 2),
-                "p99": round(float(np.percentile(v, 99)), 2), "max": round(float(v.max()), 2)}
+        return {
+            "p50": round(float(np.percentile(v, 50)), 2),
+            "p95": round(float(np.percentile(v, 95)), 2),
+            "p99": round(float(np.percentile(v, 99)), 2),
+            "max": round(float(v.max()), 2),
+        }
+
     # Trả thông lượng, số batch, phân vị latency, tỷ lệ quá SLA và thống kê thành phần.
-    return {"offered_rate_eps": rate, "achieved_eps": round(n / wall, 1), "events": n, "batches": batches,
-            "mean_batch": round(n / batches, 1),
-            "latency_ms": {"CALL": pct(types == "CALL"), "SMS": pct(types == "SMS"), "AUDIO": pct(types == "AUDIO")},
-            "over_budget_pct": round(100 * float(np.mean(lat > budget)), 3),
-            "breaker": dict(g.cb.stats), "evidence_records": log.written}
+    return {
+        "offered_rate_eps": rate,
+        "achieved_eps": round(n / wall, 1),
+        "events": n,
+        "batches": batches,
+        "mean_batch": round(n / batches, 1),
+        "latency_ms": {"CALL": pct(types == "CALL"), "SMS": pct(types == "SMS"), "AUDIO": pct(types == "AUDIO")},
+        "over_budget_pct": round(100 * float(np.mean(lat > budget)), 3),
+        "breaker": dict(g.cb.stats),
+        "evidence_records": log.written,
+    }
 
 
 def _worker(args):
@@ -105,7 +118,7 @@ def _worker(args):
     events = load_events(DATA_DIR / "test_events_50k.csv")
     warm = load_events(DATA_DIR / "test_warmup_24h_events.csv.gz")
     # Chia sự kiện/warm-up bằng CRC32 khóa thuê bao để cùng thuê bao luôn ở một partition.
-    key = lambda e: zlib.crc32((e.get("caller") or e.get("sender")).encode()) % k   # noqa: E731
+    key = lambda e: zlib.crc32((e.get("caller") or e.get("sender")).encode()) % k  # noqa: E731
     ev = [e for e in events if key(e) == part]
     wm = [e for e in warm if key(e) == part]
     return run_rate(ev, wm, rate)
@@ -135,15 +148,23 @@ if __name__ == "__main__":
     else:
         # Chạy mỗi tốc độ qua pool tiến trình, mỗi worker sở hữu một nhóm khóa.
         key = f"partitioned_{a.partitions}"
-        results[key] = {"hardware": hw, "note": "throughput-only: each partition owns its subscriber keys; "
-                        "cross-key features need a shared store (Redis/Aerospike) in production", "runs": []}
+        results[key] = {
+            "hardware": hw,
+            "note": "throughput-only: each partition owns its subscriber keys; "
+            "cross-key features need a shared store (Redis/Aerospike) in production",
+            "runs": [],
+        }
         for r in rates:
             # Phân phối tốc độ đều qua các partition, sau đó tổng hợp thông lượng và latency xấu nhất.
             with mp.get_context("spawn").Pool(a.partitions) as pool:
                 parts = pool.map(_worker, [(p, a.partitions, r / a.partitions) for p in range(a.partitions)])
-            agg = {"offered_rate_eps": r, "achieved_eps": round(sum(p["achieved_eps"] for p in parts), 1),
-                   "call_p99_ms": max(p["latency_ms"]["CALL"]["p99"] for p in parts),
-                   "over_budget_pct": round(float(np.mean([p["over_budget_pct"] for p in parts])), 3), "partitions": parts}
+            agg = {
+                "offered_rate_eps": r,
+                "achieved_eps": round(sum(p["achieved_eps"] for p in parts), 1),
+                "call_p99_ms": max(p["latency_ms"]["CALL"]["p99"] for p in parts),
+                "over_budget_pct": round(float(np.mean([p["over_budget_pct"] for p in parts])), 3),
+                "partitions": parts,
+            }
             # In bản tổng hợp không kèm chi tiết partition và lưu đầy đủ từng lượt chạy.
             print(json.dumps({k: v for k, v in agg.items() if k != "partitions"}))
             results[key]["runs"].append(agg)

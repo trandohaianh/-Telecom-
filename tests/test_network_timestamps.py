@@ -1,4 +1,5 @@
 """Signed retries remain distinct on coarse wall clocks."""
+
 import sys
 import time
 from collections import OrderedDict
@@ -30,4 +31,4 @@ def test_concurrent_signed_retries_have_unique_timestamps(monkeypatch):
     with ThreadPoolExecutor(max_workers=8) as pool:
         timestamps = list(pool.map(lambda _: security.network_timestamp(), range(800)))
     assert len(set(timestamps)) == 800
-    assert all(abs(float(timestamp) - fixed_ns / 1e9) < .001 for timestamp in timestamps)
+    assert all(abs(float(timestamp) - fixed_ns / 1e9) < 0.001 for timestamp in timestamps)

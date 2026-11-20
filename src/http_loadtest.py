@@ -3,6 +3,7 @@
 Legacy timing fields are retained. Only explicit scoring evidence can satisfy
 the new scored-deadline metrics; quick pending/fail-open replies cannot.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,10 +26,20 @@ from security import network_timestamp, sign_network
 DEADLINE_MS = 30.0
 ARRIVAL_PACING = "thread_sleep" if sys.platform == "win32" else "asyncio_sleep"
 _MISSING = object()
-_OUTCOMES = ("scored_before_deadline", "pending", "fail_open", "scored_after_deadline",
-             "scored_deadline_unverified", "not_scored", "scoring_unreported",
-             "scoring_inconsistent", "http_error", "invalid_response", "client_error",
-             "client_shed")
+_OUTCOMES = (
+    "scored_before_deadline",
+    "pending",
+    "fail_open",
+    "scored_after_deadline",
+    "scored_deadline_unverified",
+    "not_scored",
+    "scoring_unreported",
+    "scoring_inconsistent",
+    "http_error",
+    "invalid_response",
+    "client_error",
+    "client_shed",
+)
 
 
 def validate_run_parameters(*, rate, seconds, concurrency=32, timeout_s=2.0):
@@ -38,7 +49,8 @@ def validate_run_parameters(*, rate, seconds, concurrency=32, timeout_s=2.0):
     except (TypeError, ValueError, OverflowError) as error:
         raise ValueError("rate, seconds and timeout must be finite and positive") from error
     if any(isinstance(value, bool) for value in (rate, seconds, timeout_s)) or any(
-            not math.isfinite(value) or value <= 0 for value in numbers):
+        not math.isfinite(value) or value <= 0 for value in numbers
+    ):
         raise ValueError("rate, seconds and timeout must be finite and positive")
     if isinstance(concurrency, bool) or not isinstance(concurrency, Integral) or concurrency < 1:
         raise ValueError("concurrency must be a positive integer")
@@ -70,8 +82,11 @@ def validate_output_destination(path):
 
 
 def finite_latency(value):
-    return (float(value) if isinstance(value, (int, float)) and not isinstance(value, bool)
-            and math.isfinite(value) and value >= 0 else None)
+    return (
+        float(value)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0
+        else None
+    )
 
 
 def verdict_outcome(result):
@@ -115,7 +130,8 @@ async def wait_until(arrival):
 
 async def run_http(url, key, *, rate, seconds=5.0, concurrency=32, timeout_s=2.0):
     rate, seconds, concurrency, timeout_s, count = validate_run_parameters(
-        rate=rate, seconds=seconds, concurrency=concurrency, timeout_s=timeout_s)
+        rate=rate, seconds=seconds, concurrency=concurrency, timeout_s=timeout_s
+    )
     run_id = uuid.uuid4().hex[:12]
     status, decisions, ingest = Counter(), Counter(), Counter()
     outcomes = Counter({name: 0 for name in _OUTCOMES})
@@ -137,16 +153,25 @@ async def run_http(url, key, *, rate, seconds=5.0, concurrency=32, timeout_s=2.0
             nonlocal fail_open, pending_responses, scored_responses, unexpected_enforce
             nonlocal http_within, server_within, scored_http_within
             event = {
-                "event_id": f"HTTPBENCH-{run_id}-{index}", "call_id": f"HTTPBENCH-{run_id}-{index}",
-                "event_type": "CALL", "ts": epoch + index / rate,
-                "caller": f"849{index % 1000:08d}", "callee": f"843{(index + 1) % 1000:08d}",
-                "cell_id": "HN-0001", "imei": f"35391110{index % 1000:07d}",
-                "origin_trunk": "LOCAL", "network": "4G", "caller_age_days": 500,
+                "event_id": f"HTTPBENCH-{run_id}-{index}",
+                "call_id": f"HTTPBENCH-{run_id}-{index}",
+                "event_type": "CALL",
+                "ts": epoch + index / rate,
+                "caller": f"849{index % 1000:08d}",
+                "callee": f"843{(index + 1) % 1000:08d}",
+                "cell_id": "HN-0001",
+                "imei": f"35391110{index % 1000:07d}",
+                "origin_trunk": "LOCAL",
+                "network": "4G",
+                "caller_age_days": 500,
             }
             body = json.dumps(event, sort_keys=True, separators=(",", ":")).encode()
             timestamp = network_timestamp()
-            headers = {"content-type": "application/json", "x-timestamp": timestamp,
-                       "x-signature": sign_network(body, timestamp, key)}
+            headers = {
+                "content-type": "application/json",
+                "x-timestamp": timestamp,
+                "x-signature": sign_network(body, timestamp, key),
+            }
             request_start = time.perf_counter()
             queue_delays.append(max(0.0, (request_start - arrival) * 1000))
             received_response, outcome = False, None
@@ -179,8 +204,10 @@ async def run_http(url, key, *, rate, seconds=5.0, concurrency=32, timeout_s=2.0
                             server_queue_latencies.append(queue)
                         fail_open += int(bool(result.get("fail_open")))
                         pending_responses += int(bool(result.get("pending")))
-                        scored_responses += int(result.get("scored") is True or (
-                            result.get("scored_before_deadline") is True and result.get("scored") is not False))
+                        scored_responses += int(
+                            result.get("scored") is True
+                            or (result.get("scored_before_deadline") is True and result.get("scored") is not False)
+                        )
                         unexpected_enforce += int(result.get("mode") == "enforce")
                         outcome = verdict_outcome(result)
             except httpx.HTTPError:
@@ -210,8 +237,7 @@ async def run_http(url, key, *, rate, seconds=5.0, concurrency=32, timeout_s=2.0
     outcomes["client_shed"] = shed
 
     def percentiles(values):
-        return {f"p{p}": round(float(np.percentile(values, p)), 3)
-                for p in (50, 95, 99)} if values else {}
+        return {f"p{p}": round(float(np.percentile(values, p)), 3) for p in (50, 95, 99)} if values else {}
 
     def pct(value):
         return round(100 * value / count, 3)
@@ -219,31 +245,50 @@ async def run_http(url, key, *, rate, seconds=5.0, concurrency=32, timeout_s=2.0
     legacy_within = sum(value <= DEADLINE_MS for value in latencies)
     return {
         # Existing keys are retained for comparisons with earlier reports.
-        "kind": "http_end_to_end", "offered_rate_eps": rate, "offered_events": count,
+        "kind": "http_end_to_end",
+        "offered_rate_eps": rate,
+        "offered_events": count,
         "arrival_pacing": ARRIVAL_PACING,
-        "completed_requests": len(latencies), "client_shed": shed, "wall_s": round(wall, 3),
-        "completed_eps": round(len(latencies) / wall, 2), "http_status": dict(status),
-        "decisions": dict(decisions), "ingest": dict(ingest), "fail_open": fail_open,
-        "unexpected_enforce": unexpected_enforce, "latency_ms": percentiles(latencies),
+        "completed_requests": len(latencies),
+        "client_shed": shed,
+        "wall_s": round(wall, 3),
+        "completed_eps": round(len(latencies) / wall, 2),
+        "http_status": dict(status),
+        "decisions": dict(decisions),
+        "ingest": dict(ingest),
+        "fail_open": fail_open,
+        "unexpected_enforce": unexpected_enforce,
+        "latency_ms": percentiles(latencies),
         "scheduler_delay_ms": percentiles(queue_delays),
-        "request_roundtrip_ms": percentiles(roundtrips), "server_reported_latency_ms": percentiles(server_latencies),
+        "request_roundtrip_ms": percentiles(roundtrips),
+        "server_reported_latency_ms": percentiles(server_latencies),
         "responses_within_30ms_pct": pct(legacy_within),
         "note": "all offered requests are denominator; legacy response timing is not proof of model scoring",
         # Deadline success excludes pending/fail-open/errors/shedding/unreported scoring.
-        "deadline_ms": DEADLINE_MS, "denominator": "offered_events", "concurrency": concurrency,
-        "offered_window_s": seconds, "timeout_s": timeout_s, "response_outcomes": dict(outcomes),
-        "scored_responses": scored_responses, "pending_responses": pending_responses,
-        "pending_responses_pct": pct(pending_responses), "fail_open_pct": pct(fail_open),
+        "deadline_ms": DEADLINE_MS,
+        "denominator": "offered_events",
+        "concurrency": concurrency,
+        "offered_window_s": seconds,
+        "timeout_s": timeout_s,
+        "response_outcomes": dict(outcomes),
+        "scored_responses": scored_responses,
+        "pending_responses": pending_responses,
+        "pending_responses_pct": pct(pending_responses),
+        "fail_open_pct": pct(fail_open),
         "scoring_unreported": outcomes["scoring_unreported"],
         "scored_before_deadline": outcomes["scored_before_deadline"],
         "scored_before_deadline_pct": pct(outcomes["scored_before_deadline"]),
-        "scored_within_http_30ms": scored_http_within, "scored_within_http_30ms_pct": pct(scored_http_within),
-        "http_responses_within_30ms": http_within, "http_responses_within_30ms_pct": pct(http_within),
-        "server_responses_within_30ms": server_within, "server_responses_within_30ms_pct": pct(server_within),
-        "server_commit_ms": percentiles(commit_latencies), "server_queue_ms": percentiles(server_queue_latencies),
+        "scored_within_http_30ms": scored_http_within,
+        "scored_within_http_30ms_pct": pct(scored_http_within),
+        "http_responses_within_30ms": http_within,
+        "http_responses_within_30ms_pct": pct(http_within),
+        "server_responses_within_30ms": server_within,
+        "server_responses_within_30ms_pct": pct(server_within),
+        "server_commit_ms": percentiles(commit_latencies),
+        "server_queue_ms": percentiles(server_queue_latencies),
         "metric_definitions": {
             "scored_before_deadline": "2xx verdict; explicit scored deadline flag preferred, otherwise scored=true; "
-                "not pending/fail_open; finite server latency <=30ms",
+            "not pending/fail_open; finite server latency <=30ms",
             "scored_within_http_30ms": "scored_before_deadline plus arrival-to-completed-HTTP-response <=30ms",
             "responses_within_30ms_pct": "legacy timing of completed attempts, including quick errors; not scored success",
             "response_outcomes": "mutually exclusive categories summing to offered_events; pending/fail_open counters overlap",
@@ -270,8 +315,10 @@ def main(argv=None):
             raise ValueError("network key must contain 32 bytes encoded as hex")
     except (OSError, ValueError) as error:
         parser.error(str(error))
-    reports = [run_async(run_http(args.url, key, rate=rate, seconds=args.seconds,
-                                    concurrency=args.concurrency)) for rate in rates]
+    reports = [
+        run_async(run_http(args.url, key, rate=rate, seconds=args.seconds, concurrency=args.concurrency))
+        for rate in rates
+    ]
     content = json.dumps({"runs": reports}, indent=2)
     if args.out:
         with args.out.open("x", encoding="utf-8") as destination:

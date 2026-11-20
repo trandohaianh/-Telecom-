@@ -1,4 +1,5 @@
 """Append durable decisions to the existing SHA-256 JSONL evidence format."""
+
 from __future__ import annotations
 
 import hashlib
@@ -14,6 +15,7 @@ from evidence import GENESIS, verify
 def _env_seconds(name, default, lo, hi):
     """Finite float from the environment within [lo, hi]; anything else is a configuration error."""
     import math
+
     raw = os.environ.get(name)
     if raw is None:
         return default
@@ -72,6 +74,7 @@ class DurableEvidenceLog:
         self._validate_acknowledged_evidence()
         if self.store_id is None:
             import uuid
+
             self.store_id = uuid.uuid4().hex
             state.set("store_id", self.store_id)
         if policy is None:
@@ -82,8 +85,8 @@ class DurableEvidenceLog:
 
     def _eligible(self, seq, record):
         return "decision" in record and (
-            record.get("decision") != "ALLOW" or record.get("fail_open")
-            or seq % self.sample_allow_every == 0)
+            record.get("decision") != "ALLOW" or record.get("fail_open") or seq % self.sample_allow_every == 0
+        )
 
     def _validate_acknowledged_evidence(self):
         after = 0
@@ -95,7 +98,8 @@ class DurableEvidenceLog:
                     if self.store_id is None or ref not in self._exported:
                         raise RuntimeError(
                             f"acknowledged evidence is missing at journal sequence {seq}; "
-                            "preserve the database and log for investigation")
+                            "preserve the database and log for investigation"
+                        )
             if len(rows) < 1000:
                 return
             after = rows[-1][0]
@@ -117,8 +121,12 @@ class DurableEvidenceLog:
     def _append(self, fh, record):
         payload = json.dumps(record, ensure_ascii=False, sort_keys=True, default=str, allow_nan=False)
         digest = hashlib.sha256((self.prev + payload).encode("utf-8")).hexdigest()
-        fh.write(json.dumps({"prev": self.prev, "hash": digest, "record": record},
-                            ensure_ascii=False, default=str, allow_nan=False) + "\n")
+        fh.write(
+            json.dumps(
+                {"prev": self.prev, "hash": digest, "record": record}, ensure_ascii=False, default=str, allow_nan=False
+            )
+            + "\n"
+        )
         self.prev = digest
         self.written += 1
 
@@ -131,7 +139,7 @@ class DurableEvidenceLog:
         fh.close()
         os.replace(self.path, self.rotated_path())
         self.prev = GENESIS
-        self._exported.clear()          # refs of the rotated file; also bounds memory in a long demo run
+        self._exported.clear()  # refs of the rotated file; also bounds memory in a long demo run
         self.rotations += 1
         return self.path.open("a", encoding="utf-8")
 
@@ -161,8 +169,11 @@ class DurableEvidenceLog:
                 else:
                     fh.flush()
                 queued = self.state.queue_evidence_ack(handled) if handled else 0
-                if queued >= 1000 or self._stop.is_set() or (
-                        not rows and time.monotonic() - self._last_ack_flush >= 1.0):
+                if (
+                    queued >= 1000
+                    or self._stop.is_set()
+                    or (not rows and time.monotonic() - self._last_ack_flush >= 1.0)
+                ):
                     self.state.flush_evidence_acks()
                     self._last_ack_flush = time.monotonic()
                 if self.rotate_bytes and fh.tell() >= self.rotate_bytes and not handled:

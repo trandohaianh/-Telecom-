@@ -2,6 +2,7 @@
 
 No trained model is needed: counted feature state isolates persistence and concurrency behavior.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -19,9 +20,19 @@ from resilience import GuardedDetector
 
 
 def event(identity="ATOMIC-1", ts=100.0):
-    return {"event_id": identity, "call_id": identity, "event_type": "CALL", "ts": float(ts),
-            "caller": "84910000001", "callee": "84910000002", "cell_id": "HN-0001",
-            "imei": "35391110000001", "origin_trunk": "LOCAL", "network": "4G", "caller_age_days": 500}
+    return {
+        "event_id": identity,
+        "call_id": identity,
+        "event_type": "CALL",
+        "ts": float(ts),
+        "caller": "84910000001",
+        "callee": "84910000002",
+        "cell_id": "HN-0001",
+        "imei": "35391110000001",
+        "origin_trunk": "LOCAL",
+        "network": "4G",
+        "caller_age_days": 500,
+    }
 
 
 class CountedFeatures:
@@ -60,10 +71,21 @@ class CountedDetector:
         for ev in events:
             values = self.fs.call_features(ev)
             self.scored_ids.append(ev["event_id"])
-            results.append({"event_id": ev["event_id"], "event_type": ev["event_type"], "ts": ev["ts"],
-                            "party": ev["caller"], "counterparty": ev["callee"], "decision": "BLOCK",
-                            "risk": 0.99, "reasons": [], "evidence_features": values,
-                            "action_vi": "", "action_en": ""})
+            results.append(
+                {
+                    "event_id": ev["event_id"],
+                    "event_type": ev["event_type"],
+                    "ts": ev["ts"],
+                    "party": ev["caller"],
+                    "counterparty": ev["callee"],
+                    "decision": "BLOCK",
+                    "risk": 0.99,
+                    "reasons": [],
+                    "evidence_features": values,
+                    "action_vi": "",
+                    "action_en": "",
+                }
+            )
         return results
 
 
@@ -71,8 +93,9 @@ def create_runtime(directory, *, detector=None, **options):
     state = BackendState(directory / "state.sqlite3")
     detector = detector or CountedDetector()
     guarded = GuardedDetector(detector, budget_ms=1000)
-    runtime = InferenceRuntime(guarded, state=state, checkpoint_every=1_000_000,
-                               checkpoint_interval_s=1_000_000, **options)
+    runtime = InferenceRuntime(
+        guarded, state=state, checkpoint_every=1_000_000, checkpoint_interval_s=1_000_000, **options
+    )
     return runtime, state, detector
 
 
@@ -106,13 +129,15 @@ def install_commit_gate(monkeypatch, state):
 
 def test_one_atomic_commit_publishes_neither_partial_row_callback_nor_future(monkeypatch, tmp_path):
     callbacks = []
-    runtime, state, detector = create_runtime(tmp_path, start=False,
-                                            on_result=lambda ev, result: callbacks.append(dict(result)))
+    runtime, state, detector = create_runtime(
+        tmp_path, start=False, on_result=lambda ev, result: callbacks.append(dict(result))
+    )
     observer = observer_for(state)
     reached, release = install_commit_gate(monkeypatch, state)
     commits = []
     state.db.set_trace_callback(lambda sql: commits.append(sql) if sql.strip().upper() == "COMMIT" else None)
     try:
+
         async def exercise():
             task = asyncio.create_task(runtime.submit("VERDICT", event(), budget_ms=2000))
             runtime.start()
@@ -126,6 +151,7 @@ def test_one_atomic_commit_publishes_neither_partial_row_callback_nor_future(mon
             rows = completed_rows(observer)
             assert len(rows) == 1 and json.loads(rows[0][1])["model_decision"] == "BLOCK"
             assert len(commits) == 1
+
         asyncio.run(exercise())
     finally:
         release.set()
@@ -139,6 +165,7 @@ def test_commit_past_http_deadline_never_rearms_cached_block(monkeypatch, tmp_pa
     observer = observer_for(state)
     reached, release = install_commit_gate(monkeypatch, state)
     try:
+
         async def exercise():
             task = asyncio.create_task(runtime.submit("VERDICT", event(), budget_ms=30))
             runtime.start()
@@ -157,6 +184,7 @@ def test_commit_past_http_deadline_never_rearms_cached_block(monkeypatch, tmp_pa
             assert repeated["duplicate"]
             assert repeated["scored_before_deadline"] is False
             assert detector.fs.calls == 1
+
         asyncio.run(exercise())
     finally:
         release.set()
@@ -202,15 +230,17 @@ def test_aborted_commit_leaves_no_ghost_checkpoint_and_retry_updates_once(monkey
 
 
 def test_ready_backlog_is_drained_in_one_full_transaction(tmp_path):
-    runtime, state, detector = create_runtime(tmp_path, start=False, capacity=32,
-                                            batch_size=16, batch_wait_ms=0)
+    runtime, state, detector = create_runtime(tmp_path, start=False, capacity=32, batch_size=16, batch_wait_ms=0)
     observer = observer_for(state)
     commits = []
     state.db.set_trace_callback(lambda sql: commits.append(sql) if sql.strip().upper() == "COMMIT" else None)
     try:
+
         async def exercise():
-            jobs = [asyncio.create_task(runtime.submit("VERDICT", event(f"BATCH-{i}", 100+i), budget_ms=5000))
-                    for i in range(8)]
+            jobs = [
+                asyncio.create_task(runtime.submit("VERDICT", event(f"BATCH-{i}", 100 + i), budget_ms=5000))
+                for i in range(8)
+            ]
             for _ in range(1000):
                 if runtime.queue.qsize() == len(jobs):
                     break
@@ -223,6 +253,7 @@ def test_ready_backlog_is_drained_in_one_full_transaction(tmp_path):
             rows = completed_rows(observer)
             assert len(rows) == 8 and all(payload is not None for _, payload in rows)
             assert len(commits) == 1
+
         asyncio.run(exercise())
     finally:
         runtime.close()
@@ -238,10 +269,12 @@ def test_post_commit_callback_can_take_execution_lock_and_read_store_from_anothe
     def callback(ev, result):
         read_finished = threading.Event()
         observed = []
+
         def reader():
             with holder["runtime"].execution_lock:
                 observed.extend(holder["state"].journal_after(0))
             read_finished.set()
+
         thread = threading.Thread(target=reader, daemon=True)
         thread.start()
         finished = read_finished.wait(timeout=0.5)
@@ -260,13 +293,17 @@ def test_post_commit_callback_can_take_execution_lock_and_read_store_from_anothe
         runtime.close()
         state.close()
 
+
 def test_deny_learning_deltas_reconstruct_exact_updates_and_evictions():
     from resilience import FallbackRules
+
     fallback = FallbackRules(max_entries=3)
     replayed = {}
-    inputs = [dict(event("A", 100), caller="A", imei="I1"),
-              dict(event("B", 101), caller="B", imei="I2"),
-              dict(event("A2", 102), caller="A", imei="I1")]
+    inputs = [
+        dict(event("A", 100), caller="A", imei="I1"),
+        dict(event("B", 101), caller="B", imei="I2"),
+        dict(event("A2", 102), caller="A", imei="I1"),
+    ]
     evictions = []
     for ev in inputs:
         result = {"decision": "BLOCK"}
@@ -287,6 +324,7 @@ def test_deny_learning_deltas_reconstruct_exact_updates_and_evictions():
 
 def test_explicit_deny_noops_preserve_allow_protected_and_fail_open_semantics():
     from resilience import FallbackRules
+
     fallback = FallbackRules()
     ev = event()
     for result in ({"decision": "ALLOW"}, {"decision": "BLOCK", "fail_open": True}):

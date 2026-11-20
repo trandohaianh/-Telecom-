@@ -4,6 +4,7 @@ scikit-learn scores one tree at a time with Python overhead per tree, which cost
 event at our batch sizes. Here every tree is flattened into padded arrays and all trees are
 walked simultaneously with NumPy, giving identical scores (verified in tests) ~20x faster.
 """
+
 import numpy as np
 
 try:
@@ -55,7 +56,7 @@ class FastIForest:
         self.threshold = np.zeros((T, M))
         self.left = np.full((T, M), -1, dtype=np.int64)
         self.right = np.full((T, M), -1, dtype=np.int64)
-        self.leaf_value = np.zeros((T, M))          # depth + c(n_samples) at leaves
+        self.leaf_value = np.zeros((T, M))  # depth + c(n_samples) at leaves
         for k, (est, fsub) in enumerate(zip(trees, feats_sub)):
             tr = est.tree_
             n = tr.node_count
@@ -100,8 +101,14 @@ class FastIForest:
             # as mean normalized depth one, hence anomaly score 0.5.
             return np.full(X.shape[0], 0.5)
         if _walk is not None:
-            depth = _walk(np.ascontiguousarray(X, dtype=np.float64), self.feature, self.threshold,
-                          self.left, self.right, self.leaf_value)
+            depth = _walk(
+                np.ascontiguousarray(X, dtype=np.float64),
+                self.feature,
+                self.threshold,
+                self.left,
+                self.right,
+                self.leaf_value,
+            )
             return 2.0 ** (-depth / self.denom)
         return self._score_numpy(X)
 

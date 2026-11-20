@@ -2,6 +2,7 @@
 
 Run: python -B -m pytest -q tests/test_round7_readiness.py
 """
+
 import json
 import re
 import sqlite3
@@ -22,18 +23,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def read(rel):
     from _pages import page_source  # HTML + the page's local .js files (scripts moved out for the CSP)
+
     return page_source(rel)
 
 
 # =========================================================================== backend
 def test_push_key_returns_503_not_500_when_key_dir_is_read_only(env, monkeypatch, tmp_path):  # noqa: F811
     import push
+
     blocker = tmp_path / "not-a-dir"
     blocker.write_text("x", encoding="utf-8")
-    monkeypatch.setattr(push, "KEY_FILE", blocker / "secrets" / "vapid.pem")   # parent is a file -> OSError
+    monkeypatch.setattr(push, "KEY_FILE", blocker / "secrets" / "vapid.pem")  # parent is a file -> OSError
     c, _, _ = env
     r = c.get("/api/app/push/key")
-    assert r.status_code == 503          # disabled with a message; was an unhandled PermissionError (500)
+    assert r.status_code == 503  # disabled with a message; was an unhandled PermissionError (500)
 
 
 def test_container_keeps_the_vapid_key_on_the_state_volume_and_requires_a_manifest():
@@ -55,7 +58,7 @@ def test_misconfigured_otp_provider_fails_fast_and_never_500s_the_login_page(env
     r = c.get("/api/auth/config")
     assert r.status_code == 200 and r.json()["phone_verification"] == "unavailable"
     src = read("src/portal.py").split("def startup", 1)[1].split("\ndef ", 1)[0]
-    assert "real_otp_provider(demo=False)" in src      # validated once at start-up
+    assert "real_otp_provider(demo=False)" in src  # validated once at start-up
 
 
 def test_empty_compose_values_mean_default_for_sms_template(monkeypatch):
@@ -72,10 +75,12 @@ def test_empty_compose_values_mean_default_for_sms_template(monkeypatch):
 
 def test_wrong_passwords_from_another_ip_cannot_lock_the_admin_out(env, monkeypatch):  # noqa: F811
     import server
+
     _, _, users = env
     name = next(iter(users))
-    monkeypatch.setattr(security, "login_password",
-                        lambda u, p: ("s", {"name": u, "role": "admin"}, 0) if p == "right" else None)
+    monkeypatch.setattr(
+        security, "login_password", lambda u, p: ("s", {"name": u, "role": "admin"}, 0) if p == "right" else None
+    )
     attacker = TestClient(server.app, client=("203.0.113.9", 4000))
     owner = TestClient(server.app, client=("198.51.100.7", 4000))
     for _ in range(12):
@@ -89,13 +94,19 @@ def test_wrong_passwords_from_another_ip_cannot_lock_the_admin_out(env, monkeypa
 
 def test_subscriber_lockout_counts_only_failures_per_ip(env):  # noqa: F811
     import server
+
     c, _, _ = env
     _register(c, "lock@example.com", "dung-mat-khau-1")
     attacker = TestClient(server.app, client=("203.0.113.10", 4000))
     for _ in range(11):
         attacker.post("/api/app/auth/login", json={"email": "lock@example.com", "password": "sai-mat-khau-x"})
     victim = TestClient(server.app, client=("198.51.100.8", 4000))
-    assert victim.post("/api/app/auth/login", json={"email": "lock@example.com", "password": "dung-mat-khau-1"}).status_code == 200
+    assert (
+        victim.post(
+            "/api/app/auth/login", json={"email": "lock@example.com", "password": "dung-mat-khau-1"}
+        ).status_code
+        == 200
+    )
 
 
 def test_oversized_bodies_are_refused_before_any_route_reads_them(env):  # noqa: F811
@@ -107,14 +118,19 @@ def test_oversized_bodies_are_refused_before_any_route_reads_them(env):  # noqa:
     def chunks():
         for _ in range(40):
             yield b"y" * 65536
-    assert c.post("/api/app/auth/login", content=chunks(), headers={"content-type": "application/json"}).status_code == 413
+
+    assert (
+        c.post("/api/app/auth/login", content=chunks(), headers={"content-type": "application/json"}).status_code == 413
+    )
     import http_hardening
+
     mw = http_hardening.BodyLimitMiddleware(None, max_bytes=4096, large_bytes=10 << 20)
     assert mw._limit("/api/v1/audio") == 10 << 20 and mw._limit("/api/login") == 4096
 
 
 def test_invalid_body_limit_setting_is_rejected(monkeypatch):
     import http_hardening
+
     for bad in ("abc", "10", str(1 << 30)):
         monkeypatch.setenv("FRAUD_MAX_BODY_BYTES", bad)
         with pytest.raises(ValueError):
@@ -123,15 +139,17 @@ def test_invalid_body_limit_setting_is_rejected(monkeypatch):
 
 def test_security_headers_on_normal_and_unhandled_error_responses(env, monkeypatch):  # noqa: F811
     import server
+
     c, _, _ = env
     r = c.get("/health/live")
     assert r.headers["referrer-policy"] == "same-origin" and "object-src 'none'" in r.headers["content-security-policy"]
-    assert "strict-transport-security" not in r.headers                         # plain http
+    assert "strict-transport-security" not in r.headers  # plain http
     hs = TestClient(server.app, base_url="https://testserver").get("/health/live")
     assert hs.headers["strict-transport-security"].startswith("max-age=")
 
     def boom():
         raise RuntimeError("secret internal detail")
+
     server.app.add_api_route("/__test_boom", boom)
     try:
         r = TestClient(server.app, raise_server_exceptions=False).get("/__test_boom")
@@ -161,14 +179,15 @@ def test_non_ascii_credentials_are_a_401_not_a_500(env):  # noqa: F811
 
 def test_audit_page_size_is_bounded():
     src = read("src/server.py")
-    assert "def api_audit(n: int = Query(default=20, ge=1, le=500)" in src
+    assert "n: int = Query(default=20, ge=1, le=500)" in src.split("def api_audit(", 1)[1].split(")", 1)[0] + ")"
 
 
 def test_evidence_tail_skips_a_torn_last_line(tmp_path):
     import server
+
     p = tmp_path / "ev.jsonl"
     rows = [json.dumps({"prev": "0", "hash": str(i), "record": {"i": i}}) for i in range(300)]
-    p.write_text("\n".join(rows) + "\n" + '{"prev": "x", "hash"', encoding="utf-8")   # writer mid-line
+    p.write_text("\n".join(rows) + "\n" + '{"prev": "x", "hash"', encoding="utf-8")  # writer mid-line
     got = server._tail_evidence(p, 5, chunk=256)
     assert [r["record"]["i"] for r in got] == [295, 296, 297, 298, 299]
     assert server._tail_evidence(tmp_path / "missing.jsonl", 5) == []
@@ -176,6 +195,7 @@ def test_evidence_tail_skips_a_torn_last_line(tmp_path):
 
 def test_malformed_pipeline_schedule_fails_at_start(monkeypatch):
     import ops_pipeline
+
     assert ops_pipeline.parse_daily_at("02:30") == (2, 30)
     for bad in ("2:61", "25:00", "noon", "1"):
         with pytest.raises(ValueError):
@@ -187,11 +207,12 @@ def test_malformed_pipeline_schedule_fails_at_start(monkeypatch):
 
 def test_app_db_migrations_add_indexes_to_existing_databases(tmp_path):
     from appdb import MIGRATIONS
+
     path = tmp_path / "old.sqlite3"
     AppDB(path)
     con = sqlite3.connect(path)
     con.execute("DROP INDEX ix_push_sub")
-    con.execute("PRAGMA user_version=0")          # an old database created before migrations existed
+    con.execute("PRAGMA user_version=0")  # an old database created before migrations existed
     con.commit()
     con.close()
     AppDB(path)
@@ -206,8 +227,17 @@ def test_app_db_migrations_add_indexes_to_existing_databases(tmp_path):
 def test_compose_forwards_documented_settings_and_rotates_logs():
     compose = yaml.safe_load(read("deploy/cloud/docker-compose.yml"))
     env_ = compose["services"]["telecom"]["environment"]
-    for name in ("FRAUD_REAL_TRAFFIC_VALIDATED", "FRAUD_SMS_HTTP_URL", "FRAUD_SMS_HTTP_TOKEN_FILE", "FRAUD_SMS_HTTP_BODY",
-                 "FRAUD_SMS_BRANDNAME", "FRAUD_PUSH", "FRAUD_VAPID_SUBJECT", "FRAUD_SQLITE_SYNCHRONOUS", "LOG_LEVEL"):
+    for name in (
+        "FRAUD_REAL_TRAFFIC_VALIDATED",
+        "FRAUD_SMS_HTTP_URL",
+        "FRAUD_SMS_HTTP_TOKEN_FILE",
+        "FRAUD_SMS_HTTP_BODY",
+        "FRAUD_SMS_BRANDNAME",
+        "FRAUD_PUSH",
+        "FRAUD_VAPID_SUBJECT",
+        "FRAUD_SQLITE_SYNCHRONOUS",
+        "LOG_LEVEL",
+    ):
         assert name in env_, name
     assert env_["FRAUD_SQLITE_SYNCHRONOUS"].endswith(":-FULL}")
     assert compose["services"]["telecom"]["logging"]["options"]["max-size"] == "10m"
@@ -282,11 +312,11 @@ def test_manage_page_escapes_and_encodes_and_never_fails_silently():
 def test_demo_mode_insider_lockout_survives_a_restart(env, monkeypatch):  # noqa: F811
     _, _, users = env
     name = next(n for n, u in users.items() if u.get("role") in security.ROLES)
-    monkeypatch.setattr(security, "_session_store", None)                # demo: no durable session store
+    monkeypatch.setattr(security, "_session_store", None)  # demo: no durable session store
     security.suspend(name)
     try:
         saved = json.loads(Path(security.USERS_FILE).read_text(encoding="utf-8"))
-        assert saved[name]["disabled"] is True                            # persisted, not only in RAM
+        assert saved[name]["disabled"] is True  # persisted, not only in RAM
     finally:
         security.suspended.discard(name)
 
@@ -314,10 +344,11 @@ def test_demo_evidence_rotates_and_both_chains_stay_valid(tmp_path):
     from backend_evidence import DurableEvidenceLog
     from backend_state import BackendState
     from evidence import verify
+
     path = tmp_path / "evidence_demo.jsonl"
     log = DurableEvidenceLog(path, BackendState(), rotate_bytes=1 << 20)
     pad = "x" * 900
-    for i in range(1600):                                     # ~1.6 MB of FLAG records
+    for i in range(1600):  # ~1.6 MB of FLAG records
         log.submit({"event_id": f"E{i}", "decision": "FLAG", "pad": pad})
         if i % 200 == 0:
             _t.sleep(0.05)
@@ -336,6 +367,7 @@ def test_demo_evidence_rotates_and_both_chains_stay_valid(tmp_path):
 
 def test_only_demo_mode_rotates_evidence(monkeypatch):
     import server
+
     src = read("src/server.py")
     assert "rotate_bytes=_demo_evidence_cap() if self.demo_mode else None" in src
     assert server._demo_evidence_cap() == 256 << 20

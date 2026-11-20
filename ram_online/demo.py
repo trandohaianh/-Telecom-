@@ -1,4 +1,5 @@
 """Executable simulation. Provision only an explicitly isolated demo namespace."""
+
 import argparse
 import json
 import statistics
@@ -22,11 +23,13 @@ async def main(args):
         await gate.refresh_snapshot(policy_client)
         await lookup_client.ping()
         assert await gate.check_call_allowed(caller) is True
-        detector = SlidingWindowDetector(analytics_client, store, threshold=3,
-            namespace=namespace, activate_demo_blocks=True)
+        detector = SlidingWindowDetector(
+            analytics_client, store, threshold=3, namespace=namespace, activate_demo_blocks=True
+        )
         for index in range(4):
-            result = await detector.process({"caller": caller, "call_id": "call-" + str(index),
-                "setup_ts_ms": time.time_ns() // 1_000_000})
+            result = await detector.process(
+                {"caller": caller, "call_id": "call-" + str(index), "setup_ts_ms": time.time_ns() // 1_000_000}
+            )
         # Gate still has the OLD Bloom: version mismatch must find the new deny.
         assert result["flagged"]
         assert await gate.check_call_allowed(caller) is False
@@ -49,13 +52,22 @@ async def main(args):
             else:
                 incorrect += 1
         ordered = sorted(durations)
-        report = {"namespace": namespace, "samples": args.samples,
-            "correct_within_budget": good, "degraded": degraded, "incorrect": incorrect,
+        report = {
+            "namespace": namespace,
+            "samples": args.samples,
+            "correct_within_budget": good,
+            "degraded": degraded,
+            "incorrect": incorrect,
             "lookup_budget_ms": args.budget_ms,
-            "all_attempt_latency_ms": {"p50": statistics.median(ordered),
-                "p99": ordered[min(len(ordered)-1, int(.99 * len(ordered)))], "max": max(ordered)},
+            "all_attempt_latency_ms": {
+                "p50": statistics.median(ordered),
+                "p99": ordered[min(len(ordered) - 1, int(0.99 * len(ordered)))],
+                "max": max(ordered),
+            },
             "scope": "sequential in-process function + real Redis; no HTTP/SIP load or capacity certification",
-            "bloom_bytes": len(gate.snapshot.bloom.bits), "bloom_hashes": gate.snapshot.bloom.k}
+            "bloom_bytes": len(gate.snapshot.bloom.bits),
+            "bloom_hashes": gate.snapshot.bloom.k,
+        }
         print(json.dumps(report, indent=2))
         if args.out:
             with open(args.out, "x", encoding="utf-8") as target:
@@ -63,8 +75,9 @@ async def main(args):
     finally:
         # Only keys in this unique demonstration namespace.
         await policy_client.delete(store.manifest_key, store.deny_key)
-        await analytics_client.delete("{" + namespace + ":" + caller + "}:calls",
-                                      "{" + namespace + ":" + caller + "}:frontier")
+        await analytics_client.delete(
+            "{" + namespace + ":" + caller + "}:calls", "{" + namespace + ":" + caller + "}:frontier"
+        )
         await policy_client.aclose()
         await analytics_client.aclose()
         await lookup_client.aclose()

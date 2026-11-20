@@ -1,4 +1,5 @@
 """Session attribution and uncertainty regression tests; no model training required."""
+
 import sys
 from pathlib import Path
 
@@ -38,12 +39,15 @@ def test_legacy_audio_is_bound_to_latest_preceding_call_within_its_duration():
     assert report["legacy_linkage_used"]
 
 
-@pytest.mark.parametrize("audio,reason", [
-    (event("AUDIO", 10, "unknown"), "unknown_call_id"),
-    (event("AUDIO", -1, "first"), "audio_before_setup"),
-    (event("AUDIO", 100, "first"), "audio_after_call_end"),
-    (event("AUDIO", 10, "first", caller="C"), "parties_mismatch"),
-])
+@pytest.mark.parametrize(
+    "audio,reason",
+    [
+        (event("AUDIO", 10, "unknown"), "unknown_call_id"),
+        (event("AUDIO", -1, "first"), "audio_before_setup"),
+        (event("AUDIO", 100, "first"), "audio_after_call_end"),
+        (event("AUDIO", 10, "first", caller="C"), "parties_mismatch"),
+    ],
+)
 def test_invalid_linkage_never_upgrades_a_call(audio, reason):
     final, links, report = session_outcomes([event("CALL", 0, "first"), audio], decisions("ALLOW", "BLOCK"))
     assert final[0] == "ALLOW" and not links
@@ -84,6 +88,7 @@ def test_same_timestamp_audio_before_setup_does_not_gain_future_evidence():
 
 def test_unscored_rejections_are_excluded_from_headline_metrics():
     from evaluate import metrics
+
     events = [event("CALL", 0, "scored", label=0), event("CALL", 100, "late", label=0)]
     results = [dict(decision="ALLOW", scored=True), dict(decision="ALLOW", scored=False, ingest="LATE")]
     report = metrics(events, results)

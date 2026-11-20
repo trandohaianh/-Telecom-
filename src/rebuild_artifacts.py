@@ -1,4 +1,5 @@
 """Rebuild a consistent feature/model bundle in a fresh directory; preserve the original baseline."""
+
 from __future__ import annotations
 
 import argparse
@@ -29,17 +30,32 @@ def main():
     for path in (data, models, logs):
         path.mkdir(exist_ok=args.resume)
     source = Path(__file__).resolve().parent
-    env = dict(os.environ, FRAUD_DATA_DIR=str(data), FRAUD_MODEL_DIR=str(models),
-               FRAUD_LOG_DIR=str(logs), FRAUD_MODEL_VERSION=args.model_version,
-               PYTHONDONTWRITEBYTECODE="1", PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1",
-               OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1", MKL_NUM_THREADS="1", NUMBA_NUM_THREADS="1")
+    env = dict(
+        os.environ,
+        FRAUD_DATA_DIR=str(data),
+        FRAUD_MODEL_DIR=str(models),
+        FRAUD_LOG_DIR=str(logs),
+        FRAUD_MODEL_VERSION=args.model_version,
+        PYTHONDONTWRITEBYTECODE="1",
+        PYTHONIOENCODING="utf-8",
+        PYTHONUNBUFFERED="1",
+        OPENBLAS_NUM_THREADS="1",
+        OMP_NUM_THREADS="1",
+        MKL_NUM_THREADS="1",
+        NUMBA_NUM_THREADS="1",
+    )
     stages = ["build_dataset.py", "train.py"]
     if not args.skip_evaluation:
         stages.append("evaluate.py")
     stages.extend(["make_drift_baseline.py", "shadow_run.py"])
-    report = {"model_version": args.model_version, "created_utc": datetime.now(timezone.utc).isoformat(),
-              "output_dir": str(target), "baseline_preserved": True, "stages": [],
-              "traffic_source": "synthetic_simulator"}
+    report = {
+        "model_version": args.model_version,
+        "created_utc": datetime.now(timezone.utc).isoformat(),
+        "output_dir": str(target),
+        "baseline_preserved": True,
+        "stages": [],
+        "traffic_source": "synthetic_simulator",
+    }
     completed = set()
     if args.resume:
         report = json.loads((target / "rebuild_report.json").read_text(encoding="utf-8"))
@@ -48,9 +64,13 @@ def main():
         completed = {item["script"] for item in report["stages"] if item["exit_code"] == 0}
         checks = []
         if "build_dataset.py" in completed:
-            checks.append("from model_manifest import validate_dataset_manifest; from config import DATA_DIR; assert validate_dataset_manifest(DATA_DIR)['status']=='verified'")
+            checks.append(
+                "from model_manifest import validate_dataset_manifest; from config import DATA_DIR; assert validate_dataset_manifest(DATA_DIR)['status']=='verified'"
+            )
         if "train.py" in completed:
-            checks.append("from model_manifest import validate_model_manifest; from config import MODEL_DIR; assert validate_model_manifest(MODEL_DIR,require_manifest=True)['status']=='verified'")
+            checks.append(
+                "from model_manifest import validate_model_manifest; from config import MODEL_DIR; assert validate_model_manifest(MODEL_DIR,require_manifest=True)['status']=='verified'"
+            )
         for check in checks:
             subprocess.run([sys.executable, "-B", "-c", check], cwd=source, env=env, check=True)
     for stage in stages:
@@ -60,10 +80,16 @@ def main():
         print(f"START {stage}", flush=True)
         start = time.perf_counter()
         with (logs / (stage + ".log")).open("w", encoding="utf-8") as stream:
-            process = subprocess.run([sys.executable, "-B", str(source / stage)], cwd=source.parent,
-                                     env=env, stdout=stream, stderr=subprocess.STDOUT)
-        report["stages"].append({"script": stage, "exit_code": process.returncode,
-                                "seconds": round(time.perf_counter() - start, 3)})
+            process = subprocess.run(
+                [sys.executable, "-B", str(source / stage)],
+                cwd=source.parent,
+                env=env,
+                stdout=stream,
+                stderr=subprocess.STDOUT,
+            )
+        report["stages"].append(
+            {"script": stage, "exit_code": process.returncode, "seconds": round(time.perf_counter() - start, 3)}
+        )
         (target / "rebuild_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         if process.returncode:
             raise RuntimeError(f"{stage} failed; inspect {logs / (stage + '.log')}")

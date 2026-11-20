@@ -4,6 +4,7 @@ Bộ đếm tách bạch đúng khuyến nghị audit: số quyết định đã
 từ chối nạp, khuyến nghị gửi nhà mạng theo chế độ shadow/enforce — không gộp fail-open vào ALLOW.
 Nhãn ít giá trị (không có số điện thoại / user) để phù hợp giới hạn 10k series của Grafana Cloud free.
 """
+
 from __future__ import annotations
 
 import hmac
@@ -15,8 +16,12 @@ from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, Counter, Histogram,
 from prometheus_client.core import GaugeMetricFamily
 
 HTTP_REQUESTS = Counter("tfs_http_requests_total", "HTTP requests", ["method", "route", "status"])
-HTTP_LATENCY = Histogram("tfs_http_request_duration_seconds", "HTTP latency by route template", ["route"],
-                         buckets=(0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5))
+HTTP_LATENCY = Histogram(
+    "tfs_http_request_duration_seconds",
+    "HTTP latency by route template",
+    ["route"],
+    buckets=(0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5),
+)
 AUTH_EVENTS = Counter("tfs_auth_events_total", "Authentication events", ["actor", "event", "result"])
 USAGE_UNITS = Counter("tfs_usage_units_total", "Billable external usage units", ["kind"])
 USAGE_COST = Counter("tfs_usage_cost_usd_total", "Billable external usage cost (USD)", ["kind"])
@@ -55,8 +60,15 @@ class EngineCollector:
                 for k, v in (st.get("resilience") or {}).items():
                     if isinstance(v, (int, float)) and k not in ("rescore_capacity",):
                         resilience.add_metric([k], float(v))
-                for k in ("overloaded", "admission_rejected", "duplicates", "http_timeouts", "worker_errors",
-                          "committed_events", "max_commit_ms"):
+                for k in (
+                    "overloaded",
+                    "admission_rejected",
+                    "duplicates",
+                    "http_timeouts",
+                    "worker_errors",
+                    "committed_events",
+                    "max_commit_ms",
+                ):
                     inference.add_metric([k], float((st.get("inference") or {}).get(k, 0) or 0))
                 inf = st.get("inference") or {}
                 queue.add_metric(["size"], float(inf.get("queue_size", 0) or 0))
@@ -72,8 +84,20 @@ class EngineCollector:
                     unscored.add_metric([k], float(v))
             except Exception:
                 pass
-        yield from (decisions, by_type, processed, resilience, inference, queue, breaker, mode, network, latency, uptime,
-                   unscored)
+        yield from (
+            decisions,
+            by_type,
+            processed,
+            resilience,
+            inference,
+            queue,
+            breaker,
+            mode,
+            network,
+            latency,
+            uptime,
+            unscored,
+        )
 
         subs = g("tfs_subscribers", "Tài khoản thuê bao")
         reports = g("tfs_number_reports", "Báo cáo số theo trạng thái", ["status"])
@@ -94,7 +118,9 @@ class EngineCollector:
                         last_ok.add_metric([r["job"]], float(r["ok_at"]))
                     if r["last"]:
                         last_status.add_metric([r["job"]], {"ok": 1.0, "warn": 0.5}.get(r["last"], 0.0))
-                k = db.one("SELECT drift_max_psi FROM kpi_snapshots WHERE drift_max_psi IS NOT NULL ORDER BY id DESC LIMIT 1")
+                k = db.one(
+                    "SELECT drift_max_psi FROM kpi_snapshots WHERE drift_max_psi IS NOT NULL ORDER BY id DESC LIMIT 1"
+                )
                 if k:
                     drift.add_metric([], float(k["drift_max_psi"]))
             except Exception:

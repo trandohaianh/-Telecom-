@@ -1,4 +1,5 @@
 """Generate train / validation / independent test windows and extract features with the runtime feature store."""
+
 import json
 import time
 
@@ -78,7 +79,9 @@ if __name__ == "__main__":
     summary, artifacts = {}, []
     for name, (seed, hours, start, kind, warm_h) in WINDOWS.items():
         t = time.time()
-        warm, ev = make_window(name, seed, hours, start, kind, limit=50_000 if name == "test" else None, warmup_hours=warm_h)
+        warm, ev = make_window(
+            name, seed, hours, start, kind, limit=50_000 if name == "test" else None, warmup_hours=warm_h
+        )
         raw = pd.DataFrame(ev)
         raw_path = DATA_DIR / (f"{name}_events.csv.gz" if name != "test" else "test_events_50k.csv")
         raw.to_csv(raw_path, index=False)
@@ -93,11 +96,13 @@ if __name__ == "__main__":
             df.to_parquet(feature_path, index=False)
             artifacts.append(feature_path)
         summary[name] = {
-            "events": len(ev), "fraud_events": int(raw["label"].sum()),
+            "events": len(ev),
+            "fraud_events": int(raw["label"].sum()),
             "fraud_rate_pct": round(100 * raw["label"].mean(), 4),
             "by_type": raw.groupby("event_type").size().to_dict(),
             "fraud_by_family": raw[raw.label == 1].groupby("fraud_type").size().to_dict(),
-            "warmup_events": len(warm), "seconds": round(time.time() - t, 1),
+            "warmup_events": len(warm),
+            "seconds": round(time.time() - t, 1),
         }
         print(name, summary[name])
     summary_path = DATA_DIR / "dataset_summary.json"

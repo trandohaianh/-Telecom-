@@ -3,6 +3,7 @@
 Events are scored in micro-batches: features are computed sequentially (they depend on the
 stream state), model inference is vectorised per batch. A batch of 1 is the single-event path.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,13 +24,18 @@ from model_manifest import validate_model_manifest
 # ACTIONS ánh xạ cặp (event_type, decision) sang nhãn tiếng Việt/Anh để UI và operator hiểu hành động.
 ACTIONS = {
     ("CALL", "BLOCK"): ("Từ chối thiết lập cuộc gọi trước khi đổ chuông", "Reject call set-up before the phone rings"),
-    ("CALL", "FLAG"): ("Cho qua + chuyển Tier 2 giám sát trong cuộc gọi + hàng chờ chuyên viên",
-                       "Allow + Tier-2 in-call monitoring + analyst queue"),
+    ("CALL", "FLAG"): (
+        "Cho qua + chuyển Tier 2 giám sát trong cuộc gọi + hàng chờ chuyên viên",
+        "Allow + Tier-2 in-call monitoring + analyst queue",
+    ),
     ("CALL", "ALLOW"): ("Cho phép", "Allow"),
     ("SMS", "BLOCK"): ("Chặn & cách ly tin nhắn", "Drop and quarantine the SMS"),
     ("SMS", "FLAG"): ("Giao kèm nhãn cảnh báo lừa đảo", "Deliver with a scam-warning label"),
     ("SMS", "ALLOW"): ("Cho phép", "Allow"),
-    ("AUDIO", "BLOCK"): ("Ngắt cuộc gọi + gửi SMS cảnh báo cho người nhận", "Disconnect + send a warning SMS to the callee"),
+    ("AUDIO", "BLOCK"): (
+        "Ngắt cuộc gọi + gửi SMS cảnh báo cho người nhận",
+        "Disconnect + send a warning SMS to the callee",
+    ),
     ("AUDIO", "FLAG"): ("Phát âm báo cảnh báo trong cuộc gọi", "Play an in-call warning tone"),
     ("AUDIO", "ALLOW"): ("Cho phép", "Allow"),
 }
@@ -47,6 +53,7 @@ sys.setswitchinterval(0.001)
 SMS_META_SCALE = np.array([1, 1, 1, 1, 1, 3, 1, 1, 20.0])
 try:
     import numba
+
     numba.set_num_threads(PREDICT_THREADS)
 except Exception:  # noqa: BLE001 - numba is optional (FastIForest falls back to NumPy)
     pass
@@ -62,13 +69,17 @@ HARVEST_WINDOW_S = 3600
 # thiếu thì hạ xuống cảnh báo (cuộc gọi vẫn đi, có giám sát tầng 2). Đây là chỗ đổi một ít recall lấy "không chặn nhầm".
 def has_behavioural_evidence(f) -> bool:
     return bool(
-        f["protected_cli_mismatch"] or f["cell_unknown_radio"] or f["imei_gateway_tac"]
-        or f["msisdn_per_imei_24h"] >= 2 or f["imei_per_msisdn_24h"] >= 2      # nhiều SIM / nhiều máy (SIM box)
-        or f["calls_10m"] >= 5 or f["calls_1h"] >= 12                          # gọi dồn dập
-        or (f["completed_calls_seen"] >= 3 and f["short_call_ratio"] >= 0.6)   # đã thấy nhiều cuộc cực ngắn
+        f["protected_cli_mismatch"]
+        or f["cell_unknown_radio"]
+        or f["imei_gateway_tac"]
+        or f["msisdn_per_imei_24h"] >= 2
+        or f["imei_per_msisdn_24h"] >= 2  # nhiều SIM / nhiều máy (SIM box)
+        or f["calls_10m"] >= 5
+        or f["calls_1h"] >= 12  # gọi dồn dập
+        or (f["completed_calls_seen"] >= 3 and f["short_call_ratio"] >= 0.6)  # đã thấy nhiều cuộc cực ngắn
         # cụm SIM mới cùng một trạm: ở trạm đông người, 3-5 SIM mới trong 1 giờ là bình thường -> cần cụm lớn VÀ số này gọi liền
         or (f["new_sims_on_cell_1h"] >= 6 and f["calls_10m"] >= 2)
-        or f["velocity_kmh"] >= 300                                            # di chuyển phi lý
+        or f["velocity_kmh"] >= 300  # di chuyển phi lý
         # >= 3 SIM mới cùng trạm cùng hồ sơ farm: 0 sự kiện sạch trên 430 nghìn sự kiện train/val/cal
         or f.get("farm_cell_sims_1h", 0) >= FARM_EVIDENCE_SIMS
     )
@@ -83,7 +94,9 @@ FARM_EVIDENCE_SIMS = 3
 # Detector là entry point chính: đọc feature store, chạy mô hình và sinh quyết định + lý do giải thích.
 class Detector:
     # Khởi tạo mô hình tier 1, tier 2, zero-day và cấu hình feature store/ingest guard cho batch scoring.
-    def __init__(self, model_dir=MODEL_DIR, guard=None, shadow=False, ledger=None, keep_features=False, require_manifest=False):
+    def __init__(
+        self, model_dir=MODEL_DIR, guard=None, shadow=False, ledger=None, keep_features=False, require_manifest=False
+    ):
         # guard  : an IngestGuard, or None to keep the raw file-replay behaviour
         # shadow : score and record decisions but never enforce them (pre-production mode)
         # ledger : an ActionLedger, so a replayed decision is executed at most once
@@ -103,9 +116,10 @@ class Detector:
         self.iso_med = np.array([z["median"][f] for f in self.iso_feats])
         self.iso_iqr = np.array([z["iqr"][f] for f in self.iso_feats])
         # M10: per-segment scale for zero-day explanations (falls back to the global scale).
-        self.iso_seg_scale = {seg: (np.array([v["median"][f] for f in self.iso_feats]),
-                                    np.array([v["iqr"][f] for f in self.iso_feats]))
-                              for seg, v in (z.get("segment_scale") or {}).items()}
+        self.iso_seg_scale = {
+            seg: (np.array([v["median"][f] for f in self.iso_feats]), np.array([v["iqr"][f] for f in self.iso_feats]))
+            for seg, v in (z.get("segment_scale") or {}).items()
+        }
         s = joblib.load(model_dir / "sms_text_lr.joblib")
         self.vec, self.sms_clf = s["vec"], s["clf"]
         self.sms_coef = self.sms_clf.coef_.ravel()
@@ -142,6 +156,7 @@ class Detector:
     def prime(self, events):
         """Load history into the feature store without scoring (state restored after a restart)."""
         from build_dataset import prime
+
         prime(self.fs, events)
 
     # ------------------------------------------------------------------ guarded entry point
@@ -158,9 +173,11 @@ class Detector:
             results = self.score_batch(events)
         else:
             from ingest_guard import ADMITTED
+
             to_score, statuses = self.guard.filter(events)
-            admitted = sorted((i for i, st in enumerate(statuses) if st == ADMITTED),
-                              key=lambda i: float(events[i]["ts"]))
+            admitted = sorted(
+                (i for i, st in enumerate(statuses) if st == ADMITTED), key=lambda i: float(events[i]["ts"])
+            )
             scored = dict(zip(admitted, self.score_batch(to_score) if to_score else []))
             results = []
             for i, (ev, st) in enumerate(zip(events, statuses)):
@@ -190,13 +207,24 @@ class Detector:
         et = ev["event_type"]
         vi, en = ACTIONS[(et, "ALLOW")]
         return {
-            "event_id": ev["event_id"], "event_type": et, "ts": ev["ts"], "decision": "ALLOW",
-            "risk": None, "action_vi": vi, "action_en": en, "reasons": [],
+            "event_id": ev["event_id"],
+            "event_type": et,
+            "ts": ev["ts"],
+            "decision": "ALLOW",
+            "risk": None,
+            "action_vi": vi,
+            "action_en": en,
+            "reasons": [],
             "suppression_reason": "EVENT_TIME_BEHIND_FRONTIER" if status == "LATE" else "DUPLICATE_EVENT",
             **({"call_id": ev["call_id"]} if ev.get("call_id") else {}),
-            "tier": 1 if et == "CALL" else 2, "model_version": getattr(self, "model_version", MODEL_VERSION),
-            "party": ev.get("caller") or ev.get("sender"), "counterparty": ev.get("callee") or ev.get("recipient"),
-            "ingest": status, "scored": False, "feature_store_ms": 0.0, "batch_ms": 0.0,
+            "tier": 1 if et == "CALL" else 2,
+            "model_version": getattr(self, "model_version", MODEL_VERSION),
+            "party": ev.get("caller") or ev.get("sender"),
+            "counterparty": ev.get("callee") or ev.get("recipient"),
+            "ingest": status,
+            "scored": False,
+            "feature_store_ms": 0.0,
+            "batch_ms": 0.0,
         }
 
     # ------------------------------------------------------------------ helpers
@@ -218,7 +246,9 @@ class Detector:
     @staticmethod
     def _segments(X):
         foreign = X[:, CALL_FEATURES.index("caller_foreign")] == 1
-        trunk = (X[:, CALL_FEATURES.index("origin_bank_trunk")] == 1) | (X[:, CALL_FEATURES.index("cli_protected")] == 1)
+        trunk = (X[:, CALL_FEATURES.index("origin_bank_trunk")] == 1) | (
+            X[:, CALL_FEATURES.index("cli_protected")] == 1
+        )
         return np.where(foreign, "foreign", np.where(trunk, "trunk", "domestic"))
 
     # ------------------------------------------------------------------ main entry
@@ -228,8 +258,9 @@ class Detector:
         t_total = time.perf_counter()
         missing = object()
         callers = {ev.get("caller") for ev in events if ev.get("caller")}
-        before = {caller: dict(self.harvest_hits[caller]) if caller in self.harvest_hits else missing
-                  for caller in callers}
+        before = {
+            caller: dict(self.harvest_hits[caller]) if caller in self.harvest_hits else missing for caller in callers
+        }
         try:
             with self.fs.transaction(events):
                 results = self._score_batch(events)
@@ -313,9 +344,16 @@ class Detector:
                     if j in farm_floor:
                         code, vi, en = rc.SIM_FARM
                         reasons.append({"code": code, "vi": vi, "en": en, "feature": "farm_cell_sims_1h"})
-                results[i] = self._result(events[i], "CALL", dec[j], float(p[j]), reasons, f,
-                                          anomaly=float(a[j] - a_th[j]),
-                                          zero_day=bool(dec[j] == "FLAG" and p[j] < th["flag"] and a[j] >= a_th[j]))
+                results[i] = self._result(
+                    events[i],
+                    "CALL",
+                    dec[j],
+                    float(p[j]),
+                    reasons,
+                    f,
+                    anomaly=float(a[j] - a_th[j]),
+                    zero_day=bool(dec[j] == "FLAG" and p[j] < th["flag"] and a[j] >= a_th[j]),
+                )
         if smss:
             idx = [i for i, _ in smss]
             # TF-IDF và hồi quy logistic viết tường minh (cùng con số với vectorizer + predict_proba của sklearn), không
@@ -324,8 +362,11 @@ class Detector:
             docs = [self._tfidf(_strip(events[i]["text"])) for i in idx]
             meta = np.array([[f[c] for c in SMS_META_FEATURES] for _, f in smss], dtype=float) / SMS_META_SCALE
             nt = self.sms_nt
-            z = np.array([float(v @ self.sms_coef[js]) if len(js) else 0.0 for js, v in docs]) \
-                + meta @ self.sms_coef[nt:] + self.sms_intercept
+            z = (
+                np.array([float(v @ self.sms_coef[js]) if len(js) else 0.0 for js, v in docs])
+                + meta @ self.sms_coef[nt:]
+                + self.sms_intercept
+            )
             p = 1.0 / (1.0 + np.exp(-z))
             th = self.th["sms"]
             for j, i in enumerate(idx):
@@ -341,8 +382,14 @@ class Detector:
                         top = sorted(range(len(js)), key=lambda q: (-txt_c[q], js[q]))[:3]
                         grams = [self.sms_vocab_inv[js[q]].strip() for q in top if txt_c[q] > 0]
                         code, vi, en = rc.SMS_REASONS["text"]
-                        reasons.append({"code": code, "vi": f"{vi}: “{' / '.join(grams)}”",
-                                        "en": f"{en}: “{' / '.join(grams)}”", "feature": "text"})
+                        reasons.append(
+                            {
+                                "code": code,
+                                "vi": f"{vi}: “{' / '.join(grams)}”",
+                                "en": f"{en}: “{' / '.join(grams)}”",
+                                "feature": "text",
+                            }
+                        )
                 results[i] = self._result(events[i], "SMS", d, float(p[j]), reasons, smss[j][1])
         if audios:
             X = np.array([[f[c] for c in AUDIO_FEATURES] for _, f in audios], dtype=float)
@@ -389,7 +436,7 @@ class Detector:
         cnt = {}
         for n_ in range(lo, hi + 1):
             for k in range(len(toks) - n_ + 1):
-                j = self.sms_vocab.get(toks[k] if n_ == 1 else " ".join(toks[k:k + n_]))
+                j = self.sms_vocab.get(toks[k] if n_ == 1 else " ".join(toks[k : k + n_]))
                 if j is not None:
                     cnt[j] = cnt.get(j, 0) + 1
         if not cnt:
@@ -411,10 +458,18 @@ class Detector:
     def _result(self, ev, et, decision, risk, reasons, feats, anomaly=None, zero_day=False):
         vi, en = ACTIONS[(et, decision)]
         out = {
-            "event_id": ev["event_id"], "event_type": et, "ts": ev["ts"], "decision": decision,
-            "risk": round(risk, 6), "action_vi": vi, "action_en": en, "reasons": reasons,
-            "tier": 1 if et == "CALL" else 2, "model_version": getattr(self, "model_version", MODEL_VERSION),
-            "party": ev.get("caller") or ev.get("sender"), "counterparty": ev.get("callee") or ev.get("recipient"),
+            "event_id": ev["event_id"],
+            "event_type": et,
+            "ts": ev["ts"],
+            "decision": decision,
+            "risk": round(risk, 6),
+            "action_vi": vi,
+            "action_en": en,
+            "reasons": reasons,
+            "tier": 1 if et == "CALL" else 2,
+            "model_version": getattr(self, "model_version", MODEL_VERSION),
+            "party": ev.get("caller") or ev.get("sender"),
+            "counterparty": ev.get("callee") or ev.get("recipient"),
             "scored": True,
             "artifact_status": getattr(self, "model_manifest", {}).get("status", "legacy_unverified"),
             **({"call_id": ev["call_id"]} if ev.get("call_id") else {}),
@@ -425,6 +480,9 @@ class Detector:
         if decision != "ALLOW" or self.keep_features:
             # Monitoring/retraining capture must retain the exact feature values used by inference.
             # Compact evidence keeps its existing display precision; UI formatting is independent.
-            out["evidence_features"] = (dict(feats) if self.keep_features else
-                                        {k: (round(v, 4) if isinstance(v, float) else v) for k, v in feats.items()})
+            out["evidence_features"] = (
+                dict(feats)
+                if self.keep_features
+                else {k: (round(v, 4) if isinstance(v, float) else v) for k, v in feats.items()}
+            )
         return out

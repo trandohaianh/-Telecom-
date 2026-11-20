@@ -1,4 +1,5 @@
 """Chia tải theo số chủ gọi + side state nhân bản phải cho ĐÚNG đặc trưng như chạy 1 tiến trình."""
+
 import random
 
 from feature_store import FeatureStore
@@ -8,20 +9,41 @@ from scaleout import shard_of, shard_of_key, side_update
 def _events(n=3000, seed=7):
     rng = random.Random(seed)
     subs = [f"849{i:08d}" for i in range(60)]
-    imeis = [f"86769004{i:07d}" for i in range(8)]                 # vài IMEI dùng chung: kiểu SIM box
+    imeis = [f"86769004{i:07d}" for i in range(8)]  # vài IMEI dùng chung: kiểu SIM box
     cells = ["HN-0001", "HN-0002", "X-FAKE1", "TRUNK"]
     out, ts = [], 1000.0
     for i in range(n):
         ts += rng.uniform(0.5, 40)
         if rng.random() < 0.8:
             a, b = rng.sample(subs, 2)
-            out.append({"event_type": "CALL", "ts": ts, "caller": a, "callee": b, "cell_id": rng.choice(cells),
-                        "imei": rng.choice(imeis), "origin_trunk": "LOCAL", "network": "4G",
-                        "caller_age_days": rng.choice([3.0, 30.0, 400.0, -1.0]), "duration_s": rng.uniform(1, 200),
-                        "event_id": f"E{i}"})
+            out.append(
+                {
+                    "event_type": "CALL",
+                    "ts": ts,
+                    "caller": a,
+                    "callee": b,
+                    "cell_id": rng.choice(cells),
+                    "imei": rng.choice(imeis),
+                    "origin_trunk": "LOCAL",
+                    "network": "4G",
+                    "caller_age_days": rng.choice([3.0, 30.0, 400.0, -1.0]),
+                    "duration_s": rng.uniform(1, 200),
+                    "event_id": f"E{i}",
+                }
+            )
         else:
-            out.append({"event_type": "SMS", "ts": ts, "sender": rng.choice(subs), "recipient": rng.choice(subs),
-                        "sms_route": "P2P", "text": "xin chao", "cell_id": "SMSC", "event_id": f"E{i}"})
+            out.append(
+                {
+                    "event_type": "SMS",
+                    "ts": ts,
+                    "sender": rng.choice(subs),
+                    "recipient": rng.choice(subs),
+                    "sms_route": "P2P",
+                    "text": "xin chao",
+                    "cell_id": "SMSC",
+                    "event_id": f"E{i}",
+                }
+            )
     return out
 
 

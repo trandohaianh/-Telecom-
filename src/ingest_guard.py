@@ -18,6 +18,7 @@ event time.
 State is bounded: the dedup index is pruned by event time, never by wall-clock, so replaying a
 historical stream behaves exactly like live traffic.
 """
+
 from __future__ import annotations
 
 import math
@@ -76,20 +77,21 @@ class IngestGuard:
     """
 
     # __init__ lưu key đã thấy và max_ts để tính watermark cho stream live và replay lịch sử.
-    def __init__(self, dedup_ttl_s: float = DEFAULT_DEDUP_TTL_S,
-                 allowed_lateness_s: float = DEFAULT_ALLOWED_LATENESS_S):
+    def __init__(
+        self, dedup_ttl_s: float = DEFAULT_DEDUP_TTL_S, allowed_lateness_s: float = DEFAULT_ALLOWED_LATENESS_S
+    ):
         self.dedup_ttl_s = float(dedup_ttl_s)
         self.allowed_lateness_s = float(allowed_lateness_s)
         if not math.isfinite(self.dedup_ttl_s) or self.dedup_ttl_s <= 0:
             raise ValueError("dedup_ttl_s must be positive and finite")
         if not math.isfinite(self.allowed_lateness_s) or self.allowed_lateness_s < 0:
             raise ValueError("allowed_lateness_s must be non-negative and finite")
-        self._seen: "OrderedDict[str, float]" = OrderedDict()   # key -> event ts, insertion ordered
-        self.max_ts = float("-inf")                             # highest event time seen
+        self._seen: "OrderedDict[str, float]" = OrderedDict()  # key -> event ts, insertion ordered
+        self.max_ts = float("-inf")  # highest event time seen
         # party -> highest admitted ts; least recently updated first, pruned below the global floor
         self._party_max: "OrderedDict[str, float]" = OrderedDict()
-        self._legacy_frontier = float("-inf")   # set only when restoring a v1 (global-frontier) checkpoint
-        self._appended: list = []               # dedup keys inserted since the last checkpoint
+        self._legacy_frontier = float("-inf")  # set only when restoring a v1 (global-frontier) checkpoint
+        self._appended: list = []  # dedup keys inserted since the last checkpoint
         self.stats = {ADMITTED: 0, DUPLICATE: 0, LATE: 0}
 
     # ------------------------------------------------------------------ watermark
@@ -148,7 +150,7 @@ class IngestGuard:
         self._prune_parties()
         # Insertion frontiers are monotonic, including rejected events, so TTL pruning is safe.
         self._seen[key] = self.max_ts
-        self._appended.append((key, self.max_ts))   # D14: goes into the next checkpoint delta
+        self._appended.append((key, self.max_ts))  # D14: goes into the next checkpoint delta
         self._prune()
 
         status = LATE if late else ADMITTED
@@ -174,20 +176,28 @@ class IngestGuard:
 
     def state_dict(self) -> dict:
         """Durable guard snapshot; event types namespace the stable upstream identity."""
-        return {"version": 2, "policy": POLICY, "seen": list(self._seen.items()),
-                "party_max": list(self._party_max.items()),
-                "legacy_frontier": self._legacy_frontier if math.isfinite(self._legacy_frontier) else None,
-                "max_ts": self.max_ts if math.isfinite(self.max_ts) else None,
-                "dedup_ttl_s": self.dedup_ttl_s, "allowed_lateness_s": self.allowed_lateness_s,
-                "stats": dict(self.stats)}
+        return {
+            "version": 2,
+            "policy": POLICY,
+            "seen": list(self._seen.items()),
+            "party_max": list(self._party_max.items()),
+            "legacy_frontier": self._legacy_frontier if math.isfinite(self._legacy_frontier) else None,
+            "max_ts": self.max_ts if math.isfinite(self.max_ts) else None,
+            "dedup_ttl_s": self.dedup_ttl_s,
+            "allowed_lateness_s": self.allowed_lateness_s,
+            "stats": dict(self.stats),
+        }
 
     def take_delta(self) -> dict:
         """D14: only the dedup keys added since the last checkpoint (the index holds ~22M keys at
         25k eps); frontiers and counters are small and travel whole."""
-        out = {"seen_new": self._appended, "max_ts": self.max_ts if math.isfinite(self.max_ts) else None,
-               "party_max": list(self._party_max.items()),
-               "legacy_frontier": self._legacy_frontier if math.isfinite(self._legacy_frontier) else None,
-               "stats": dict(self.stats)}
+        out = {
+            "seen_new": self._appended,
+            "max_ts": self.max_ts if math.isfinite(self.max_ts) else None,
+            "party_max": list(self._party_max.items()),
+            "legacy_frontier": self._legacy_frontier if math.isfinite(self._legacy_frontier) else None,
+            "stats": dict(self.stats),
+        }
         self._appended = []
         return out
 
@@ -226,7 +236,7 @@ class IngestGuard:
                 raise ValueError("invalid ingestion dedup checkpoint")
             restored._seen[key] = ts
             previous = ts
-        for party, ts in ([] if legacy else state.get("party_max", [])):
+        for party, ts in [] if legacy else state.get("party_max", []):
             ts = float(ts)
             if not isinstance(party, str) or not math.isfinite(ts) or ts > restored.max_ts:
                 raise ValueError("invalid ingestion party frontier")
@@ -244,12 +254,18 @@ class IngestGuard:
         restored._prune()
         self.__dict__.update(restored.__dict__)
 
-
     # state xuất trạng thái nội bộ để dashboard hoặc debug kiểm tra nhanh.
     def state(self) -> dict:
-        return {"policy": POLICY, "keys": len(self._seen), "parties": len(self._party_max), "max_ts": self.max_ts, "watermark": self.watermark,
-                "dedup_ttl_s": self.dedup_ttl_s, "allowed_lateness_s": self.allowed_lateness_s,
-                **{k.lower(): v for k, v in self.stats.items()}}
+        return {
+            "policy": POLICY,
+            "keys": len(self._seen),
+            "parties": len(self._party_max),
+            "max_ts": self.max_ts,
+            "watermark": self.watermark,
+            "dedup_ttl_s": self.dedup_ttl_s,
+            "allowed_lateness_s": self.allowed_lateness_s,
+            **{k.lower(): v for k, v in self.stats.items()},
+        }
 
 
 # ActionLedger đảm bảo action chặn/flag chỉ thực thi đúng một lần cho cùng một quyết định.

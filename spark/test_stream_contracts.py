@@ -1,4 +1,5 @@
 """Malformed CALL quarantine and Spark checkpoint ownership regressions."""
+
 import json
 import tempfile
 import unittest
@@ -15,14 +16,13 @@ from test_stateful_stream import SOURCE, event
 class CallContractTests(unittest.TestCase):
     def test_numeric_overflow_is_a_validation_error(self):
         for key in ("ts", "caller_age_days", "duration_s"):
-            for value in (10 ** 1000, float("inf"), float("nan"), True, "1", None):
+            for value in (10**1000, float("inf"), float("nan"), True, "1", None):
                 with self.subTest(key=key, value_type=type(value).__name__):
                     with self.assertRaisesRegex(ValueError, "finite number"):
                         validate_call(event(**{key: value}))
 
     def test_completion_overflow_and_huge_integer_are_classified(self):
-        rows = [event("overflow", 1e308, duration_s=1e308),
-                event("huge", 10 ** 1000)]
+        rows = [event("overflow", 1e308, duration_s=1e308), event("huge", 10**1000)]
         for row in rows:
             classified = classify_record(Record(row))
             self.assertEqual(len(classified), len(EVENT_FIELDS) + 4)
@@ -32,14 +32,14 @@ class CallContractTests(unittest.TestCase):
             self.assertEqual(json.loads(classified[-1])["event_id"], row["event_id"])
         # D12 (owner decision 17/11/2026): far-future/ms timestamps are rejected like the main API.
         with self.assertRaisesRegex(ValueError, "Unix seconds"):
-            validate_call(event("finite", 1e308, duration_s=0.))
+            validate_call(event("finite", 1e308, duration_s=0.0))
         with self.assertRaisesRegex(ValueError, "Unix seconds"):
             validate_call(event("millis", 1.7e12))
         self.assertEqual(validate_call(event("unix", 1.7e9))["ts"], 1.7e9)
 
     def test_live_completion_fields_cannot_override_replay(self):
         for key in ("start_ts", "end_ts"):
-            for value in (0., float("inf"), "bad"):
+            for value in (0.0, float("inf"), "bad"):
                 with self.assertRaisesRegex(ValueError, r"ts \+ duration_s; unsupported fields"):
                     validate_call(event(**{key: value}))
             # pandas inserts nulls into unaffected rows of a mixed-schema frame.
@@ -47,37 +47,47 @@ class CallContractTests(unittest.TestCase):
                 normalized = validate_call(event(**{key: missing}))
                 self.assertNotIn(key, normalized)
             # Fixed Spark schema may omit even an explicitly null JSON field.
-            for value in (0., None):
+            for value in (0.0, None):
                 envelope = event(**{key: value})
                 parsed = event(_raw=json.dumps(envelope))
                 classified = classify_record(Record(parsed))
                 self.assertIn("unsupported fields: " + key, classified[-3])
 
     def test_malformed_records_do_not_poison_local_batch(self):
-        rows = [event("overflow", 1e308, duration_s=1e308),
-                event("huge", 10 ** 1000), event("live-end", 100., end_ts=101.),
-                event("live-start", 100., _raw=json.dumps(event(start_ts=99.))),
-                event("valid", 100.)]
+        rows = [
+            event("overflow", 1e308, duration_s=1e308),
+            event("huge", 10**1000),
+            event("live-end", 100.0, end_ts=101.0),
+            event("live-start", 100.0, _raw=json.dumps(event(start_ts=99.0))),
+            event("valid", 100.0),
+        ]
         with tempfile.TemporaryDirectory() as directory:
             processor = StatefulCallStream(Path(directory), SOURCE)
             result = processor.process(pd.DataFrame(rows, dtype=object), 0)
             self.assertEqual(result.event_id.tolist(), ["valid"])
             self.assertEqual(processor.last_metrics["quarantined"], 4)
             self.assertEqual(processor.last_metrics["accepted_rows"], 1)
-            self.assertEqual(processor.max_ts, 100.)
+            self.assertEqual(processor.max_ts, 100.0)
             restarted = StatefulCallStream(Path(directory), SOURCE)
-            next_result = restarted.process(pd.DataFrame([event("next", 101.)]), 1)
-            self.assertEqual(next_result.iloc[0].calls_1m, 2.)
+            next_result = restarted.process(pd.DataFrame([event("next", 101.0)]), 1)
+            self.assertEqual(next_result.iloc[0].calls_1m, 2.0)
 
 
 class CheckpointOwnerTests(unittest.TestCase):
-    ENGINES = (("call_features_v2", lambda path: StatefulCallStream(path, SOURCE)),
-               ("distributed_call_features_v1", lambda path: DistributedCallStream(None, path, SOURCE)))
+    ENGINES = (
+        ("call_features_v2", lambda path: StatefulCallStream(path, SOURCE)),
+        ("distributed_call_features_v1", lambda path: DistributedCallStream(None, path, SOURCE)),
+    )
 
     def test_foreign_and_unknown_feature_namespaces_are_rejected(self):
         for own, factory in self.ENGINES:
-            for name in ("call_features_v1", "call_features_v2", "call_features_v999",
-                         "distributed_call_features_v1", "distributed_call_features_v999"):
+            for name in (
+                "call_features_v1",
+                "call_features_v2",
+                "call_features_v999",
+                "distributed_call_features_v1",
+                "distributed_call_features_v999",
+            ):
                 if name == own:
                     continue
                 with self.subTest(own=own, foreign=name), tempfile.TemporaryDirectory() as directory:
@@ -110,12 +120,12 @@ class CheckpointOwnerTests(unittest.TestCase):
                 checkpoint = Path(directory)
                 processor = factory(checkpoint)
                 if own == "call_features_v2":
-                    processor.process(pd.DataFrame([event("first", 0.)]), 0)
+                    processor.process(pd.DataFrame([event("first", 0.0)]), 0)
                 (checkpoint / "offsets").mkdir()
                 restarted = factory(checkpoint)
                 if own == "call_features_v2":
-                    result = restarted.process(pd.DataFrame([event("second", 1.)]), 1)
-                    self.assertEqual(result.iloc[0].calls_1m, 2.)
+                    result = restarted.process(pd.DataFrame([event("second", 1.0)]), 1)
+                    self.assertEqual(result.iloc[0].calls_1m, 2.0)
                 self.assertEqual(restarted.root.name, own)
 
     def test_foreign_namespace_is_rejected_even_when_own_manifest_exists(self):
@@ -132,13 +142,17 @@ class CheckpointOwnerTests(unittest.TestCase):
 class ImeiPartitionKeyTests(unittest.TestCase):
     def test_rows_without_imei_do_not_share_one_hot_key(self):
         from distributed_features import imei_entity, imei_partition
+
         rows = [dict(event_id=f"e{i}", caller=f"C{i}", ts=float(i), imei="") for i in range(3)]
         keys = {imei_entity(r) for r in rows}
         self.assertEqual(len(keys), 3)
         self.assertNotIn("", keys)
         out = list(imei_partition(sorted(((imei_entity(r), r["ts"], r["event_id"]), r) for r in rows)))
         self.assertEqual([v for _, v in out], [0.0, 0.0, 0.0])
-        same = [dict(event_id="a", caller="X", ts=0.0, imei="35391"), dict(event_id="b", caller="Y", ts=1.0, imei="35391")]
+        same = [
+            dict(event_id="a", caller="X", ts=0.0, imei="35391"),
+            dict(event_id="b", caller="Y", ts=1.0, imei="35391"),
+        ]
         self.assertEqual(imei_entity(same[0]), "35391")
 
 

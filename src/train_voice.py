@@ -1,4 +1,5 @@
 """Train a real-audio baseline from labeled, chronologically separated recordings."""
+
 from __future__ import annotations
 
 import argparse
@@ -57,11 +58,13 @@ def validate_manifest(rows):
 def independent_groups(rows):
     # Connected components prevent different group labels hiding shared calls/speakers/campaigns.
     parents = list(range(len(rows)))
+
     def find(index):
         while parents[index] != index:
             parents[index] = parents[parents[index]]
             index = parents[index]
         return index
+
     owners = {}
     for index, row in enumerate(rows):
         for field in ("group_id", "call_id", "speaker_id", "campaign_id"):
@@ -103,26 +106,36 @@ def train(manifest_path: Path, output_dir: Path):
             y.append(int(row["label"]))
         features[split], labels[split] = np.array(x), np.array(y)
     # Fit preprocessing and classifier on train only; calibration and test never fit the estimator.
-    estimator = make_pipeline(SimpleImputer(strategy="median", keep_empty_features=True),
-                              StandardScaler(), LogisticRegression(class_weight="balanced", max_iter=1000,
-                                                                     random_state=7))
+    estimator = make_pipeline(
+        SimpleImputer(strategy="median", keep_empty_features=True),
+        StandardScaler(),
+        LogisticRegression(class_weight="balanced", max_iter=1000, random_state=7),
+    )
     estimator.fit(features["train"], labels["train"])
     calibration_scores = estimator.predict_proba(features["calibration"])[:, 1]
     groups = independent_groups(partitions["calibration"])
     policies = {
-        "block": calibrate(calibration_scores, labels["calibration"], .0001, groups=groups),
-        "flag": calibrate(calibration_scores, labels["calibration"], .005, groups=groups),
+        "block": calibrate(calibration_scores, labels["calibration"], 0.0001, groups=groups),
+        "flag": calibrate(calibration_scores, labels["calibration"], 0.005, groups=groups),
     }
-    bundle = {"domain": DOMAIN, "schema_version": SCHEMA_VERSION, "features": REAL_FEATURES,
-              "estimator": estimator, "policies": policies,
-              "trained_at": datetime.now(timezone.utc).isoformat(),
-              "data_sha256": content_digest.hexdigest(), "target": "manifest_fraud_label"}
+    bundle = {
+        "domain": DOMAIN,
+        "schema_version": SCHEMA_VERSION,
+        "features": REAL_FEATURES,
+        "estimator": estimator,
+        "policies": policies,
+        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "data_sha256": content_digest.hexdigest(),
+        "target": "manifest_fraud_label",
+    }
     test_scores = estimator.predict_proba(features["test"])[:, 1]
     report = {
-        "domain": DOMAIN, "schema_version": SCHEMA_VERSION,
+        "domain": DOMAIN,
+        "schema_version": SCHEMA_VERSION,
         "splits": {k: {"events": len(labels[k]), "positives": int(labels[k].sum())} for k in SPLITS},
         "test_pr_auc": float(average_precision_score(labels["test"], test_scores)),
-        "policies": policies, "data_sha256": bundle["data_sha256"],
+        "policies": policies,
+        "data_sha256": bundle["data_sha256"],
         "score_semantics": "ranking_score_not_calibrated_probability",
         "raw_audio_stored": False,
         "calibration_unit": "connected call/group/speaker/campaign component; max score per component",
@@ -136,7 +149,8 @@ def train(manifest_path: Path, output_dir: Path):
             predictions = test_scores >= threshold
             positive, negative = labels["test"] == 1, labels["test"] == 0
             report["test_" + name] = {
-                "enabled": True, "recall": float(predictions[positive].mean()),
+                "enabled": True,
+                "recall": float(predictions[positive].mean()),
                 "fpr": float(predictions[negative].mean()),
                 "false_positives": int(predictions[negative].sum()),
                 "negative_records": int(negative.sum()),
@@ -150,9 +164,17 @@ def train(manifest_path: Path, output_dir: Path):
         raise FileExistsError("output artifacts already exist; use a fresh model directory")
     output_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(bundle, artifact)
-    metadata.write_text(json.dumps({"domain": DOMAIN, "schema_version": SCHEMA_VERSION,
-                                    "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()},
-                                   indent=2), encoding="utf-8")
+    metadata.write_text(
+        json.dumps(
+            {
+                "domain": DOMAIN,
+                "schema_version": SCHEMA_VERSION,
+                "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest(),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     report_path.write_text(json.dumps(report, indent=2, allow_nan=False), encoding="utf-8")
     RealVoiceModel.load(artifact)  # Verify the exact artifact a serving process will load.
     return report

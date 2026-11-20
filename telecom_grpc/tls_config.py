@@ -1,4 +1,5 @@
 """TLS credential loading for the telecom gRPC edge."""
+
 from __future__ import annotations
 
 import os
@@ -14,5 +15,4 @@ def server_credentials():
     cert = open(os.environ["GRPC_SERVER_CERT"], "rb").read()
     key = open(os.environ["GRPC_SERVER_KEY"], "rb").read()
     roots = open(roots_path, "rb").read()
-    return grpc.ssl_server_credentials(((key, cert),), root_certificates=roots,
-                                       require_client_auth=True)
+    return grpc.ssl_server_credentials(((key, cert),), root_certificates=roots, require_client_auth=True)

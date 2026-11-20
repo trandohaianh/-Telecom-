@@ -1,4 +1,5 @@
 """Signed real-WAV observations, bounded work and an independent real-audio model domain."""
+
 from __future__ import annotations
 
 import asyncio
@@ -52,21 +53,41 @@ def _metadata(data):
     if len(payload) > MAX_WAV_BYTES:
         raise HTTPException(413, "WAV exceeds size limit")
     event = {name: data[name] for name in ("event_id", "call_id", "caller", "callee", "ts")}
-    event.update(event_type="VOICE_OBSERVATION", audio_sha256=hashlib.sha256(payload).hexdigest(),
-                 caller_channel=channel, schema_version=SCHEMA_VERSION)
+    event.update(
+        event_type="VOICE_OBSERVATION",
+        audio_sha256=hashlib.sha256(payload).hexdigest(),
+        caller_channel=channel,
+        schema_version=SCHEMA_VERSION,
+    )
     return event, payload, channel
 
 
 class VoiceService:
-    def __init__(self, *, record_observation=None, lookup_observation=None,
-                 mode=lambda: "shadow", analyzer=analyze_wav, model=None, asr=None,
-                 workers=2, max_jobs=4, response_ms=170, close_timeout_s=10.0):
+    def __init__(
+        self,
+        *,
+        record_observation=None,
+        lookup_observation=None,
+        mode=lambda: "shadow",
+        analyzer=analyze_wav,
+        model=None,
+        asr=None,
+        workers=2,
+        max_jobs=4,
+        response_ms=170,
+        close_timeout_s=10.0,
+    ):
         self.record, self.lookup = record_observation, lookup_observation
         self.mode, self.analyzer, self.model, self.asr = mode, analyzer, model, asr
         self.response_ms = float(response_ms)
         self.close_timeout_s = float(close_timeout_s)
-        if (workers < 1 or max_jobs < workers or not 1 <= self.response_ms <= 1000
-                or not math.isfinite(self.close_timeout_s) or self.close_timeout_s <= 0):
+        if (
+            workers < 1
+            or max_jobs < workers
+            or not 1 <= self.response_ms <= 1000
+            or not math.isfinite(self.close_timeout_s)
+            or self.close_timeout_s <= 0
+        ):
             raise ValueError("invalid voice worker/deadline configuration")
         self.executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="voice-extract")
         self.slots = threading.BoundedSemaphore(max_jobs)
@@ -76,14 +97,18 @@ class VoiceService:
 
     async def _execute(self, event, payload, channel, original_mode):
         current_work = None
+
         def track(work):
             self._active_work.add(work)
+
             def finished(done):
                 self._active_work.discard(done)
                 if not done.cancelled():
                     done.exception()
+
             work.add_done_callback(finished)
             return work
+
         try:
             # Durable replay is checked inside the same bounded admitted job, before
             # expensive extraction or a changed/unavailable model can fail a retry.
@@ -95,12 +120,19 @@ class VoiceService:
                     return dict(previous, duplicate=True)
             model, asr = self.model, self.asr
             model_id = getattr(model, "artifact_id", "inprocess") if model else None
+
             def analyze_and_predict():
                 observation = self.analyzer(payload, caller_channel=channel, asr=asr)
-                verdict = model.predict(observation) if model else {
-                    "decision": "OBSERVE", "score": None, "reason": "real_audio_model_not_configured",
-                    "recommended_action": "NONE",
-                }
+                verdict = (
+                    model.predict(observation)
+                    if model
+                    else {
+                        "decision": "OBSERVE",
+                        "score": None,
+                        "reason": "real_audio_model_not_configured",
+                        "recommended_action": "NONE",
+                    }
+                )
                 return observation, verdict
 
             loop = asyncio.get_running_loop()
@@ -109,21 +141,30 @@ class VoiceService:
             observation, verdict = await asyncio.shield(current_work)
             current_work = None
             result = {
-                "event_id": event["event_id"], "call_id": event["call_id"],
-                "event_type": "VOICE_OBSERVATION", "ts": event["ts"], "advisory": True,
-                "status": "COMPLETE", "observation": observation, **verdict,
+                "event_id": event["event_id"],
+                "call_id": event["call_id"],
+                "event_type": "VOICE_OBSERVATION",
+                "ts": event["ts"],
+                "advisory": True,
+                "status": "COMPLETE",
+                "observation": observation,
+                **verdict,
                 "policy_action": verdict.get("recommended_action", "NONE"),
-                "model_id": model_id, "mode": original_mode, "original_mode": original_mode,
+                "model_id": model_id,
+                "mode": original_mode,
+                "original_mode": original_mode,
                 "model_version": "real-voice-v1" if model else "observation-only",
                 # Durable measurements are advisory raw results. Only a fresh,
                 # timely delivery below may recommend an action to its caller.
-                "recommended_action": "NONE", "delivery_status": "model_result_only",
+                "recommended_action": "NONE",
+                "delivery_status": "model_result_only",
             }
             if self.record:
                 # Persist measurements/hash and decisions only. Raw WAV and transcript are not retained.
-                persisted = {**result, "observation": {
-                    k: v for k, v in observation.items() if k not in ("transcript", "segments")
-                }}
+                persisted = {
+                    **result,
+                    "observation": {k: v for k, v in observation.items() if k not in ("transcript", "segments")},
+                }
                 current_work = track(asyncio.ensure_future(self.record(event, persisted)))
                 recorded = await asyncio.shield(current_work)
                 current_work = None
@@ -145,13 +186,18 @@ class VoiceService:
         same_model = self.model is not None and result.get("model_id") == current_model_id
         original_mode = result.get("original_mode", result.get("mode"))
         fresh = not duplicate and not expired and not result.get("fail_open")
-        action = result.get("policy_action", "NONE") if (
-            fresh and same_model and original_mode == "enforce" and result["mode"] == "enforce"
-        ) else "NONE"
+        action = (
+            result.get("policy_action", "NONE")
+            if (fresh and same_model and original_mode == "enforce" and result["mode"] == "enforce")
+            else "NONE"
+        )
         result["recommended_action"] = action if action in ("ALLOW", "FLAG", "BLOCK") else "NONE"
-        result.update(duplicate=duplicate, delivery_expired=expired,
-                      actionable=result["recommended_action"] != "NONE",
-                      delivery_status="duplicate" if duplicate else "expired" if expired else "completed")
+        result.update(
+            duplicate=duplicate,
+            delivery_expired=expired,
+            actionable=result["recommended_action"] != "NONE",
+            delivery_status="duplicate" if duplicate else "expired" if expired else "completed",
+        )
         return result
 
     async def submit(self, event, payload, channel):
@@ -163,8 +209,7 @@ class VoiceService:
         duplicate = entry is not None
         if entry and entry[0] != fingerprint:
             raise HTTPException(409, "event_id already belongs to a different audio payload")
-        retry_failed = bool(entry and entry[1].done() and (
-            entry[1].cancelled() or entry[1].exception() is not None))
+        retry_failed = bool(entry and entry[1].done() and (entry[1].cancelled() or entry[1].exception() is not None))
         if entry and not retry_failed:
             task = entry[1]
         else:
@@ -172,8 +217,9 @@ class VoiceService:
                 if value[1].done() and (time.perf_counter() - value[2] > 600 or len(self.jobs) >= 1024):
                     del self.jobs[expired]
             if not self.slots.acquire(blocking=False):
-                raise HTTPException(429, "voice queue full; retry the same event_id later",
-                                    headers={"Retry-After": "1"})
+                raise HTTPException(
+                    429, "voice queue full; retry the same event_id later", headers={"Retry-After": "1"}
+                )
             created = entry[2] if entry else time.perf_counter()
             original_mode = entry[3] if entry else self.mode()
             task = asyncio.create_task(self._execute(event, payload, channel, original_mode))
@@ -183,12 +229,18 @@ class VoiceService:
             self.jobs[key] = entry
         try:
             result = await asyncio.wait_for(asyncio.shield(task), self.response_ms / 1000)
-            return self._render(result, duplicate=duplicate,
-                                deadline=entry[2] + self.response_ms / 1000), 200
+            return self._render(result, duplicate=duplicate, deadline=entry[2] + self.response_ms / 1000), 200
         except asyncio.TimeoutError:
-            return {"event_id": key, "call_id": event["call_id"], "status": "PROCESSING",
-                    "advisory": True, "recommended_action": "NONE", "retry_after_ms": 250,
-                    "duplicate": duplicate, "actionable": False}, 202
+            return {
+                "event_id": key,
+                "call_id": event["call_id"],
+                "status": "PROCESSING",
+                "advisory": True,
+                "recommended_action": "NONE",
+                "retry_after_ms": 250,
+                "duplicate": duplicate,
+                "actionable": False,
+            }, 202
         except AudioValidationError as exc:
             raise HTTPException(400, str(exc)) from exc
 
@@ -205,15 +257,15 @@ class VoiceService:
             if pending:
                 raise RuntimeError(
                     "voice shutdown deadline exceeded: unfinished work remains; "
-                    "native workers were not cancelled and may still be running")
+                    "native workers were not cancelled and may still be running"
+                )
         remaining = deadline - time.perf_counter()
         if remaining <= 0:
             raise RuntimeError("voice shutdown deadline exceeded before executor shutdown")
         try:
             await asyncio.wait_for(asyncio.to_thread(self.executor.shutdown, wait=True), remaining)
         except asyncio.TimeoutError as exc:
-            raise RuntimeError(
-                "voice shutdown deadline exceeded: executor threads may still be running") from exc
+            raise RuntimeError("voice shutdown deadline exceeded: executor threads may still be running") from exc
 
 
 UPLOAD_READ_TIMEOUT_S = float(os.environ.get("FRAUD_AUDIO_READ_TIMEOUT_S", "15"))
@@ -236,9 +288,18 @@ def _parse_signed_upload(body, stamp, signature):
     return _metadata(data)
 
 
-def create_voice_router(*, submit_event=None, mode=lambda: "shadow", record_observation=None,
-                        lookup_observation=None, analyzer=analyze_wav, model=None, asr=None,
-                        response_ms=None, close_timeout_s=None):
+def create_voice_router(
+    *,
+    submit_event=None,
+    mode=lambda: "shadow",
+    record_observation=None,
+    lookup_observation=None,
+    analyzer=analyze_wav,
+    model=None,
+    asr=None,
+    response_ms=None,
+    close_timeout_s=None,
+):
     # submit_event is reserved for compatibility; raw-WAV features never enter synthetic AUDIO inference.
     # Model loading is explicit configuration, and the two domains have different schemas/artifacts.
     if model is None and os.environ.get("FRAUD_REAL_VOICE_MODEL"):
@@ -246,11 +307,17 @@ def create_voice_router(*, submit_event=None, mode=lambda: "shadow", record_obse
     if asr is None and os.environ.get("FRAUD_ASR_MODEL"):
         asr = LocalWhisperASR(os.environ["FRAUD_ASR_MODEL"])
     service = VoiceService(
-        record_observation=record_observation, lookup_observation=lookup_observation,
-        mode=mode, analyzer=analyzer, model=model, asr=asr,
+        record_observation=record_observation,
+        lookup_observation=lookup_observation,
+        mode=mode,
+        analyzer=analyzer,
+        model=model,
+        asr=asr,
         response_ms=float(os.environ.get("FRAUD_AUDIO_RESPONSE_MS", "170")) if response_ms is None else response_ms,
         close_timeout_s=float(os.environ.get("FRAUD_AUDIO_SHUTDOWN_TIMEOUT_S", "10"))
-                        if close_timeout_s is None else close_timeout_s)
+        if close_timeout_s is None
+        else close_timeout_s,
+    )
 
     @contextlib.asynccontextmanager
     async def lifespan(_app):
@@ -302,7 +369,8 @@ def create_voice_router(*, submit_event=None, mode=lambda: "shadow", record_obse
         # which also serves the 30 ms CALL verdicts.
         try:
             event, payload, channel = await asyncio.to_thread(
-                _parse_signed_upload, body, stamp, request.headers.get("x-signature", ""))
+                _parse_signed_upload, body, stamp, request.headers.get("x-signature", "")
+            )
         except _Refused as exc:
             raise HTTPException(401, "network link refused: " + str(exc)) from None
         result, status = await service.submit(event, payload, channel)

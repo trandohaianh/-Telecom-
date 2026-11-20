@@ -7,6 +7,7 @@ sự kiện cho N = 1, 2, 4, 8 shard rồi so chỉ số với N = 1.
 
     python evals/shard_equivalence.py [--shards 1 2 4 8] [--with-replicated-side-state]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -60,12 +61,18 @@ def run_replicated(n: int, events, warm):
             if s == owner:
                 pending[s].append(idx)
             else:
-                flush(s)                       # giữ đúng thứ tự: chấm hết việc của shard trước khi nhận side update
+                flush(s)  # giữ đúng thứ tự: chấm hết việc của shard trước khi nhận side update
                 dets[s].fs.observe_foreign(ev, owns_fns[s])
     for s in range(n):
         flush(s)
-    return _summary(n, events, results, [sum(1 for e in events if shard_of(e, n) == s) for s in range(n)], None,
-                    "partitioned+replicated_side_state")
+    return _summary(
+        n,
+        events,
+        results,
+        [sum(1 for e in events if shard_of(e, n) == s) for s in range(n)],
+        None,
+        "partitioned+replicated_side_state",
+    )
 
 
 def _summary(n, events, results, sizes, busiest, mode):
@@ -74,9 +81,12 @@ def _summary(n, events, results, sizes, busiest, mode):
     m = evaluate.metrics(events, results)
     fam = m["by_family"]
     return {
-        "shards": n, "mode": mode,
-        "block_recall_pct": m["block"]["recall_pct"], "block_precision_pct": m["block"]["precision_pct"],
-        "block_fpr_pct": m["block"]["fpr_pct"], "any_recall_pct": m["block_or_flag"]["recall_pct"],
+        "shards": n,
+        "mode": mode,
+        "block_recall_pct": m["block"]["recall_pct"],
+        "block_precision_pct": m["block"]["precision_pct"],
+        "block_fpr_pct": m["block"]["fpr_pct"],
+        "any_recall_pct": m["block_or_flag"]["recall_pct"],
         "any_fpr_pct": m["block_or_flag"]["fpr_pct"],
         "family_detected_pct": {k: v["detected_pct"] for k, v in fam.items()},
         "largest_shard_events": max(sizes),
@@ -122,10 +132,17 @@ def main() -> int:
         rows += [run_replicated(n, events, warm) for n in args.shards if n > 1]
     base = rows[0]
     for row in rows:
-        row["delta_vs_1"] = {k: round(row[k] - base[k], 4) for k in
-                             ("block_recall_pct", "block_precision_pct", "block_fpr_pct", "any_recall_pct", "any_fpr_pct")}
-        print(json.dumps({k: v for k, v in row.items() if k not in ("family_detected_pct",)} |
-                         {"SIM_BOX": row["family_detected_pct"].get("SIM_BOX")}, ensure_ascii=False))
+        row["delta_vs_1"] = {
+            k: round(row[k] - base[k], 4)
+            for k in ("block_recall_pct", "block_precision_pct", "block_fpr_pct", "any_recall_pct", "any_fpr_pct")
+        }
+        print(
+            json.dumps(
+                {k: v for k, v in row.items() if k not in ("family_detected_pct",)}
+                | {"SIM_BOX": row["family_detected_pct"].get("SIM_BOX")},
+                ensure_ascii=False,
+            )
+        )
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0

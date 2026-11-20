@@ -4,6 +4,7 @@ Python 3.12 on Windows exposes a coarse GetTickCount64 monotonic clock.
 Use QueryPerformanceCounter for this loop's clock and timer resolution.
 No global Windows timer resolution or process-wide asyncio policy is changed.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,14 +21,18 @@ class _PreciseClock:
     def time(self):
         return perf_counter()
 
+
 class PreciseSelectorEventLoop(_PreciseClock, asyncio.SelectorEventLoop):
     pass
 
+
 if hasattr(asyncio, "ProactorEventLoop"):
+
     class PreciseProactorEventLoop(_PreciseClock, asyncio.ProactorEventLoop):
         pass
 else:
     PreciseProactorEventLoop = None
+
 
 def select_loop_factory(use_subprocess=False):
     """Select a platform loop constructor without changing the global policy."""
@@ -40,13 +45,16 @@ def select_loop_factory(use_subprocess=False):
         return PreciseProactorEventLoop if precise else asyncio.ProactorEventLoop
     return PreciseSelectorEventLoop if precise else asyncio.SelectorEventLoop
 
+
 def uvicorn_loop_factory():
     """Uvicorn custom factories construct a loop, unlike its built-in selectors."""
     return select_loop_factory()()
 
+
 def run_async(coroutine):
     with asyncio.Runner(loop_factory=uvicorn_loop_factory) as runner:
         return runner.run(coroutine)
+
 
 def clock_description():
     return {

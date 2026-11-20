@@ -1,0 +1,9 @@
+# Legacy hand-formatted files: several tests assert exact source snippets in them, so a bulk
+# reformat would break those tests. New JS files under static/ are checked by prettier.
+static/app/app.js
+static/app/sw.js
+static/app/theme-init.js
+static/app/theme-toggle.js
+static/admin/assets/dashboard.js
+static/admin/assets/manage.js
+static/admin/assets/theme-init.js

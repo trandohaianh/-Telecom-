@@ -4,6 +4,7 @@ Three sorted shuffles compute subscriber, shared IMEI and shared cell features.
 This is distributed bounded batch replay. It does not provide persistent
 distributed streaming state or an online low-latency feature service.
 """
+
 from __future__ import annotations
 
 from itertools import groupby
@@ -23,6 +24,7 @@ def subscriber_records(row):
 def subscriber_partition(records):
     # Imports execute on workers; spark_features registers src as pyFiles.
     from feature_store import CALL_FEATURES, FeatureStore
+
     for subscriber, group in groupby(records, key=lambda item: item[0][0]):
         store = FeatureStore()
         for _, (role, row) in group:
@@ -58,6 +60,7 @@ def imei_partition(records):
 def cell_partition(records):
     for _, group in groupby(records, key=lambda item: item[0][0]):
         from data_generator import REGISTERED_CELLS
+
         last_seen = {}
         for _, row in group:
             cell, ts, age = row["cell_id"], row["ts"], row["caller_age_days"]
@@ -85,28 +88,39 @@ def add_distributed_features(frame, partitions: int = 8):
 
     def sorted_by_entity(rdd):
         return rdd.repartitionAndSortWithinPartitions(
-            numPartitions=partitions, partitionFunc=lambda key: portable_hash(key[0]))
+            numPartitions=partitions, partitionFunc=lambda key: portable_hash(key[0])
+        )
 
     rows = frame.rdd.map(lambda row: row.asDict(recursive=True))
-    schema = T.StructType([T.StructField("event_id", T.StringType(), False)] + [
-        T.StructField(name, T.DoubleType(), False) for name in CALL_FEATURES])
+    schema = T.StructType(
+        [T.StructField("event_id", T.StringType(), False)]
+        + [T.StructField(name, T.DoubleType(), False) for name in CALL_FEATURES]
+    )
     core = frame.sparkSession.createDataFrame(
-        sorted_by_entity(rows.flatMap(subscriber_records)).mapPartitions(subscriber_partition), schema)
+        sorted_by_entity(rows.flatMap(subscriber_records)).mapPartitions(subscriber_partition), schema
+    )
     imei_schema = "event_id string, shared_imei_count double"
     imei = frame.sparkSession.createDataFrame(
         # Rows without IMEI never share a device (their feature is 0), so key each one by its own
         # event_id: one "" key used to send every such row to a single hot partition.
-        sorted_by_entity(rows.map(lambda row: (
-            (imei_entity(row), *event_order(row)), row))).mapPartitions(imei_partition),
-        imei_schema)
+        sorted_by_entity(rows.map(lambda row: ((imei_entity(row), *event_order(row)), row))).mapPartitions(
+            imei_partition
+        ),
+        imei_schema,
+    )
     enriched = frame.join(core.select("event_id", "active_hours_on_network"), "event_id")
     cell_rows = enriched.rdd.map(lambda row: row.asDict(recursive=True))
     cells = frame.sparkSession.createDataFrame(
-        sorted_by_entity(cell_rows.map(lambda row: (
-            (row["cell_id"], *event_order(row)), row))).mapPartitions(cell_partition),
-        "event_id string, shared_cell_count double")
-    return (core.join(imei, "event_id").join(cells, "event_id")
-            .drop("msisdn_per_imei_24h", "new_sims_on_cell_1h")
-            .withColumnRenamed("shared_imei_count", "msisdn_per_imei_24h")
-            .withColumnRenamed("shared_cell_count", "new_sims_on_cell_1h")
-            .select("event_id", *CALL_FEATURES))
+        sorted_by_entity(cell_rows.map(lambda row: ((row["cell_id"], *event_order(row)), row))).mapPartitions(
+            cell_partition
+        ),
+        "event_id string, shared_cell_count double",
+    )
+    return (
+        core.join(imei, "event_id")
+        .join(cells, "event_id")
+        .drop("msisdn_per_imei_24h", "new_sims_on_cell_1h")
+        .withColumnRenamed("shared_imei_count", "msisdn_per_imei_24h")
+        .withColumnRenamed("shared_cell_count", "new_sims_on_cell_1h")
+        .select("event_id", *CALL_FEATURES)
+    )

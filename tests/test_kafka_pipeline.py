@@ -4,6 +4,7 @@ Checks the properties the demo's measurements rely on: one durable commit per mi
 committed only after the journal, replay deduplication, event-time order inside a batch, end-to-end
 latency measured from the producer send time, and that scoring is the existing ShardedEngine.
 """
+
 import json
 from pathlib import Path
 
@@ -65,14 +66,30 @@ class FakeEngine:
 
     def process(self, events):
         self.calls.append([e["event_id"] for e in events])
-        return [{"decision": "FLAG" if e["caller"].endswith("9") else "ALLOW", "risk": 0.5, "scored": True,
-                 "reasons": [{"code": "R101"}]} for e in events]
+        return [
+            {
+                "decision": "FLAG" if e["caller"].endswith("9") else "ALLOW",
+                "risk": 0.5,
+                "scored": True,
+                "reasons": [{"code": "R101"}],
+            }
+            for e in events
+        ]
 
 
 def ev(i, ts=None, caller=None):
-    return {"event_id": f"E{i}", "event_type": "CALL", "ts": float(ts if ts is not None else 1000 + i),
-            "caller": caller or f"84900000{i % 10}", "callee": "84911111111", "cell_id": "HN-0001",
-            "imei": "353911100000001", "origin_trunk": "LOCAL", "network": "4G", "caller_age_days": 300}
+    return {
+        "event_id": f"E{i}",
+        "event_type": "CALL",
+        "ts": float(ts if ts is not None else 1000 + i),
+        "caller": caller or f"84900000{i % 10}",
+        "callee": "84911111111",
+        "cell_id": "HN-0001",
+        "imei": "353911100000001",
+        "origin_trunk": "LOCAL",
+        "network": "4G",
+        "caller_age_days": 300,
+    }
 
 
 def msgs(events, sent_at=1.0):
@@ -100,8 +117,8 @@ def test_one_durable_commit_per_micro_batch_then_offsets(tmp_path):
     consumer, producer, engine = FakeConsumer(msgs([ev(i) for i in range(250)]), log), FakeProducer(), FakeEngine()
     pipe = kp.VerdictPipeline(consumer, producer, engine, state, max_batch=100, max_wait_s=0)
     pipe.run(250, idle_timeout_s=1)
-    assert pipe.stats["batches"] == 3 and log.count("sql-commit") == 3          # 100 + 100 + 50, one fsync each
-    assert log == ["sql-commit", "offset-commit"] * 3                            # offsets only after the journal
+    assert pipe.stats["batches"] == 3 and log.count("sql-commit") == 3  # 100 + 100 + 50, one fsync each
+    assert log == ["sql-commit", "offset-commit"] * 3  # offsets only after the journal
     assert len(producer.sent) == 250 and all(t == kp.OUT_TOPIC for t, _, _ in producer.sent)
     v = json.loads(producer.sent[0][2])
     assert v[kp.SENT_AT] == 1.0 and v["decision"] in ("ALLOW", "FLAG") and v["journal_seq"] >= 1
@@ -118,16 +135,16 @@ def test_redelivered_messages_are_not_scored_twice(tmp_path):
     first = dict(pipe.results)
     producer = FakeProducer()
     again = kp.VerdictPipeline(FakeConsumer(batch), producer, engine, state, max_batch=50, max_wait_s=0)
-    again.run(20, idle_timeout_s=1)              # at-least-once redelivery after a crash before the offset commit
+    again.run(20, idle_timeout_s=1)  # at-least-once redelivery after a crash before the offset commit
     assert len(engine.calls) == 1 and again.stats["duplicates"] == 20
     assert {k: v["decision"] for k, v in again.results.items()} == {k: v["decision"] for k, v in first.items()}
-    assert len(producer.sent) == 20               # verdicts are re-published from the journal
+    assert len(producer.sent) == 20  # verdicts are re-published from the journal
     state.close()
 
 
 def test_batch_is_scored_in_event_time_order(tmp_path):
     state = BackendState(tmp_path / "j.sqlite3", background_checkpoint=False)
-    events = [ev(1, ts=30), ev(2, ts=10), ev(3, ts=20)]       # interleaved partitions
+    events = [ev(1, ts=30), ev(2, ts=10), ev(3, ts=20)]  # interleaved partitions
     engine = FakeEngine()
     kp.VerdictPipeline(FakeConsumer(msgs(events)), FakeProducer(), engine, state, max_batch=10, max_wait_s=0).run(3, 1)
     assert engine.calls == [["E2", "E3", "E1"]]
@@ -142,15 +159,17 @@ def test_micro_batcher_waits_after_the_first_message_but_not_forever():
     assert len(batcher.next_batch()) == 2
     assert batcher.next_batch() == []
     bad = FakeConsumer([Msg(b"k", b"v", err="broker error")] + msgs([ev(9)]))
-    assert len(kp.MicroBatcher(bad, max_batch=5, max_wait_s=0).next_batch()) == 1   # errors are not events
+    assert len(kp.MicroBatcher(bad, max_batch=5, max_wait_s=0).next_batch()) == 1  # errors are not events
     with pytest.raises(ValueError):
         kp.MicroBatcher(consumer, max_batch=0)
 
 
 def test_sink_measures_end_to_end_latency_and_ignores_replayed_verdicts():
-    vals = [json.dumps({"event_id": "A", "decision": "ALLOW", kp.SENT_AT: 10.000}).encode(),
-            json.dumps({"event_id": "B", "decision": "FLAG", kp.SENT_AT: 10.010}).encode(),
-            json.dumps({"event_id": "A", "decision": "ALLOW", kp.SENT_AT: 10.000}).encode()]
+    vals = [
+        json.dumps({"event_id": "A", "decision": "ALLOW", kp.SENT_AT: 10.000}).encode(),
+        json.dumps({"event_id": "B", "decision": "FLAG", kp.SENT_AT: 10.010}).encode(),
+        json.dumps({"event_id": "A", "decision": "ALLOW", kp.SENT_AT: 10.000}).encode(),
+    ]
     sink = kp.VerdictSink(FakeConsumer([Msg(b"k", v) for v in vals]), clock=lambda: 10.030)
     sink.run(2, timeout_s=1)
     assert sink.decisions == {"A": "ALLOW", "B": "FLAG"} and [round(x, 3) for x in sink.latency_ms] == [30.0, 20.0]
@@ -171,9 +190,11 @@ def test_paced_producer_keeps_an_absolute_schedule_and_retries_a_full_queue():
                 raise BufferError("queue full")
             t[0] += 0.0001
             super().produce(topic, key, value)
+
     p = Slow()
-    out = kp.produce_paced(p, [ev(i) for i in range(100)], rate=1000, clock=lambda: t[0],
-                           sleep=lambda s: t.__setitem__(0, t[0] + s))
+    out = kp.produce_paced(
+        p, [ev(i) for i in range(100)], rate=1000, clock=lambda: t[0], sleep=lambda s: t.__setitem__(0, t[0] + s)
+    )
     assert out["sent"] == 100 and len(p.sent) == 100 and 900 <= out["achieved_rate"] <= 1100
     sent_times = [json.loads(v)[kp.SENT_AT] for _, _, v in p.sent]
     assert sent_times == sorted(sent_times) and sent_times[-1] >= 0.099
@@ -193,7 +214,9 @@ def test_demo_stack_is_separate_pinned_and_loopback_only():
     k = compose["services"]["kafka"]
     assert k["image"].startswith("apache/kafka:3.8.0@sha256:") and all(p.startswith("127.0.0.1:") for p in k["ports"])
     assert compose["services"]["demo"]["environment"]["FRAUD_SQLITE_SYNCHRONOUS"] == "FULL"
-    assert "confluent-kafka==" in (ROOT / "deploy" / "kafka-demo" / "requirements-kafka.txt").read_text(encoding="utf-8")
+    assert "confluent-kafka==" in (ROOT / "deploy" / "kafka-demo" / "requirements-kafka.txt").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_shard_workers_warm_models_before_reporting_ready():

@@ -1,4 +1,5 @@
 """Join human reviews to the durable shadow journal without exporting subscriber identities."""
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +19,8 @@ def journal(path):
     connection = sqlite3.connect(uri, uri=True)
     try:
         for payload, result in connection.execute(
-                "SELECT payload,result FROM events WHERE kind='VERDICT' AND result IS NOT NULL ORDER BY seq"):
+            "SELECT payload,result FROM events WHERE kind='VERDICT' AND result IS NOT NULL ORDER BY seq"
+        ):
             yield json.loads(payload), json.loads(result)
     finally:
         connection.close()
@@ -33,8 +35,15 @@ def export_review(database, destination):
         for event, result in journal(database):
             if event["event_type"] != "CALL":
                 continue
-            writer.writerow({"event_id": event["event_id"], "call_id": event.get("call_id", ""),
-                             "ts": event["ts"], "decision": result["decision"], "ingest": result.get("ingest", "")})
+            writer.writerow(
+                {
+                    "event_id": event["event_id"],
+                    "call_id": event.get("call_id", ""),
+                    "ts": event["ts"],
+                    "decision": result["decision"],
+                    "ingest": result.get("ingest", ""),
+                }
+            )
             count += 1
     return {"review_rows": count, "identities_exported": False, "raw_content_exported": False}
 
@@ -65,8 +74,10 @@ def build_feedback(database, labels, output_dir, *, key, train_before, calibrati
             observations[identity] = event, result
     if set(reviews) - set(observations):
         raise ValueError("review references an event absent from the shadow journal")
+
     def partition(ts):
         return "train" if ts < train_before else ("calibration" if ts < calibration_before else "test")
+
     groups = {}
     for identity, review in reviews.items():
         event, _ = observations[identity]
@@ -77,24 +88,38 @@ def build_feedback(database, labels, output_dir, *, key, train_before, calibrati
     crossing = {name for name, splits in groups.items() if len(splits) > 1}
     output = {name: [] for name in ("train", "calibration", "test")}
     exclusions = {"group_crosses_temporal_boundary": 0, "not_scored_or_missing_features": 0}
+
     def pseudonym(value):
         return hmac.new(key, str(value).encode(), hashlib.sha256).hexdigest()
+
     for identity, review in reviews.items():
         event, result = observations[identity]
         if review["group_id"] in crossing:
             exclusions["group_crosses_temporal_boundary"] += 1
             continue
         values = result.get("evidence_features", {})
-        if (event["event_type"] != "CALL" or result.get("ingest") != "ADMITTED" or not result.get("scored", True)
-                or any(name not in values or not isinstance(values[name], (int, float))
-                       or not math.isfinite(values[name]) for name in CALL_FEATURES)):
+        if (
+            event["event_type"] != "CALL"
+            or result.get("ingest") != "ADMITTED"
+            or not result.get("scored", True)
+            or any(
+                name not in values or not isinstance(values[name], (int, float)) or not math.isfinite(values[name])
+                for name in CALL_FEATURES
+            )
+        ):
             exclusions["not_scored_or_missing_features"] += 1
             continue
         row = {name: float(values[name]) for name in CALL_FEATURES}
-        row.update(event_id=pseudonym(identity), call_id=pseudonym(event.get("call_id") or identity),
-                   group_id=pseudonym(review["group_id"]), reviewer=pseudonym(review["reviewer"]),
-                   ts=event["ts"], label=int(review["label"]), decision=result["decision"],
-                   model_version=result.get("model_version", "unreported"))
+        row.update(
+            event_id=pseudonym(identity),
+            call_id=pseudonym(event.get("call_id") or identity),
+            group_id=pseudonym(review["group_id"]),
+            reviewer=pseudonym(review["reviewer"]),
+            ts=event["ts"],
+            label=int(review["label"]),
+            decision=result["decision"],
+            model_version=result.get("model_version", "unreported"),
+        )
         output[partition(event["ts"])].append(row)
     destination = Path(output_dir)
     if destination.exists():
@@ -109,11 +134,16 @@ def build_feedback(database, labels, output_dir, *, key, train_before, calibrati
     report = {
         "feature_contract": FeatureStore.FEATURE_CONTRACT,
         "provenance": "operator-reviewed shadow API journal; real-world provenance must be established by operator",
-        "source_events": total, "reviewed_events": len(reviews), "exclusions": exclusions,
-        "splits": {name: {"events": len(rows), "positives": sum(row["label"] for row in rows)}
-                   for name, rows in output.items()},
-        "train_before": train_before, "calibration_before": calibration_before,
-        "files_sha256": files, "subscriber_identities_exported": False,
+        "source_events": total,
+        "reviewed_events": len(reviews),
+        "exclusions": exclusions,
+        "splits": {
+            name: {"events": len(rows), "positives": sum(row["label"] for row in rows)} for name, rows in output.items()
+        },
+        "train_before": train_before,
+        "calibration_before": calibration_before,
+        "files_sha256": files,
+        "subscriber_identities_exported": False,
         "raw_content_exported": False,
         "sampling_note": "label selection can bias metrics; review representative ALLOW controls as well as alerts",
     }
@@ -131,7 +161,9 @@ def main():
     build.add_argument("--state-db", type=Path, required=True)
     build.add_argument("--labels", type=Path, required=True)
     build.add_argument("--out-dir", type=Path, required=True)
-    build.add_argument("--key-file", type=Path, required=True, help="separate pseudonymization key; do not reuse network HMAC key")
+    build.add_argument(
+        "--key-file", type=Path, required=True, help="separate pseudonymization key; do not reuse network HMAC key"
+    )
     build.add_argument("--train-before", type=float, required=True)
     build.add_argument("--calibration-before", type=float, required=True)
     args = parser.parse_args()
@@ -139,8 +171,14 @@ def main():
         report = export_review(args.state_db, args.out)
     else:
         key = bytes.fromhex(args.key_file.read_text(encoding="utf-8").strip())
-        report = build_feedback(args.state_db, args.labels, args.out_dir, key=key,
-                                train_before=args.train_before, calibration_before=args.calibration_before)
+        report = build_feedback(
+            args.state_db,
+            args.labels,
+            args.out_dir,
+            key=key,
+            train_before=args.train_before,
+            calibration_before=args.calibration_before,
+        )
     print(json.dumps(report, indent=2))
 
 

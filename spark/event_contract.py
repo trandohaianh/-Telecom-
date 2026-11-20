@@ -1,4 +1,5 @@
 """Shared CALL validation and deterministic replay ordering."""
+
 from __future__ import annotations
 
 import hashlib
@@ -7,21 +8,40 @@ import math
 from pathlib import Path
 
 MAX_EVENT_TS = 1e11  # Unix seconds (~year 5138)
-EVENT_FIELDS = ("event_id", "event_type", "ts", "caller", "callee", "cell_id", "imei",
-                "origin_trunk", "network", "caller_age_days", "duration_s", "label", "fraud_type")
+EVENT_FIELDS = (
+    "event_id",
+    "event_type",
+    "ts",
+    "caller",
+    "callee",
+    "cell_id",
+    "imei",
+    "origin_trunk",
+    "network",
+    "caller_age_days",
+    "duration_s",
+    "label",
+    "fraud_type",
+)
 
 
 def require_checkpoint_namespace(checkpoint, namespace):
     """Reject shared Spark progress without its own durable feature identity."""
     checkpoint = Path(checkpoint)
     names = {path.name for path in checkpoint.iterdir()} if checkpoint.is_dir() else set()
-    foreign = sorted(name for name in names if name != namespace and
-                     name.startswith(("call_features_v", "distributed_call_features_v")))
+    foreign = sorted(
+        name
+        for name in names
+        if name != namespace and name.startswith(("call_features_v", "distributed_call_features_v"))
+    )
     if foreign:
         if foreign == ["call_features_v1"] and namespace == "call_features_v2":
             raise ValueError("Legacy v1 checkpoint: replay into a fresh checkpoint; v1 buckets are not exact")
-        raise ValueError("Checkpoint contains a different feature engine or schema (" +
-                         ", ".join(foreign) + "); use a fresh checkpoint")
+        raise ValueError(
+            "Checkpoint contains a different feature engine or schema ("
+            + ", ".join(foreign)
+            + "); use a fresh checkpoint"
+        )
     root = checkpoint / namespace
     progress = names.intersection(("offsets", "commits", "sources", "state", "metadata"))
     if progress and not (root / "source.json").is_file():
@@ -69,8 +89,9 @@ def validate_call(row):
         if isinstance(raw, dict):
             unsupported.update({"start_ts", "end_ts"}.intersection(raw))
     if unsupported:
-        raise ValueError("Spark replay CALL uses ts + duration_s; unsupported fields: " +
-                         ", ".join(sorted(unsupported)))
+        raise ValueError(
+            "Spark replay CALL uses ts + duration_s; unsupported fields: " + ", ".join(sorted(unsupported))
+        )
     for key in ("ts", "caller_age_days", "duration_s"):
         value = row.get(key)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -100,6 +121,7 @@ def fsync_directory(path):
     """Persist a rename: without fsyncing the parent, power loss can drop the new directory entry
     while Spark's own commit survives, silently losing that batch's output. No-op on Windows."""
     import os
+
     if os.name != "posix":
         return
     fd = os.open(str(path), os.O_RDONLY)

@@ -1,4 +1,5 @@
 """Compare CALL feature tables. Strict completeness is the default CI contract."""
+
 from __future__ import annotations
 
 import argparse
@@ -72,8 +73,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--ref", type=Path, default=HERE / "reference_call_features.parquet")
     parser.add_argument("--got", type=Path, default=HERE / "spark_call_features.parquet")
-    parser.add_argument("--allow-partial", action="store_true",
-                        help="Permit missing feature columns, never missing rows or invalid values")
+    parser.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Permit missing feature columns, never missing rows or invalid values",
+    )
     args = parser.parse_args()
     return compare(load(args.ref), load(args.got), allow_partial=args.allow_partial)
 

@@ -1,4 +1,5 @@
 """Session-level evaluation without attributing later calls' audio to earlier calls."""
+
 from __future__ import annotations
 
 import bisect
@@ -85,9 +86,17 @@ def session_outcomes(events, results):
             final[target] = result["decision"]
     linked = len(links)
     audio_count = sum(ev["event_type"] == "AUDIO" for ev in events)
-    return final, links, {"audio_events": audio_count, "linked_audio": linked,
-                          "unmatched_audio": audio_count - linked, "reasons": dict(reasons),
-                          "legacy_linkage_used": bool(reasons["legacy_preceding_call"])}
+    return (
+        final,
+        links,
+        {
+            "audio_events": audio_count,
+            "linked_audio": linked,
+            "unmatched_audio": audio_count - linked,
+            "reasons": dict(reasons),
+            "legacy_linkage_used": bool(reasons["legacy_preceding_call"]),
+        },
+    )
 
 
 def _classification(labels, decisions):
@@ -96,11 +105,16 @@ def _classification(labels, decisions):
     positives = sum(labels)
     negatives = len(labels) - positives
     lo, hi = wilson(tp, positives)
-    return {"TP": tp, "FP": fp, "FN": positives - tp, "TN": negatives - fp,
-            "recall_pct": 100.0 * tp / positives if positives else None,
-            "recall_95ci_pct": [100.0 * lo, 100.0 * hi],
-            "precision_pct": 100.0 * tp / (tp + fp) if tp + fp else None,
-            "fpr": fpr_report(fp, negatives)}
+    return {
+        "TP": tp,
+        "FP": fp,
+        "FN": positives - tp,
+        "TN": negatives - fp,
+        "recall_pct": 100.0 * tp / positives if positives else None,
+        "recall_95ci_pct": [100.0 * lo, 100.0 * hi],
+        "precision_pct": 100.0 * tp / (tp + fp) if tp + fp else None,
+        "fpr": fpr_report(fp, negatives),
+    }
 
 
 def call_session_metrics(events, results):
@@ -113,23 +127,38 @@ def call_session_metrics(events, results):
     for audio, call in links.items():
         if results[audio]["decision"] != "ALLOW":
             first_detection[call] = min(first_detection.get(call, math.inf), _time(events[audio]))
-    delays = sorted(first_detection[i] - _time(events[i]) for i in calls if int(events[i]["label"]) and i in first_detection)
+    delays = sorted(
+        first_detection[i] - _time(events[i]) for i in calls if int(events[i]["label"]) and i in first_detection
+    )
+
     def median(values):
         if not values:
             return None
         n = len(values)
         return values[n // 2] if n % 2 else (values[n // 2 - 1] + values[n // 2]) / 2
+
     def block_only(decisions):
         return ["BLOCK" if d == "BLOCK" else "ALLOW" for d in decisions]
-    return {"unit": "CALL session, one observation per setup (AUDIO chunks excluded)",
-            "calls": len(calls), "fraud_calls": sum(labels),
-            "unscored_calls": sum(ev["event_type"] == "CALL" and not r.get("scored", True) for ev, r in zip(events, results)),
-            "pre_ring_block": _classification(labels, block_only(before_audio)),
-            "pre_ring_block_or_flag": _classification(labels, before_audio),
-            "final_block": _classification(labels, block_only(after_audio)),
-            "final_block_or_flag": _classification(labels, after_audio),
-            "fraud_time_to_first_action_s": {"detected_calls": len(delays), "median": median(delays),
-                                             "max": max(delays) if delays else None},
-            "linkage": linkage,
-            "limitations": ["Binomial intervals do not account for repeated callers/campaign correlation.",
-                            "Legacy linkage is approximate; explicit call_id is required for reliable sessions."]}
+
+    return {
+        "unit": "CALL session, one observation per setup (AUDIO chunks excluded)",
+        "calls": len(calls),
+        "fraud_calls": sum(labels),
+        "unscored_calls": sum(
+            ev["event_type"] == "CALL" and not r.get("scored", True) for ev, r in zip(events, results)
+        ),
+        "pre_ring_block": _classification(labels, block_only(before_audio)),
+        "pre_ring_block_or_flag": _classification(labels, before_audio),
+        "final_block": _classification(labels, block_only(after_audio)),
+        "final_block_or_flag": _classification(labels, after_audio),
+        "fraud_time_to_first_action_s": {
+            "detected_calls": len(delays),
+            "median": median(delays),
+            "max": max(delays) if delays else None,
+        },
+        "linkage": linkage,
+        "limitations": [
+            "Binomial intervals do not account for repeated callers/campaign correlation.",
+            "Legacy linkage is approximate; explicit call_id is required for reliable sessions.",
+        ],
+    }

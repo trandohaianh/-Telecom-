@@ -1,4 +1,5 @@
 """Carrier bridge: mapping, signing, retry/dead-letter policy, Kafka at-least-once, end-to-end into the API."""
+
 import asyncio
 import io
 import json
@@ -16,8 +17,17 @@ import carrier_bridge as cb  # noqa: E402
 import security  # noqa: E402
 
 KEY = bytes.fromhex("ab" * 32)
-CALL = {"event_type": "CALL", "event_id": "B1", "ts": 100.0, "caller": "84961234567", "callee": "84351234567",
-        "cell_id": "HN-0001", "imei": "35391110000001", "origin_trunk": "LOCAL", "network": "4G"}
+CALL = {
+    "event_type": "CALL",
+    "event_id": "B1",
+    "ts": 100.0,
+    "caller": "84961234567",
+    "callee": "84351234567",
+    "cell_id": "HN-0001",
+    "imei": "35391110000001",
+    "origin_trunk": "LOCAL",
+    "network": "4G",
+}
 
 
 async def no_sleep(_s):
@@ -26,8 +36,9 @@ async def no_sleep(_s):
 
 def bridge(handler, tmp_path, **kw):
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://api")
-    return cb.Bridge("http://api", KEY, client=client, dead_letter=cb.DeadLetter(tmp_path / "dlq.jsonl"),
-                     sleep=no_sleep, **kw)
+    return cb.Bridge(
+        "http://api", KEY, client=client, dead_letter=cb.DeadLetter(tmp_path / "dlq.jsonl"), sleep=no_sleep, **kw
+    )
 
 
 def dlq(tmp_path):
@@ -37,19 +48,45 @@ def dlq(tmp_path):
 
 # ---------------------------------------------------------------- pure functions
 def test_mapping_renames_fields_and_converts_milliseconds():
-    m = cb.normalize_mapping({"calling_number": "caller", "called_number": "callee", "setup_time": "ts",
-                              "ts_unit": "ms", "defaults": {"network": "4G"}, "drop": ["vendor_seq"],
-                              "values": {"event_type": {"MOC": "CALL"}}})
-    out = cb.map_event({"event_type": "MOC", "event_id": "X", "calling_number": "84961234567",
-                        "called_number": "84351234567", "setup_time": 1731830400123, "vendor_seq": 7}, m)
-    assert out == {"network": "4G", "event_type": "CALL", "event_id": "X", "caller": "84961234567",
-                   "callee": "84351234567", "ts": pytest.approx(1731830400.123)}
+    m = cb.normalize_mapping(
+        {
+            "calling_number": "caller",
+            "called_number": "callee",
+            "setup_time": "ts",
+            "ts_unit": "ms",
+            "defaults": {"network": "4G"},
+            "drop": ["vendor_seq"],
+            "values": {"event_type": {"MOC": "CALL"}},
+        }
+    )
+    out = cb.map_event(
+        {
+            "event_type": "MOC",
+            "event_id": "X",
+            "calling_number": "84961234567",
+            "called_number": "84351234567",
+            "setup_time": 1731830400123,
+            "vendor_seq": 7,
+        },
+        m,
+    )
+    assert out == {
+        "network": "4G",
+        "event_type": "CALL",
+        "event_id": "X",
+        "caller": "84961234567",
+        "callee": "84351234567",
+        "ts": pytest.approx(1731830400.123),
+    }
     nested = cb.normalize_mapping({"fields": {"t": "ts"}, "ts_unit": "ms", "duration_unit": "ms"})
     assert cb.map_event({"t": "5000", "duration_s": 12000}, nested) == {"ts": 5.0, "duration_s": 12.0}
     iso = cb.normalize_mapping({"ts_unit": "iso"})
-    assert cb.map_event({"ts": "2026-11-17T07:00:00+07:00"}, iso)["ts"] == datetime(2026, 11, 17, tzinfo=timezone.utc).timestamp()
+    assert (
+        cb.map_event({"ts": "2026-11-17T07:00:00+07:00"}, iso)["ts"]
+        == datetime(2026, 11, 17, tzinfo=timezone.utc).timestamp()
+    )
     with pytest.raises(cb.RecordError):
-        cb.map_event({"ts": "2026-11-17T07:00:00"}, iso)          # no offset: ambiguous local time
+        cb.map_event({"ts": "2026-11-17T07:00:00"}, iso)  # no offset: ambiguous local time
     with pytest.raises(cb.RecordError):
         cb.map_event({"ts": "soon"}, m)
     with pytest.raises(ValueError):
@@ -64,7 +101,7 @@ def test_kind_inference_and_envelope():
     kind, event, _ = cb.prepare({"kind": "cdr", "event": {**CALL, "duration_s": 3}}, m)
     assert kind == "CDR" and "kind" not in event
     dur = cb.normalize_mapping({"call_duration": "duration_s"})
-    assert cb.prepare({**CALL, "call_duration": 9}, dur)[0] == "CDR"   # inferred after mapping
+    assert cb.prepare({**CALL, "call_duration": 9}, dur)[0] == "CDR"  # inferred after mapping
     for bad in (b"{not json", "[1]", {"kind": "FAX", "event": CALL}, {**CALL, "event_id": ""}):
         with pytest.raises(cb.RecordError):
             cb.prepare(bad, m)
@@ -76,7 +113,7 @@ def test_signed_headers_verify_with_server_security_module():
     assert security.verify_network(body, h["x-timestamp"], h["x-signature"], KEY) is None
     assert cb.sign(body, h["x-timestamp"], KEY) == security.sign_network(body, h["x-timestamp"], KEY)
     h2 = cb.signed_headers(body, KEY)
-    assert h2["x-timestamp"] != h["x-timestamp"]                  # retries are not replays
+    assert h2["x-timestamp"] != h["x-timestamp"]  # retries are not replays
 
 
 def test_key_file_formats_and_no_key_in_repr(tmp_path):
@@ -94,12 +131,12 @@ def test_key_file_formats_and_no_key_in_repr(tmp_path):
 def test_status_classification():
     assert cb.classify(200, {"decision": "ALLOW"}) == "ok"
     assert cb.classify(202, {"pending": True, "retryable": True}) == "ok"
-    assert cb.classify(200, {"retryable": True, "durable": False}) == "retry"   # fail-open overload
+    assert cb.classify(200, {"retryable": True, "durable": False}) == "retry"  # fail-open overload
     for s in (401, 429, 500, 503):
         assert cb.classify(s) == "retry"
     for s in (400, 404, 409, 413, 422):
         assert cb.classify(s) == "dead"
-    assert cb.percentile([5, 1, 3, 2, 4], .5) == 3 and cb.percentile([], .5) is None
+    assert cb.percentile([5, 1, 3, 2, 4], 0.5) == 3 and cb.percentile([], 0.5) is None
 
 
 # ---------------------------------------------------------------- delivery policy
@@ -108,8 +145,12 @@ def test_retry_on_503_then_success(tmp_path):
 
     def handler(request):
         seen.append(request.headers["x-timestamp"])
-        assert security.verify_network(request.content, request.headers["x-timestamp"],
-                                       request.headers["x-signature"], KEY) is None
+        assert (
+            security.verify_network(
+                request.content, request.headers["x-timestamp"], request.headers["x-signature"], KEY
+            )
+            is None
+        )
         if len(seen) < 3:
             return httpx.Response(503, json={"ok": False})
         return httpx.Response(200, json={"event_id": "B1", "decision": "ALLOW"})
@@ -148,7 +189,7 @@ def test_invalid_records_dead_letter_without_calling_api(tmp_path):
     assert len(calls) == 1 and dlq(tmp_path)[0]["reason"] == "invalid JSON"
     final = json.loads(out.getvalue().splitlines()[-1])
     assert final["ok"] == 1 and final["dead_lettered"] == 1 and final["received"] == 2
-    assert "84961234567" not in out.getvalue()                    # metrics carry no subscriber numbers
+    assert "84961234567" not in out.getvalue()  # metrics carry no subscriber numbers
 
 
 def test_backpressure_bounds_inflight(tmp_path):
@@ -214,8 +255,9 @@ def test_kafka_commits_only_contiguous_acknowledged_offsets(tmp_path):
     def ev(i):
         return json.dumps({**CALL, "event_id": f"K{i}"}).encode()
 
-    consumer = FakeConsumer([FakeMsg(0, i, ev(i)) for i in range(3)] + [FakeMsg(0, 3, b"{bad")]
-                            + [FakeMsg(1, 10, ev(10))])
+    consumer = FakeConsumer(
+        [FakeMsg(0, i, ev(i)) for i in range(3)] + [FakeMsg(0, 3, b"{bad")] + [FakeMsg(1, 10, ev(10))]
+    )
 
     async def scenario():
         gate, done = asyncio.Event(), set()
@@ -223,7 +265,7 @@ def test_kafka_commits_only_contiguous_acknowledged_offsets(tmp_path):
         async def handler(request):
             eid = json.loads(request.content)["event_id"]
             if eid == "K0":
-                await gate.wait()                                 # the oldest offset is slow
+                await gate.wait()  # the oldest offset is slow
             done.add(eid)
             return httpx.Response(200, json={"event_id": eid})
 
@@ -241,7 +283,7 @@ def test_kafka_commits_only_contiguous_acknowledged_offsets(tmp_path):
         await until(lambda: {"K1", "K2", "K10"} <= done and dlq(tmp_path))
         await until(lambda: (1, 11) in consumer.commits)
         await asyncio.sleep(0.05)
-        assert all(p != 0 for p, _ in consumer.commits)          # K1/K2/bad done but K0 not: no commit
+        assert all(p != 0 for p, _ in consumer.commits)  # K1/K2/bad done but K0 not: no commit
         gate.set()
         await until(lambda: (0, 4) in consumer.commits)
         b.stop.set()
@@ -272,6 +314,7 @@ def test_offset_tracker_restore_and_revoke():
 def test_kafka_connect_forces_manual_commit(monkeypatch):
     pytest.importorskip("confluent_kafka")
     import confluent_kafka
+
     captured = {}
     monkeypatch.setattr(confluent_kafka, "Consumer", lambda conf: captured.update(conf) or FakeConsumer([]))
     cb.KafkaSource.connect("b:9092", "t", "g", extra={"enable.auto.commit": True})
@@ -283,9 +326,14 @@ def test_kafka_connect_forces_manual_commit(monkeypatch):
 def live_api(monkeypatch, tmp_path):
     import server
     from test_backend_runtime import FakeDetector
-    engine = server.LiveEngine(demo_mode=False, state_path=tmp_path / "state.sqlite3",
-                               evidence_path=tmp_path / "evidence.jsonl",
-                               detector_factory=lambda: FakeDetector(), start_workers=False)
+
+    engine = server.LiveEngine(
+        demo_mode=False,
+        state_path=tmp_path / "state.sqlite3",
+        evidence_path=tmp_path / "evidence.jsonl",
+        detector_factory=lambda: FakeDetector(),
+        start_workers=False,
+    )
     monkeypatch.setattr(server, "engine", engine)
     monkeypatch.setattr(security, "network_key", lambda: KEY)
     engine.runtime.start()
@@ -297,16 +345,37 @@ def live_api(monkeypatch, tmp_path):
 
 def test_end_to_end_file_feed_through_fastapi_app(live_api, tmp_path):
     mapping = tmp_path / "map.json"
-    mapping.write_text(json.dumps({"calling_number": "caller", "called_number": "callee",
-                                   "setup_time": "ts", "ts_unit": "ms"}), encoding="utf-8")
-    carrier = {"event_type": "CALL", "event_id": "E2E-1", "calling_number": "84961234567",
-               "called_number": "84351234567", "setup_time": 100000, "cell_id": "HN-0001",
-               "imei": "35391110000001", "origin_trunk": "LOCAL", "network": "4G"}
-    lines = [carrier, carrier,                                     # duplicate: API dedups, still ok
-             {"kind": "CDR", "event": {"event_type": "CALL", "event_id": "E2E-1", "calling_number": "84961234567",
-                                       "setup_time": 100000, "duration_s": 42}},
-             {**carrier, "origin_trunk": "INTL"},                  # same id, other content -> 409
-             {k: v for k, v in {**carrier, "event_id": "E2E-2"}.items() if k != "imei"}]   # 400
+    mapping.write_text(
+        json.dumps({"calling_number": "caller", "called_number": "callee", "setup_time": "ts", "ts_unit": "ms"}),
+        encoding="utf-8",
+    )
+    carrier = {
+        "event_type": "CALL",
+        "event_id": "E2E-1",
+        "calling_number": "84961234567",
+        "called_number": "84351234567",
+        "setup_time": 100000,
+        "cell_id": "HN-0001",
+        "imei": "35391110000001",
+        "origin_trunk": "LOCAL",
+        "network": "4G",
+    }
+    lines = [
+        carrier,
+        carrier,  # duplicate: API dedups, still ok
+        {
+            "kind": "CDR",
+            "event": {
+                "event_type": "CALL",
+                "event_id": "E2E-1",
+                "calling_number": "84961234567",
+                "setup_time": 100000,
+                "duration_s": 42,
+            },
+        },
+        {**carrier, "origin_trunk": "INTL"},  # same id, other content -> 409
+        {k: v for k, v in {**carrier, "event_id": "E2E-2"}.items() if k != "imei"},
+    ]  # 400
     feed = tmp_path / "feed.jsonl"
     feed.write_text("".join(json.dumps(x) + "\n" for x in lines), encoding="utf-8")
     statuses = []
@@ -314,10 +383,20 @@ def test_end_to_end_file_feed_through_fastapi_app(live_api, tmp_path):
     async def scenario():
         async def log_response(response):
             statuses.append(response.status_code)
-        client = httpx.AsyncClient(transport=httpx.ASGITransport(app=live_api), base_url="http://api",
-                                   event_hooks={"response": [log_response]})
-        b = cb.Bridge("http://api", KEY, client=client, mapping=cb.load_mapping(mapping), concurrency=1,
-                      dead_letter=cb.DeadLetter(tmp_path / "dlq.jsonl"), sleep=no_sleep, max_retries=3)
+
+        client = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=live_api), base_url="http://api", event_hooks={"response": [log_response]}
+        )
+        b = cb.Bridge(
+            "http://api",
+            KEY,
+            client=client,
+            mapping=cb.load_mapping(mapping),
+            concurrency=1,
+            dead_letter=cb.DeadLetter(tmp_path / "dlq.jsonl"),
+            sleep=no_sleep,
+            max_retries=3,
+        )
         code = await b.run(cb.FileSource(str(feed)), metrics_every=0, out=io.StringIO())
         await client.aclose()
         return code, b.metrics.counts

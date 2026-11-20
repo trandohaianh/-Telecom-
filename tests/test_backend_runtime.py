@@ -1,4 +1,5 @@
 """Regressions for live isolation, durable RPC identity and bounded inference deadlines."""
+
 import asyncio
 import json
 import sys
@@ -20,9 +21,18 @@ from resilience import CircuitBreaker, GuardedDetector
 
 
 def call(eid="C1", ts=100.0):
-    return {"event_id": eid, "event_type": "CALL", "ts": ts, "caller": "84900000001",
-            "callee": "84900000002", "cell_id": "HN-0001", "imei": "35391110000001",
-            "origin_trunk": "LOCAL", "network": "4G", "caller_age_days": -1}
+    return {
+        "event_id": eid,
+        "event_type": "CALL",
+        "ts": ts,
+        "caller": "84900000001",
+        "callee": "84900000002",
+        "cell_id": "HN-0001",
+        "imei": "35391110000001",
+        "origin_trunk": "LOCAL",
+        "network": "4G",
+        "caller_age_days": -1,
+    }
 
 
 class MemoryFeatures:
@@ -64,11 +74,21 @@ class FakeDetector:
         out = []
         for ev in events:
             self.fs.calls += 1
-            out.append({"event_id": ev["event_id"], "event_type": ev["event_type"], "ts": ev["ts"],
-                        "party": ev.get("caller"), "counterparty": ev.get("callee"),
-                        "decision": "BLOCK" if self.block else "ALLOW", "risk": 0.9,
-                        "reasons": [{"code": "R103", "vi": "", "en": "", "feature": "calls_1h"}],
-                        "evidence_features": {"calls_1h": 10}, "action_vi": "", "action_en": ""})
+            out.append(
+                {
+                    "event_id": ev["event_id"],
+                    "event_type": ev["event_type"],
+                    "ts": ev["ts"],
+                    "party": ev.get("caller"),
+                    "counterparty": ev.get("callee"),
+                    "decision": "BLOCK" if self.block else "ALLOW",
+                    "risk": 0.9,
+                    "reasons": [{"code": "R103", "vi": "", "en": "", "feature": "calls_1h"}],
+                    "evidence_features": {"calls_1h": 10},
+                    "action_vi": "",
+                    "action_en": "",
+                }
+            )
         return out
 
 
@@ -83,8 +103,13 @@ def make_runtime(tmp_path, detector=None, **kwargs):
 def test_duplicate_setup_cdr_and_restart_keep_exactly_one_state_update(tmp_path):
     runtime, state, detector = make_runtime(tmp_path)
     event = call()
-    cdr = {"event_id": event["event_id"], "event_type": "CALL", "ts": 100.0,
-           "caller": event["caller"], "duration_s": 12.0}
+    cdr = {
+        "event_id": event["event_id"],
+        "event_type": "CALL",
+        "ts": 100.0,
+        "caller": event["caller"],
+        "duration_s": 12.0,
+    }
     try:
         first = asyncio.run(runtime.submit("VERDICT", event, budget_ms=500))
         repeated = asyncio.run(runtime.submit("VERDICT", event, budget_ms=500))
@@ -112,6 +137,7 @@ def test_deadline_queue_bound_and_event_loop_responsiveness(tmp_path):
     gate, started = threading.Event(), threading.Event()
     runtime, state, detector = make_runtime(tmp_path, FakeDetector(gate=gate, started=started), capacity=1)
     try:
+
         async def exercise():
             start = time.monotonic()
             one = asyncio.create_task(runtime.submit("VERDICT", call("A", 100), budget_ms=25))
@@ -133,6 +159,7 @@ def test_deadline_queue_bound_and_event_loop_responsiveness(tmp_path):
             assert runtime.queue.maxsize == 1 and runtime.queue.qsize() <= 1
             # Inference is still waiting on gate; HTTP deadlines and this coroutine ran independently.
             assert not gate.is_set() and time.monotonic() - start < 0.5
+
         asyncio.run(exercise())
     finally:
         gate.set()
@@ -145,8 +172,9 @@ def test_late_registered_commercial_call_never_learns_a_fraud_denylist():
     detector = FakeDetector()
     registry = CommercialRegistry()
     registry.register("84900000001", "Registered enterprise", 100)
-    guarded = GuardedDetector(detector, budget_ms=1, registry=registry,
-                              breaker=CircuitBreaker(failure_threshold=1, cooldown_s=60))
+    guarded = GuardedDetector(
+        detector, budget_ms=1, registry=registry, breaker=CircuitBreaker(failure_threshold=1, cooldown_s=60)
+    )
     guarded.chaos_delay_ms = 10
     result = guarded.score_batch([call()])[0]
     assert result["fail_open"] and result["decision"] == "ALLOW"
@@ -161,7 +189,7 @@ def test_retrospective_policy_and_features_do_not_rewind_live_state():
     guarded = GuardedDetector(detector, budget_ms=1000, registry=registry)
     guarded.chaos_error = True
     guarded.score_batch([call()])  # queued while the model did not see the event
-    detector.fs.calls = 12        # live state has since advanced
+    detector.fs.calls = 12  # live state has since advanced
     guarded.chaos_error = False
     assert guarded.drain_rescore() == []
     assert detector.fs.calls == 12 and not guarded.fallback.deny
@@ -185,8 +213,10 @@ def test_single_live_owner_and_pending_journal_recovery(tmp_path):
 
 
 def test_sessions_suspension_and_human_policy_survive_reopen(tmp_path, monkeypatch):
-    users = {"ana": {"role": "analyst", "token": "a", "sign_key": "11" * 32},
-             "boss": {"role": "admin", "token": "b", "sign_key": "22" * 32}}
+    users = {
+        "ana": {"role": "analyst", "token": "a", "sign_key": "11" * 32},
+        "boss": {"role": "admin", "token": "b", "sign_key": "22" * 32},
+    }
     monkeypatch.setattr(security, "_users_cache", users)
     saved_suspensions = set(security.suspended)
     runtime, state, _ = make_runtime(tmp_path)
@@ -229,12 +259,19 @@ def test_durable_evidence_drains_outbox_once_and_preserves_existing_chain(tmp_pa
 
 def test_live_boot_skips_demo_files_and_appends_live_decision(tmp_path, monkeypatch):
     import server
+
     def no_demo_data(*args, **kwargs):
         raise AssertionError("live mode must not load demo data")
+
     monkeypatch.setattr(server, "load_events", no_demo_data)
     path = tmp_path / "live.jsonl"
-    engine = server.LiveEngine(demo_mode=False, state_path=tmp_path / "state.sqlite3",
-                               evidence_path=path, detector_factory=FakeDetector, start_workers=False)
+    engine = server.LiveEngine(
+        demo_mode=False,
+        state_path=tmp_path / "state.sqlite3",
+        evidence_path=path,
+        detector_factory=FakeDetector,
+        start_workers=False,
+    )
     try:
         assert engine.events == [] and engine.sim is None and engine._stream_thread is None
         engine.runtime.start()
@@ -246,8 +283,9 @@ def test_live_boot_skips_demo_files_and_appends_live_decision(tmp_path, monkeypa
     assert json.loads(path.read_text(encoding="utf-8"))["record"]["event_id"] == "C1"
 
 
-@pytest.mark.parametrize("change", [{"ts": float("nan")}, {"ts": "100"}, {"imei": []},
-                                    {"label": 1}, {"duration_s": 10}])
+@pytest.mark.parametrize(
+    "change", [{"ts": float("nan")}, {"ts": "100"}, {"imei": []}, {"label": 1}, {"duration_s": 10}]
+)
 def test_network_schema_rejects_unsafe_or_ambiguous_fields(change):
     with pytest.raises(ValueError):
         validate_event(dict(call(), **change))
@@ -279,8 +317,15 @@ def test_cdr_overload_is_retryable_and_does_not_consume_identity(tmp_path):
 
 def test_pending_voice_observation_recovery_never_enters_synthetic_detector(tmp_path):
     state = BackendState(tmp_path / "state.sqlite3")
-    event = {"event_id": "V1", "event_type": "VOICE_OBSERVATION", "call_id": "CALL1",
-             "caller": "A", "callee": "B", "ts": 1000.0, "audio_sha256": "aa"}
+    event = {
+        "event_id": "V1",
+        "event_type": "VOICE_OBSERVATION",
+        "call_id": "CALL1",
+        "caller": "A",
+        "callee": "B",
+        "ts": 1000.0,
+        "audio_sha256": "aa",
+    }
     state.reserve("OBSERVATION", event)
     state.close()
     runtime, state, detector = make_runtime(tmp_path)
@@ -299,6 +344,7 @@ def test_noncausal_rescore_never_learns_deny_or_notifies_as_confirmed_fraud(tmp_
     from types import SimpleNamespace
 
     from agent import OpsAgent
+
     detector = FakeDetector()
     guarded = GuardedDetector(detector, budget_ms=1000)
     guarded.chaos_error = True
@@ -308,8 +354,13 @@ def test_noncausal_rescore_never_learns_deny_or_notifies_as_confirmed_fraud(tmp_
     assert len(retro) == 1 and retro[0]["requires_review"]
     assert retro[0]["retro_context"] == "current_snapshot" and not guarded.fallback.deny
     users = {"ai_agent": {"role": "agent", "sign_key": "11" * 32}}
-    engine = SimpleNamespace(g=guarded, lock=threading.RLock(), recent_hits=deque(),
-                             reports=defaultdict(set), reputation=defaultdict(Counter))
+    engine = SimpleNamespace(
+        g=guarded,
+        lock=threading.RLock(),
+        recent_hits=deque(),
+        reports=defaultdict(set),
+        reputation=defaultdict(Counter),
+    )
     audit = security.AuditLog(tmp_path / "agent-audit.jsonl", user_db=users)
     agent = OpsAgent(engine, audit)
     agent.scan()
@@ -335,6 +386,7 @@ def test_review_only_retro_does_not_reach_subscribers_or_group_tracking():
     from collections import defaultdict, deque
 
     import server
+
     engine = server.LiveEngine.__new__(server.LiveEngine)
     engine.lock = threading.RLock()
     engine.alerts = deque(maxlen=60)
@@ -342,8 +394,15 @@ def test_review_only_retro_does_not_reach_subscribers_or_group_tracking():
     engine.inbox = defaultdict(lambda: deque(maxlen=50))
     engine.inbox["B"]
     engine.guardians = defaultdict(set)
-    result = {"event_id": "R1", "event_type": "CALL", "decision": "FLAG",
-              "party": "A", "counterparty": "B", "requires_review": True, "retro": True}
+    result = {
+        "event_id": "R1",
+        "event_type": "CALL",
+        "decision": "FLAG",
+        "party": "A",
+        "counterparty": "B",
+        "requires_review": True,
+        "retro": True,
+    }
     engine._alert(result, {"event_type": "CALL"})
     assert engine.alerts[0]["requires_review"]
     assert not engine.inbox["B"] and not engine.recent_hits
@@ -397,12 +456,17 @@ def test_fail_open_and_public_api_use_loaded_bundle_provenance(tmp_path, monkeyp
     from fastapi.testclient import TestClient
 
     import server
+
     detector = FakeDetector()
     detector.model_version = "loaded-new-version"
     detector.model_manifest = {"status": "verified", "manifest_sha256": "1234"}
-    engine = server.LiveEngine(demo_mode=False, state_path=tmp_path / "state.sqlite3",
-                               evidence_path=tmp_path / "evidence.jsonl",
-                               detector_factory=lambda: detector, start_workers=False)
+    engine = server.LiveEngine(
+        demo_mode=False,
+        state_path=tmp_path / "state.sqlite3",
+        evidence_path=tmp_path / "evidence.jsonl",
+        detector_factory=lambda: detector,
+        start_workers=False,
+    )
     monkeypatch.setattr(server, "engine", engine)
     key = bytes.fromhex("ab" * 32)
     monkeypatch.setattr(security, "network_key", lambda: key)
@@ -412,8 +476,11 @@ def test_fail_open_and_public_api_use_loaded_bundle_provenance(tmp_path, monkeyp
         client = TestClient(server.app)
         body = json.dumps(call()).encode()
         timestamp = security.network_timestamp()
-        response = client.post("/api/v1/verdict", content=body, headers={
-            "x-timestamp": timestamp, "x-signature": security.sign_network(body, timestamp, key)})
+        response = client.post(
+            "/api/v1/verdict",
+            content=body,
+            headers={"x-timestamp": timestamp, "x-signature": security.sign_network(body, timestamp, key)},
+        )
         assert response.status_code == 200
         assert response.json()["model_version"] == "loaded-new-version"
         assert response.json()["artifact_status"] == "verified"
@@ -425,29 +492,34 @@ def test_fail_open_and_public_api_use_loaded_bundle_provenance(tmp_path, monkeyp
 
 def test_bounded_owner_jobs_survive_caller_cancellation_without_blocking_event_loop(tmp_path):
     import sqlite3
+
     gate, started = threading.Event(), threading.Event()
-    runtime, state, detector = make_runtime(tmp_path, FakeDetector(gate=gate, started=started),
-                                            capacity=2, admission_capacity=3)
+    runtime, state, detector = make_runtime(
+        tmp_path, FakeDetector(gate=gate, started=started), capacity=2, admission_capacity=3
+    )
     cdr = {"event_id": "RETRY-CDR", "event_type": "CALL", "caller": "A", "ts": 1.0, "duration_s": 2.0}
     try:
+
         async def exercise():
             one = asyncio.create_task(runtime.submit("VERDICT", call("KEEP", 1), budget_ms=2000))
             for _ in range(100):
                 if started.is_set():
                     break
-                await asyncio.sleep(.002)
+                await asyncio.sleep(0.002)
             assert started.is_set()
             one.cancel()
             with pytest.raises(asyncio.CancelledError):
                 await one
             two, three = await asyncio.gather(
                 runtime.submit("VERDICT", call("B", 2), budget_ms=20),
-                runtime.submit("VERDICT", call("C", 3), budget_ms=20))
+                runtime.submit("VERDICT", call("C", 3), budget_ms=20),
+            )
             assert two["pending"] and three["pending"]
             begin = time.perf_counter()
-            replies = await asyncio.gather(*(runtime.submit("VERDICT", call(f"OVER-{i}", 10+i), budget_ms=20)
-                                             for i in range(50)))
-            assert time.perf_counter() - begin < .5
+            replies = await asyncio.gather(
+                *(runtime.submit("VERDICT", call(f"OVER-{i}", 10 + i), budget_ms=20) for i in range(50))
+            )
+            assert time.perf_counter() - begin < 0.5
             assert all(r["ingest"] in ("OVERLOAD", "ADMISSION_OVERLOAD") and not r["durable"] for r in replies)
             assert runtime.stats["admission_peak"] == 3 and runtime.stats["admission_inflight"] == 3
             assert len(runtime._admission_futures) == 3
@@ -461,6 +533,7 @@ def test_bounded_owner_jobs_survive_caller_cancellation_without_blocking_event_l
             assert runtime.stats["admission_inflight"] == 0 and detector.fs.calls == 3
             assert (await runtime.submit("CDR", cdr, budget_ms=1000))["ok"]
             assert (await runtime.submit("CDR", cdr, budget_ms=1000))["duplicate"]
+
         asyncio.run(exercise())
     finally:
         gate.set()
@@ -470,15 +543,19 @@ def test_bounded_owner_jobs_survive_caller_cancellation_without_blocking_event_l
 
 def test_precise_deadline_retries_an_early_asyncio_timeout(monkeypatch):
     from backend_runtime import await_precise_deadline
+
     original = asyncio.wait_for
     waits = []
+
     async def early_once(awaitable, timeout):
         waits.append(timeout)
         if len(waits) == 1:
             awaitable.cancel()  # emulate wait_for cancelling only the shield
             raise asyncio.TimeoutError
         return await original(awaitable, timeout)
+
     monkeypatch.setattr(asyncio, "wait_for", early_once)
+
     async def exercise():
         loop = asyncio.get_running_loop()
         future = loop.create_future()
@@ -486,6 +563,7 @@ def test_precise_deadline_retries_an_early_asyncio_timeout(monkeypatch):
         result = await await_precise_deadline(future, time.perf_counter() + 0.05)
         assert result == "ready" and not future.cancelled()
         assert len(waits) >= 2 and waits[1] <= waits[0]
+
     asyncio.run(exercise())
 
 
@@ -494,6 +572,7 @@ def test_runtime_uses_full_precise_deadline_without_waiting_for_slow_model(tmp_p
         def score_batch(self, events):
             time.sleep(0.15)
             return super().score_batch(events)
+
     runtime, state, _ = make_runtime(tmp_path, SlowDetector())
     try:
         begin = time.perf_counter()
@@ -511,16 +590,20 @@ def test_completed_work_returns_without_an_extra_loop_turn_before_deadline(tmp_p
     from concurrent.futures import Future
 
     import backend_runtime as module
+
     runtime, state, _ = make_runtime(tmp_path)
     original_wait = module.await_precise_deadline
     waits = []
+
     def complete(kind, event, deadline, submitted):
         future = Future()
         future.set_result({"event_id": event["event_id"], "decision": "ALLOW", "fast": True})
         return module.Work(0, kind, event, deadline, submitted, future)
+
     async def observe_wait(future, deadline):
         waits.append(deadline)
         return await original_wait(future, deadline)
+
     monkeypatch.setattr(runtime, "_enqueue", complete)
     monkeypatch.setattr(module, "await_precise_deadline", observe_wait)
     try:

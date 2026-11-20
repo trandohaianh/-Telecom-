@@ -10,6 +10,7 @@ Biến môi trường chính:
   METRICS_TOKEN           Bearer token cho Grafana Cloud đọc /metrics
   FRAUD_OTP_PROVIDER      twilio | sms-http  (chế độ thật: xác minh số bằng OTP SMS; console chỉ khi demo)
 """
+
 from __future__ import annotations
 
 import os
@@ -38,10 +39,15 @@ def main() -> None:
 
     from server import app  # noqa: F401  (nạp thư viện số trước khi chạy loop)
 
-    uvicorn.run("server:app", host=os.environ.get("HOST", "0.0.0.0"), port=int(os.environ.get("PORT", "8080")),
-                log_level=os.environ.get("LOG_LEVEL", "warning"), proxy_headers=True,
-                forwarded_allow_ips=os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1"),  # N5: never trust every peer by default
-                loop="precise_event_loop:uvicorn_loop_factory")
+    uvicorn.run(
+        "server:app",
+        host=os.environ.get("HOST", "0.0.0.0"),
+        port=int(os.environ.get("PORT", "8080")),
+        log_level=os.environ.get("LOG_LEVEL", "warning"),
+        proxy_headers=True,
+        forwarded_allow_ips=os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1"),  # N5: never trust every peer by default
+        loop="precise_event_loop:uvicorn_loop_factory",
+    )
 
 
 if __name__ == "__main__":

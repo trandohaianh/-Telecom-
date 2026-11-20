@@ -15,6 +15,7 @@ tế — không sao, việc ở đây là hai cách tính có khớp nhau không
 
     python make_sample.py --hours 1 --seed 101
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,8 +34,21 @@ from data_generator import TrafficSimulator  # noqa: E402
 from feature_store import CALL_FEATURES, FeatureStore  # noqa: E402
 
 # Các cột của sự kiện CALL mà Spark sẽ đọc. Giữ đúng tên như generator sinh ra.
-EVENT_COLS = ["event_id", "event_type", "ts", "caller", "callee", "cell_id", "imei",
-              "origin_trunk", "network", "caller_age_days", "duration_s", "label", "fraud_type"]
+EVENT_COLS = [
+    "event_id",
+    "event_type",
+    "ts",
+    "caller",
+    "callee",
+    "cell_id",
+    "imei",
+    "origin_trunk",
+    "network",
+    "caller_age_days",
+    "duration_s",
+    "label",
+    "fraud_type",
+]
 
 
 def build(seed: int, hours: float, start_hour: int) -> pd.DataFrame:
@@ -79,12 +93,19 @@ def main() -> int:
     feats = reference_features(calls)
     out_feats = args.out_dir / "reference_call_features.parquet"
     feats.to_parquet(out_feats, index=False)
-    (args.out_dir / "feature_contract.json").write_text(json.dumps({"feature_contract": FeatureStore.FEATURE_CONTRACT, "order": ["ts", "event_id"], "features": CALL_FEATURES}), encoding="utf-8")
+    (args.out_dir / "feature_contract.json").write_text(
+        json.dumps(
+            {"feature_contract": FeatureStore.FEATURE_CONTRACT, "order": ["ts", "event_id"], "features": CALL_FEATURES}
+        ),
+        encoding="utf-8",
+    )
 
     print(f"{len(calls):,} sự kiện CALL  ->  {out_events.name}")
     print(f"{len(feats):,} dòng × {len(CALL_FEATURES)} đặc trưng  ->  {out_feats.name}")
-    print(f"khoảng thời gian: ts {calls['ts'].min():.0f} .. {calls['ts'].max():.0f}"
-          f"  ({(calls['ts'].max() - calls['ts'].min()) / 3600:.2f} giờ)")
+    print(
+        f"khoảng thời gian: ts {calls['ts'].min():.0f} .. {calls['ts'].max():.0f}"
+        f"  ({(calls['ts'].max() - calls['ts'].min()) / 3600:.2f} giờ)"
+    )
     print(f"số thuê bao gọi đi khác nhau: {calls['caller'].nunique():,}")
     return 0
 

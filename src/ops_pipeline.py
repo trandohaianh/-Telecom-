@@ -8,6 +8,7 @@ Job:
 - retention (hằng ngày): dọn OTP/phiên hết hạn, sự kiện chi phí và KPI quá hạn.
 Mỗi lần chạy ghi vào pipeline_runs → metric tfs_pipeline_* → cảnh báo khi trễ.
 """
+
 from __future__ import annotations
 
 import gzip
@@ -52,16 +53,20 @@ def _call_decision_window(st: dict) -> dict:
     """
     global _LAST_CALL_DECISIONS
     totals = st.get("call_decisions")
-    if totals is None:   # older engine without per-type counters: keep the previous behaviour
+    if totals is None:  # older engine without per-type counters: keep the previous behaviour
         d = st.get("decisions", {})
-        return {"ALLOW": d.get("ALLOW", 0) + d.get("FAIL_OPEN", 0), "FLAG": d.get("FLAG", 0), "BLOCK": d.get("BLOCK", 0)}
+        return {
+            "ALLOW": d.get("ALLOW", 0) + d.get("FAIL_OPEN", 0),
+            "FLAG": d.get("FLAG", 0),
+            "BLOCK": d.get("BLOCK", 0),
+        }
     totals = {k: int(totals.get(k, 0)) for k in ("ALLOW", "FLAG", "BLOCK")}
     previous = _LAST_CALL_DECISIONS
     if any(totals[k] < previous.get(k, 0) for k in totals):
-        previous = {}    # engine restarted: counters began again from zero
+        previous = {}  # engine restarted: counters began again from zero
     window = {k: totals[k] - previous.get(k, 0) for k in totals}
     if sum(window.values()) >= 500:
-        _LAST_CALL_DECISIONS = totals   # too few calls: keep accumulating into the next snapshot
+        _LAST_CALL_DECISIONS = totals  # too few calls: keep accumulating into the next snapshot
     return window
 
 
@@ -76,6 +81,7 @@ def _block_rate_pvalue(window: dict, baseline: dict) -> float | None:
     if n < 500 or not 0 < p0 < 1:
         return None
     from scipy.stats import binom
+
     return float(binom.sf(window.get("BLOCK", 0) - 1, n, p0))
 
 
@@ -99,24 +105,39 @@ def kpi_snapshot(db: AppDB, engine) -> tuple[str, dict]:
     window, baseline = _call_decision_window(st), _baseline_rates()
     psi = _decision_psi(window, baseline)
     block_p = _block_rate_pvalue(window, baseline)
-    drift_status = None if psi is None else ("alert" if psi >= 0.25 or (block_p is not None and block_p < 1e-3)
-                                             else "watch" if psi >= 0.1 or (block_p is not None and block_p < 1e-2)
-                                             else "stable")
+    drift_status = (
+        None
+        if psi is None
+        else (
+            "alert"
+            if psi >= 0.25 or (block_p is not None and block_p < 1e-3)
+            else "watch"
+            if psi >= 0.1 or (block_p is not None and block_p < 1e-2)
+            else "stable"
+        )
+    )
     res = st.get("resilience") or {}
     row = {
-        "processed": st.get("processed", 0), "blocked": d.get("BLOCK", 0), "flagged": d.get("FLAG", 0),
-        "allowed": d.get("ALLOW", 0), "fail_open": d.get("FAIL_OPEN", 0),
+        "processed": st.get("processed", 0),
+        "blocked": d.get("BLOCK", 0),
+        "flagged": d.get("FLAG", 0),
+        "allowed": d.get("ALLOW", 0),
+        "fail_open": d.get("FAIL_OPEN", 0),
         "degraded": int(res.get("fallback_block", 0) + res.get("fallback_flag", 0)),
         "retro": int(res.get("rescored", 0)),
-        "latency_p50_ms": (st.get("latency_ms") or {}).get("p50"), "latency_p99_ms": (st.get("latency_ms") or {}).get("p99"),
+        "latency_p50_ms": (st.get("latency_ms") or {}).get("p50"),
+        "latency_p99_ms": (st.get("latency_ms") or {}).get("p99"),
         "cpu_seconds": round(process_cpu_seconds(), 2),
         "subscribers": int(db.one("SELECT COUNT(*) n FROM subscribers")["n"]),
         "reports_pending": int(db.one("SELECT COUNT(*) n FROM number_reports WHERE status='pending'")["n"]),
-        "drift_max_psi": psi, "drift_status": drift_status,
+        "drift_max_psi": psi,
+        "drift_status": drift_status,
     }
     with db.tx() as c:
-        c.execute(f"INSERT INTO kpi_snapshots(taken_at, day, {', '.join(row)}) VALUES (?, ?, {', '.join('?' * len(row))})",
-                  (now(), datetime.now(timezone.utc).date().isoformat(), *row.values()))
+        c.execute(
+            f"INSERT INTO kpi_snapshots(taken_at, day, {', '.join(row)}) VALUES (?, ?, {', '.join('?' * len(row))})",
+            (now(), datetime.now(timezone.utc).date().isoformat(), *row.values()),
+        )
     status = "warn" if drift_status == "alert" else "ok"
     return status, row
 
@@ -171,8 +192,14 @@ def retention(db: AppDB, engine) -> tuple[str, dict]:
         alerts = c.execute("""DELETE FROM subscriber_alerts WHERE id IN (
                                 SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY msisdn ORDER BY id DESC) rn
                                                 FROM subscriber_alerts) WHERE rn > 200)""").rowcount
-    return "ok", {"otp": otp, "sessions": sessions, "usage_events": usage, "kpi_snapshots": kpi, "runs": runs,
-                  "alerts": alerts}
+    return "ok", {
+        "otp": otp,
+        "sessions": sessions,
+        "usage_events": usage,
+        "kpi_snapshots": kpi,
+        "runs": runs,
+        "alerts": alerts,
+    }
 
 
 _FUNCS = {"kpi_snapshot": kpi_snapshot, "backup": backup, "retention": retention}
@@ -180,8 +207,10 @@ _FUNCS = {"kpi_snapshot": kpi_snapshot, "backup": backup, "retention": retention
 
 def run_job(db: AppDB, engine, job: str, trigger: str = "manual") -> dict:
     with db.tx() as c:
-        run_id = c.execute("INSERT INTO pipeline_runs(job, started_at, status, trigger) VALUES (?,?, 'running', ?)",
-                           (job, now(), trigger)).lastrowid
+        run_id = c.execute(
+            "INSERT INTO pipeline_runs(job, started_at, status, trigger) VALUES (?,?, 'running', ?)",
+            (job, now(), trigger),
+        ).lastrowid
     started = time.perf_counter()
     try:
         status, detail = _FUNCS[job](db, engine)
@@ -190,8 +219,10 @@ def run_job(db: AppDB, engine, job: str, trigger: str = "manual") -> dict:
         status, detail = "fail", {"error": type(exc).__name__, "message": str(exc)[:300]}
     detail["duration_s"] = round(time.perf_counter() - started, 3)
     with db.tx() as c:
-        c.execute("UPDATE pipeline_runs SET finished_at=?, status=?, detail=? WHERE id=?",
-                  (now(), status, json.dumps(detail, ensure_ascii=False, default=str), run_id))
+        c.execute(
+            "UPDATE pipeline_runs SET finished_at=?, status=?, detail=? WHERE id=?",
+            (now(), status, json.dumps(detail, ensure_ascii=False, default=str), run_id),
+        )
     return {"job": job, "status": status, "detail": detail}
 
 

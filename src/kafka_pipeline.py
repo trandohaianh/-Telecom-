@@ -15,6 +15,7 @@ producer. The Kafka client is injected (confluent_kafka objects in the demo, fak
 
 Run inside the demo container: python -B src/kafka_pipeline.py bench --partitions 2 --rate 4000
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,19 +31,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 IN_TOPIC, OUT_TOPIC = "carrier.events", "fraud.verdicts"
-SENT_AT = "_sent_at"            # producer wall-clock send time (seconds), carried inside the message
+SENT_AT = "_sent_at"  # producer wall-clock send time (seconds), carried inside the message
 
 
 # --------------------------------------------------------------------------- message contract
 def message_key(ev: dict) -> bytes:
     """Partition key = canonical caller (same rule as scaleout.partition_key / ram_online)."""
     from scaleout import partition_key
+
     return partition_key(ev).encode("utf-8")
 
 
 def encode_event(ev: dict, sent_at: float) -> tuple[bytes, bytes]:
-    return message_key(ev), json.dumps({**ev, SENT_AT: sent_at}, separators=(",", ":"),
-                                       allow_nan=False).encode("utf-8")
+    return message_key(ev), json.dumps({**ev, SENT_AT: sent_at}, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
 def decode_event(value: bytes) -> tuple[dict, float]:
@@ -54,9 +55,16 @@ def decode_event(value: bytes) -> tuple[dict, float]:
 
 
 def verdict_message(ev: dict, result: dict, sent_at: float, journal_seq: int) -> tuple[bytes, bytes]:
-    out = {"event_id": ev["event_id"], "decision": result.get("decision"), "risk": result.get("risk"),
-           "scored": result.get("scored", True), "reasons": [r.get("code") for r in result.get("reasons", [])][:3],
-           "journal_seq": journal_seq, SENT_AT: sent_at, "verdict_at": time.time()}
+    out = {
+        "event_id": ev["event_id"],
+        "decision": result.get("decision"),
+        "risk": result.get("risk"),
+        "scored": result.get("scored", True),
+        "reasons": [r.get("code") for r in result.get("reasons", [])][:3],
+        "journal_seq": journal_seq,
+        SENT_AT: sent_at,
+        "verdict_at": time.time(),
+    }
     return message_key(ev), json.dumps(out, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
@@ -87,7 +95,7 @@ class MicroBatcher:
         deadline = self.clock() + self.max_wait_s
         while len(batch) < self.max_batch and (left := deadline - self.clock()) > 0:
             more = self.consumer.consume(num_messages=self.max_batch - len(batch), timeout=left)
-            if not more:          # consume() already waited the remaining time
+            if not more:  # consume() already waited the remaining time
                 break
             batch += [m for m in more if m.error() is None]
         return batch
@@ -95,12 +103,35 @@ class MicroBatcher:
 
 # --------------------------------------------------------------------------- consumer
 class VerdictPipeline:
-    def __init__(self, consumer, producer, engine, state, *, out_topic: str = OUT_TOPIC,
-                 max_batch: int = 1000, max_wait_s: float = 0.005):
-        self.consumer, self.producer, self.engine, self.state, self.out_topic = consumer, producer, engine, state, out_topic
+    def __init__(
+        self,
+        consumer,
+        producer,
+        engine,
+        state,
+        *,
+        out_topic: str = OUT_TOPIC,
+        max_batch: int = 1000,
+        max_wait_s: float = 0.005,
+    ):
+        self.consumer, self.producer, self.engine, self.state, self.out_topic = (
+            consumer,
+            producer,
+            engine,
+            state,
+            out_topic,
+        )
         self.batcher = MicroBatcher(consumer, max_batch, max_wait_s)
-        self.stats = {"batches": 0, "events": 0, "duplicates": 0, "commits": 0, "max_batch": 0,
-                      "score_ms": 0.0, "journal_ms": 0.0, "produce_ms": 0.0}
+        self.stats = {
+            "batches": 0,
+            "events": 0,
+            "duplicates": 0,
+            "commits": 0,
+            "max_batch": 0,
+            "score_ms": 0.0,
+            "journal_ms": 0.0,
+            "produce_ms": 0.0,
+        }
         self.results: dict[str, dict] = {}
 
     def handle(self, messages) -> int:
@@ -130,7 +161,7 @@ class VerdictPipeline:
             for ev, seq in zip(events, seqs):
                 if ev["event_id"] in scored:
                     self.state.finish(seq, scored[ev["event_id"]])
-        t3 = time.perf_counter()          # COMMIT (one fsync with synchronous=FULL) happened on exiting the block
+        t3 = time.perf_counter()  # COMMIT (one fsync with synchronous=FULL) happened on exiting the block
         for ev, s, seq in zip(events, sent, seqs):
             result = scored.get(ev["event_id"]) or previous.get(ev["event_id"]) or {}
             self.results[ev["event_id"]] = result
@@ -230,24 +261,57 @@ class PipelinedVerdictPipeline:
     - A2: the journal stores one row per event in a single write (record_many), without simulator labels.
     """
 
-    def __init__(self, consumer, producer, engine, state, *, out_topic=OUT_TOPIC, max_batch=1000,
-                 max_wait_s=0.001, budget_ms=10.0, adaptive=True, in_flight=1, offset_factory=None):
-        self.consumer, self.producer, self.engine, self.state, self.out_topic = consumer, producer, engine, state, out_topic
-        self.batcher = (AdaptiveBatcher(consumer, max_batch, max_wait_s, budget_ms) if adaptive
-                        else MicroBatcher(consumer, max_batch, max_wait_s))
+    def __init__(
+        self,
+        consumer,
+        producer,
+        engine,
+        state,
+        *,
+        out_topic=OUT_TOPIC,
+        max_batch=1000,
+        max_wait_s=0.001,
+        budget_ms=10.0,
+        adaptive=True,
+        in_flight=1,
+        offset_factory=None,
+    ):
+        self.consumer, self.producer, self.engine, self.state, self.out_topic = (
+            consumer,
+            producer,
+            engine,
+            state,
+            out_topic,
+        )
+        self.batcher = (
+            AdaptiveBatcher(consumer, max_batch, max_wait_s, budget_ms)
+            if adaptive
+            else MicroBatcher(consumer, max_batch, max_wait_s)
+        )
         if offset_factory is None:
             from confluent_kafka import TopicPartition as offset_factory
         self.offset_factory = offset_factory
-        self.reader = (sqlite3.connect(str(state.path), check_same_thread=False, isolation_level=None)
-                       if state.path is not None else None)
+        self.reader = (
+            sqlite3.connect(str(state.path), check_same_thread=False, isolation_level=None)
+            if state.path is not None
+            else None
+        )
         self.q: queue.Queue = queue.Queue(maxsize=max(1, in_flight))
         self.inflight: dict[str, dict] = {}
         self.lock = threading.Lock()
         self.results: dict[str, dict] = {}
         self.error = None
         self.last_journal_ms = 0.0
-        self.stats = {"batches": 0, "events": 0, "duplicates": 0, "commits": 0, "max_batch": 0,
-                      "score_ms": 0.0, "journal_ms": 0.0, "produce_ms": 0.0}
+        self.stats = {
+            "batches": 0,
+            "events": 0,
+            "duplicates": 0,
+            "commits": 0,
+            "max_batch": 0,
+            "score_ms": 0.0,
+            "journal_ms": 0.0,
+            "produce_ms": 0.0,
+        }
         self.writer = threading.Thread(target=self._write_loop, name="journal-writer", daemon=True)
         self.writer.start()
 
@@ -261,14 +325,14 @@ class PipelinedVerdictPipeline:
         events = [journal_event(decoded[i][0]) for i in order]
         sent = [decoded[i][1] for i in order]
         ids = [ev["event_id"] for ev in events]
-        with self.lock:                                   # 1) in-flight first ...
+        with self.lock:  # 1) in-flight first ...
             known = {i: self.inflight[i] for i in ids if i in self.inflight}
         rest = [ev for ev in events if ev["event_id"] not in known]
-        if rest:                                          # 2) ... then what is durable
+        if rest:  # 2) ... then what is durable
             known.update(self.state.lookup_many("VERDICT", rest, db=self.reader))
         fresh, seen = [], set(known)
         for ev in events:
-            if ev["event_id"] not in seen:                # also drops a duplicate inside the batch
+            if ev["event_id"] not in seen:  # also drops a duplicate inside the batch
                 seen.add(ev["event_id"])
                 fresh.append(ev)
         t1 = time.perf_counter()
@@ -286,7 +350,7 @@ class PipelinedVerdictPipeline:
         self.stats["max_batch"] = max(self.stats["max_batch"], len(events))
         self.stats["score_ms"] += score_ms
         item = (events, sent, fresh, scored, known, _offsets_of(messages))
-        while True:                       # blocks while N-1 is in flight, but never on a dead writer
+        while True:  # blocks while N-1 is in flight, but never on a dead writer
             try:
                 self.q.put(item, timeout=0.1)
                 break
@@ -305,17 +369,22 @@ class PipelinedVerdictPipeline:
                 a = time.perf_counter()
                 seqs = {}
                 if fresh:
-                    with self.state.transaction():         # ONE commit = one fsync (synchronous=FULL)
-                        seqs = dict(zip((ev["event_id"] for ev in fresh),
-                                        self.state.record_many("VERDICT", fresh, [scored[ev["event_id"]] for ev in fresh])))
+                    with self.state.transaction():  # ONE commit = one fsync (synchronous=FULL)
+                        seqs = dict(
+                            zip(
+                                (ev["event_id"] for ev in fresh),
+                                self.state.record_many("VERDICT", fresh, [scored[ev["event_id"]] for ev in fresh]),
+                            )
+                        )
                 b = time.perf_counter()
-                for ev, s_at in zip(events, sent):          # verdicts are published only once durable
+                for ev, s_at in zip(events, sent):  # verdicts are published only once durable
                     eid = ev["event_id"]
                     key, value = verdict_message(ev, scored.get(eid) or known.get(eid) or {}, s_at, seqs.get(eid, -1))
                     self.producer.produce(self.out_topic, key=key, value=value)
                 self.producer.poll(0)
-                self.consumer.commit(offsets=[self.offset_factory(t, p, o) for (t, p), o in sorted(offsets.items())],
-                                     asynchronous=False)
+                self.consumer.commit(
+                    offsets=[self.offset_factory(t, p, o) for (t, p), o in sorted(offsets.items())], asynchronous=False
+                )
                 with self.lock:
                     for ev in fresh:
                         self.inflight.pop(ev["event_id"], None)
@@ -324,7 +393,7 @@ class PipelinedVerdictPipeline:
                 self.stats["commits"] += 1
                 self.stats["journal_ms"] += (b - a) * 1000
                 self.stats["produce_ms"] += (c - b) * 1000
-            except BaseException as exc:      # noqa: BLE001 - surfaced to the consumer loop by handle()/run()
+            except BaseException as exc:  # noqa: BLE001 - surfaced to the consumer loop by handle()/run()
                 self.error = exc
                 return
             finally:
@@ -382,7 +451,7 @@ class VerdictSink:
                 now = self.clock()
                 v = json.loads(m.value())
                 if v["event_id"] in self.decisions:
-                    continue              # at-least-once: a replayed verdict is not a second sample
+                    continue  # at-least-once: a replayed verdict is not a second sample
                 self.decisions[v["event_id"]] = v["decision"]
                 self.latency_ms.append((now - v[SENT_AT]) * 1000)
 
@@ -406,14 +475,18 @@ def produce_paced(producer, events, rate: float, topic: str = IN_TOPIC, clock=ti
             try:
                 producer.produce(topic, key=key, value=value)
                 break
-            except BufferError:           # local queue full: let librdkafka drain, then retry
+            except BufferError:  # local queue full: let librdkafka drain, then retry
                 producer.poll(0.01)
         if i % 500 == 0:
             producer.poll(0)
     producer.flush(60)
     elapsed = clock() - start
-    return {"sent": len(events), "seconds": round(elapsed, 3), "achieved_rate": round(len(events) / max(elapsed, 1e-9)),
-            "late_sends": late}
+    return {
+        "sent": len(events),
+        "seconds": round(elapsed, 3),
+        "achieved_rate": round(len(events) / max(elapsed, 1e-9)),
+        "late_sends": late,
+    }
 
 
 # --------------------------------------------------------------------------- bench (container only)
@@ -432,6 +505,7 @@ def _kafka_conf(bootstrap):
 
 def _create_topics(bootstrap, partitions):
     from confluent_kafka.admin import AdminClient, NewTopic
+
     admin = AdminClient(_kafka_conf(bootstrap))
     for t in (IN_TOPIC, OUT_TOPIC):
         if t in admin.list_topics(timeout=10).topics:
@@ -446,6 +520,7 @@ def _create_topics(bootstrap, partitions):
 def _producer_proc(bootstrap, events, rate, out):
     sys.path.insert(0, str(ROOT / "src"))
     from confluent_kafka import Producer
+
     p = Producer({**_kafka_conf(bootstrap), "linger.ms": 1, "acks": "all", "enable.idempotence": True})
     out.put(produce_paced(p, events, rate))
 
@@ -454,6 +529,7 @@ def bench(args) -> dict:
     import multiprocessing as mp
 
     from confluent_kafka import Consumer, Producer
+
     _bundle_env()
     import evaluate
     from backend_state import BackendState
@@ -467,21 +543,43 @@ def bench(args) -> dict:
     state_path = Path(args.state_dir) / f"journal_p{args.partitions}_{int(time.time())}.sqlite3"
     state = BackendState(state_path)
     group = f"fraud-{args.partitions}-{int(time.time())}"
-    consumer = Consumer({**_kafka_conf(args.bootstrap), "group.id": group, "enable.auto.commit": False,
-                         "auto.offset.reset": "earliest", "fetch.wait.max.ms": 1})
+    consumer = Consumer(
+        {
+            **_kafka_conf(args.bootstrap),
+            "group.id": group,
+            "enable.auto.commit": False,
+            "auto.offset.reset": "earliest",
+            "fetch.wait.max.ms": 1,
+        }
+    )
     consumer.subscribe([IN_TOPIC])
-    sink_consumer = Consumer({**_kafka_conf(args.bootstrap), "group.id": group + "-sink",
-                              "auto.offset.reset": "earliest", "fetch.wait.max.ms": 1})
+    sink_consumer = Consumer(
+        {
+            **_kafka_conf(args.bootstrap),
+            "group.id": group + "-sink",
+            "auto.offset.reset": "earliest",
+            "fetch.wait.max.ms": 1,
+        }
+    )
     sink_consumer.subscribe([OUT_TOPIC])
     out_producer = Producer({**_kafka_conf(args.bootstrap), "linger.ms": 1, "acks": "all", "enable.idempotence": True})
     lag_samples = []
     with ShardedEngine(args.shards, warm) as engine:
         if args.pipeline == "pipelined":
-            pipe = PipelinedVerdictPipeline(consumer, out_producer, engine, state, max_batch=args.batch,
-                                            max_wait_s=args.wait_ms / 1000, budget_ms=args.budget_ms,
-                                            adaptive=not args.fixed_batch)
+            pipe = PipelinedVerdictPipeline(
+                consumer,
+                out_producer,
+                engine,
+                state,
+                max_batch=args.batch,
+                max_wait_s=args.wait_ms / 1000,
+                budget_ms=args.budget_ms,
+                adaptive=not args.fixed_batch,
+            )
         else:
-            pipe = VerdictPipeline(consumer, out_producer, engine, state, max_batch=args.batch, max_wait_s=args.wait_ms / 1000)
+            pipe = VerdictPipeline(
+                consumer, out_producer, engine, state, max_batch=args.batch, max_wait_s=args.wait_ms / 1000
+            )
         sink = VerdictSink(sink_consumer)
         # Wait for both consumer groups to own their partitions before the clock starts.
         for c in (consumer, sink_consumer):
@@ -493,6 +591,7 @@ def bench(args) -> dict:
 
         def lag_sampler():
             from confluent_kafka import TopicPartition
+
             while not stop.wait(0.5):
                 try:
                     lag = 0
@@ -501,8 +600,9 @@ def bench(args) -> dict:
                         pos = consumer.position([TopicPartition(tp.topic, tp.partition)])[0].offset
                         lag += max(0, high - pos) if pos >= 0 else max(0, high - low)
                     lag_samples.append(lag)
-                except Exception:      # noqa: BLE001 - sampling must never break the run
+                except Exception:  # noqa: BLE001 - sampling must never break the run
                     pass
+
         lag_thread = threading.Thread(target=lag_sampler, daemon=True)
         sink_thread.start()
         lag_thread.start()
@@ -520,20 +620,33 @@ def bench(args) -> dict:
     results = [pipe.results[ev["event_id"]] for ev in events]
     m = evaluate.metrics(events, results)
     row = {
-        "partitions": args.partitions, "shards": args.shards, "target_rate": args.rate, "events": len(events),
-        "pipeline": args.pipeline, "max_batch": args.batch, "wait_ms": args.wait_ms,
+        "partitions": args.partitions,
+        "shards": args.shards,
+        "target_rate": args.rate,
+        "events": len(events),
+        "pipeline": args.pipeline,
+        "max_batch": args.batch,
+        "wait_ms": args.wait_ms,
         "budget_ms": args.budget_ms if args.pipeline == "pipelined" and not args.fixed_batch else None,
-        "producer": produced, "pipeline_throughput_eps": round(len(events) / wall),
-        "e2e_latency_ms": percentiles(sink.latency_ms), "e2e_samples": len(sink.latency_ms),
-        "batches": pipe.stats["batches"], "durable_commits": pipe.stats["commits"],
-        "mean_batch": round(pipe.stats["events"] / max(pipe.stats["batches"], 1), 1), "largest_batch": pipe.stats["max_batch"],
+        "producer": produced,
+        "pipeline_throughput_eps": round(len(events) / wall),
+        "e2e_latency_ms": percentiles(sink.latency_ms),
+        "e2e_samples": len(sink.latency_ms),
+        "batches": pipe.stats["batches"],
+        "durable_commits": pipe.stats["commits"],
+        "mean_batch": round(pipe.stats["events"] / max(pipe.stats["batches"], 1), 1),
+        "largest_batch": pipe.stats["max_batch"],
         "journal_ms_per_batch": round(pipe.stats["journal_ms"] / max(pipe.stats["batches"], 1), 2),
         "score_ms_per_batch": round(pipe.stats["score_ms"] / max(pipe.stats["batches"], 1), 2),
         "consumer_lag_max": max(lag_samples) if lag_samples else None,
         "fail_open": sum(1 for r in results if r.get("fail_open")),
         "journal_synchronous": state.synchronous,
-        "quality": {"block_recall_pct": m["block"]["recall_pct"], "block_fpr_pct": m["block"]["fpr_pct"],
-                    "any_recall_pct": m["block_or_flag"]["recall_pct"], "any_fpr_pct": m["block_or_flag"]["fpr_pct"]},
+        "quality": {
+            "block_recall_pct": m["block"]["recall_pct"],
+            "block_fpr_pct": m["block"]["fpr_pct"],
+            "any_recall_pct": m["block_or_flag"]["recall_pct"],
+            "any_fpr_pct": m["block_or_flag"]["fpr_pct"],
+        },
     }
     if args.reference:
         ref = json.loads(Path(args.reference).read_text(encoding="utf-8"))
@@ -550,16 +663,23 @@ def reference(args) -> dict:
     from config import DATA_DIR
     from events_io import load_events
     from scaleout import ShardedEngine
+
     events = load_events(DATA_DIR / "test_events_50k.csv")[: args.events]
     warm = load_events(DATA_DIR / "test_warmup_24h_events.csv.gz")
     with ShardedEngine(args.shards, warm) as engine:
         results = []
         for i in range(0, len(events), 64):
-            results += engine.process(events[i:i + 64])
+            results += engine.process(events[i : i + 64])
     m = evaluate.metrics(events, results)
-    return {"decisions": {ev["event_id"]: r.get("decision") for ev, r in zip(events, results)},
-            "quality": {"block_recall_pct": m["block"]["recall_pct"], "block_fpr_pct": m["block"]["fpr_pct"],
-                        "any_recall_pct": m["block_or_flag"]["recall_pct"], "any_fpr_pct": m["block_or_flag"]["fpr_pct"]}}
+    return {
+        "decisions": {ev["event_id"]: r.get("decision") for ev, r in zip(events, results)},
+        "quality": {
+            "block_recall_pct": m["block"]["recall_pct"],
+            "block_fpr_pct": m["block"]["fpr_pct"],
+            "any_recall_pct": m["block_or_flag"]["recall_pct"],
+            "any_fpr_pct": m["block_or_flag"]["fpr_pct"],
+        },
+    }
 
 
 def main(argv=None) -> int:
@@ -575,8 +695,12 @@ def main(argv=None) -> int:
     ap.add_argument("--wait-ms", type=float, default=5.0)
     ap.add_argument("--state-dir", default=os.environ.get("KAFKA_DEMO_STATE", "/srv/state"))
     ap.add_argument("--reference", help="JSON written by the 'reference' mode")
-    ap.add_argument("--pipeline", choices=["sequential", "pipelined"], default="pipelined",
-                    help="sequential = the first demo (score, journal, publish, commit in turn)")
+    ap.add_argument(
+        "--pipeline",
+        choices=["sequential", "pipelined"],
+        default="pipelined",
+        help="sequential = the first demo (score, journal, publish, commit in turn)",
+    )
     ap.add_argument("--budget-ms", type=float, default=10.0, help="A3 latency budget per batch")
     ap.add_argument("--fixed-batch", action="store_true", help="pipelined, but without the adaptive cap")
     ap.add_argument("--out")

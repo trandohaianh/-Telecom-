@@ -8,6 +8,7 @@ Thresholds are chosen ONLY from the legitimate events of the validation window s
 false-positive rate of each action stays under its budget (block <= 0.01 %, flag <= 0.5 %).
 The 50,000-event test window is never touched here.
 """
+
 # Nạp thư viện thao tác dữ liệu, huấn luyện mô hình và lưu mô hình.
 import json
 
@@ -29,21 +30,40 @@ from statistical_reporting import fpr_report, threshold_validation
 # Khai báo nhóm gian lận nhìn thấy ở tầng báo hiệu và các cấu hình cho huấn luyện.
 # families visible in call set-up signalling (voice harvesting: bursts of short answered calls to strangers)
 SIGNALLING_FRAUD = {"SIM_BOX", "CLI_SPOOF", "VOICE_HARVEST"}
-ANOMALY_FEATURES = ["calls_1m", "calls_10m", "calls_1h", "callee_dispersion_1h", "in_out_ratio_24h",
-                    "short_call_ratio", "mean_log_duration", "completed_calls_seen", "imei_per_msisdn_24h",
-                    "msisdn_per_imei_24h", "caller_age_days", "velocity_kmh", "new_sims_on_cell_1h"]
+ANOMALY_FEATURES = [
+    "calls_1m",
+    "calls_10m",
+    "calls_1h",
+    "callee_dispersion_1h",
+    "in_out_ratio_24h",
+    "short_call_ratio",
+    "mean_log_duration",
+    "completed_calls_seen",
+    "imei_per_msisdn_24h",
+    "msisdn_per_imei_24h",
+    "caller_age_days",
+    "velocity_kmh",
+    "new_sims_on_cell_1h",
+]
 # FPR budget of the unsupervised flag, allocated per peer group (foreign traffic is ~2 % of calls,
 # so 1 % inside that group costs ~0.02 % of all calls)
 ANOMALY_FLAG_FPR = {"domestic": 0.0005, "foreign": 0.01, "trunk": 0.005}
-CALL_FLAG_FPR = 0.001          # soft actions on calls trigger Tier-2 monitoring; keep them rare
-FLOORS = {"call": {"block": 0.5, "flag": 0.05}, "sms": {"block": 0.9, "flag": 0.5}, "audio": {"block": 0.9, "flag": 0.5}}
+CALL_FLAG_FPR = 0.001  # soft actions on calls trigger Tier-2 monitoring; keep them rare
+FLOORS = {
+    "call": {"block": 0.5, "flag": 0.05},
+    "sms": {"block": 0.9, "flag": 0.5},
+    "audio": {"block": 0.9, "flag": 0.5},
+}
 
 
 def segment_of(df):
     """Peer groups for anomaly detection: foreign numbers / bank-agency trunks / domestic subscribers."""
     # Gán mỗi cuộc gọi vào nhóm đối sánh theo cờ số nước ngoài hoặc trunk được bảo vệ.
-    return np.where(df["caller_foreign"] == 1, "foreign",
-                    np.where((df["origin_bank_trunk"] == 1) | (df["cli_protected"] == 1), "trunk", "domestic"))
+    return np.where(
+        df["caller_foreign"] == 1,
+        "foreign",
+        np.where((df["origin_bank_trunk"] == 1) | (df["cli_protected"] == 1), "trunk", "domestic"),
+    )
 
 
 def floor(th, kind):
@@ -66,7 +86,8 @@ def threshold_for_fpr_bound(neg_scores, target_fpr: float, confidence: float = 0
     the action is disabled instead of being armed on an unproven bound.
     """
     from scipy.stats import beta
-    s = np.sort(np.asarray(neg_scores, dtype=float))[::-1]          # descending
+
+    s = np.sort(np.asarray(neg_scores, dtype=float))[::-1]  # descending
     n = s.size
     if not n or not np.isfinite(s).all():
         raise ValueError("calibration requires finite legitimate scores")
@@ -98,7 +119,6 @@ def threshold_for_fpr(neg_scores: np.ndarray, fpr: float, margin: float = 0.5) -
     return float(np.nextafter(boundary, np.inf))
 
 
-
 def load(name, kind):
     # Đọc bộ đặc trưng parquet theo tên cửa sổ và loại sự kiện.
     return pd.read_parquet(DATA_DIR / f"{name}_{kind}_features.parquet")
@@ -114,8 +134,11 @@ def calibration_report(negative_scores, thresholds, name, flag_fpr=TARGET_FLAG_F
     report = threshold_validation(negative_scores, thresholds, TARGET_BLOCK_FPR, flag_fpr)
     report["calibration_window"] = name
     report["independent_of_early_stopping"] = name == "cal"
-    report["scope"] = ("independent calibration window; held-out evaluation still required" if name == "cal"
-                       else "legacy validation reused for threshold selection and early stopping; unverified")
+    report["scope"] = (
+        "independent calibration window; held-out evaluation still required"
+        if name == "cal"
+        else "legacy validation reused for threshold selection and early stopping; unverified"
+    )
     return report
 
 
@@ -129,15 +152,26 @@ def train_call():
     ytr = tr.fraud_type.isin(SIGNALLING_FRAUD).astype(int)
     yva = va_eval.fraud_type.isin(SIGNALLING_FRAUD).astype(int)
     # Khai báo cấu hình LightGBM có trọng số để xử lý mất cân bằng nhãn.
-    params = dict(objective="binary", learning_rate=0.05, num_leaves=31, min_child_samples=40,
-                  feature_fraction=0.8, bagging_fraction=0.8, bagging_freq=1, lambda_l2=1.0,
-                  scale_pos_weight=10.0, verbose=-1, seed=7)
+    params = dict(
+        objective="binary",
+        learning_rate=0.05,
+        num_leaves=31,
+        min_child_samples=40,
+        feature_fraction=0.8,
+        bagging_fraction=0.8,
+        bagging_freq=1,
+        lambda_l2=1.0,
+        scale_pos_weight=10.0,
+        verbose=-1,
+        seed=7,
+    )
     # Đóng gói tập huấn luyện và kiểm định thành Dataset của LightGBM.
     dtr = lgb.Dataset(tr[CALL_FEATURES], ytr)
     dva = lgb.Dataset(va_eval[CALL_FEATURES], yva, reference=dtr)
     # Huấn luyện với dừng sớm khi điểm trên tập kiểm định không còn cải thiện.
-    model = lgb.train(params, dtr, num_boost_round=600, valid_sets=[dva],
-                      callbacks=[lgb.early_stopping(40, verbose=False)])
+    model = lgb.train(
+        params, dtr, num_boost_round=600, valid_sets=[dva], callbacks=[lgb.early_stopping(40, verbose=False)]
+    )
     # Tính xác suất gian lận trên kiểm định và chỉ lấy score của sự kiện hợp lệ để định ngưỡng.
     p = model.predict(va_eval[CALL_FEATURES])
     ca, calibration_name = calibration_frame("call")
@@ -145,7 +179,9 @@ def train_call():
     yca = ca.fraud_type.isin(SIGNALLING_FRAUD).astype(int)
     neg = model.predict(ca[CALL_FEATURES])[yca.values == 0]
     # Chọn ngưỡng block/flag theo ngân sách FPR rồi áp mức sàn cho tầng call.
-    th = floor({"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, CALL_FLAG_FPR)}, "call")
+    th = floor(
+        {"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, CALL_FLAG_FPR)}, "call"
+    )
 
     # Zero-day: unsupervised Isolation Forests, one per peer group, trained on legitimate traffic only
     # Tách luồng hợp lệ và gán nhóm riêng để mô hình bất thường không học dữ liệu gian lận.
@@ -165,8 +201,9 @@ def train_call():
         # Đổi dấu điểm bình thường thành độ bất thường rồi tìm ngưỡng theo FPR nhóm.
         a_neg = -iso.score_samples(clean_va[seg_va == seg][ANOMALY_FEATURES].values)
         th["anomaly_flag"][seg] = threshold_for_fpr(a_neg, ANOMALY_FLAG_FPR[seg])
-        anomaly_validation[seg] = fpr_report(int((a_neg >= th["anomaly_flag"][seg]).sum()),
-                                            len(a_neg), ANOMALY_FLAG_FPR[seg])
+        anomaly_validation[seg] = fpr_report(
+            int((a_neg >= th["anomaly_flag"][seg]).sum()), len(a_neg), ANOMALY_FLAG_FPR[seg]
+        )
         isos[seg] = iso
     # Lưu trung vị và khoảng tứ phân vị để chuẩn hóa đặc trưng trong thành phần suy luận nhanh.
     clean = clean_tr[ANOMALY_FEATURES]
@@ -178,22 +215,36 @@ def train_call():
     for seg in ["domestic", "foreign", "trunk"]:
         part = clean_tr[seg_tr == seg][ANOMALY_FEATURES]
         if len(part) >= 30:
-            seg_scale[seg] = {"median": part.median().to_dict(),
-                              "iqr": (part.quantile(0.75) - part.quantile(0.25)).replace(0, 1.0).to_dict()}
+            seg_scale[seg] = {
+                "median": part.median().to_dict(),
+                "iqr": (part.quantile(0.75) - part.quantile(0.25)).replace(0, 1.0).to_dict(),
+            }
 
     # Ghi mô hình có giám sát và gói Isolation Forest cùng thống kê chuẩn hóa ra thư mục mô hình.
     model.save_model(str(MODEL_DIR / "tier1_call_lgbm.txt"))
-    joblib.dump({"iso": isos, "median": med.to_dict(), "iqr": iqr.to_dict(), "features": ANOMALY_FEATURES,
-                 "segment_scale": seg_scale},
-                MODEL_DIR / "tier1_zero_day_iforest.joblib")
+    joblib.dump(
+        {
+            "iso": isos,
+            "median": med.to_dict(),
+            "iqr": iqr.to_dict(),
+            "features": ANOMALY_FEATURES,
+            "segment_scale": seg_scale,
+        },
+        MODEL_DIR / "tier1_zero_day_iforest.joblib",
+    )
     # Tổng hợp chất lượng kiểm định, vòng lặp tốt nhất, ngưỡng và 10 đặc trưng quan trọng nhất.
-    rep = {"val_pr_auc": average_precision_score(yva, p), "val_roc_auc": roc_auc_score(yva, p),
-           "best_iteration": model.best_iteration, "thresholds": th,
-           "threshold_validation": calibration_report(neg, th, calibration_name, CALL_FLAG_FPR),
-           "anomaly_threshold_validation": anomaly_validation,
-           "threshold_window_reused_for_early_stopping": calibration_name == "val",
-           "feature_importance_gain": dict(sorted(zip(CALL_FEATURES, model.feature_importance("gain").round(1).tolist()),
-                                                  key=lambda x: -x[1])[:10])}
+    rep = {
+        "val_pr_auc": average_precision_score(yva, p),
+        "val_roc_auc": roc_auc_score(yva, p),
+        "best_iteration": model.best_iteration,
+        "thresholds": th,
+        "threshold_validation": calibration_report(neg, th, calibration_name, CALL_FLAG_FPR),
+        "anomaly_threshold_validation": anomaly_validation,
+        "threshold_window_reused_for_early_stopping": calibration_name == "val",
+        "feature_importance_gain": dict(
+            sorted(zip(CALL_FEATURES, model.feature_importance("gain").round(1).tolist()), key=lambda x: -x[1])[:10]
+        ),
+    }
     # Trả lại ngưỡng vận hành cùng báo cáo huấn luyện để luồng chính ghi ra tệp.
     return th, rep
 
@@ -210,7 +261,9 @@ def sms_matrix(df, vec, fit=False):
 def train_sms():
     # Đọc tập SMS và cấu hình TF-IDF cho unigram/bigram từ token chữ-số.
     tr, va = load("train", "sms"), load("val", "sms")
-    vec = TfidfVectorizer(analyzer="word", token_pattern=r"[a-z0-9]+", ngram_range=(1, 2), min_df=2, max_features=40000, sublinear_tf=True)
+    vec = TfidfVectorizer(
+        analyzer="word", token_pattern=r"[a-z0-9]+", ngram_range=(1, 2), min_df=2, max_features=40000, sublinear_tf=True
+    )
     # Fit bộ vector hóa trên train, sau đó huấn luyện hồi quy logistic có cân bằng lớp.
     Xtr = sms_matrix(tr, vec, fit=True)
     clf = LogisticRegression(C=4.0, class_weight="balanced", max_iter=2000)
@@ -219,23 +272,41 @@ def train_sms():
     p = clf.predict_proba(sms_matrix(va, vec))[:, 1]
     ca, calibration_name = calibration_frame("sms")
     neg = clf.predict_proba(sms_matrix(ca, vec))[:, 1][ca.label.values == 0]
-    th = floor({"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)}, "sms")
+    th = floor(
+        {"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)},
+        "sms",
+    )
     # Lưu vectorizer, classifier và thứ tự metadata cần cho suy luận.
     joblib.dump({"vec": vec, "clf": clf, "meta": SMS_META_FEATURES}, MODEL_DIR / "sms_text_lr.joblib")
     # Trả ngưỡng cùng các chỉ số phân loại trên cửa sổ validation.
-    return th, {"val_pr_auc": average_precision_score(va.label, p), "val_roc_auc": roc_auc_score(va.label, p),
-                "thresholds": th, "threshold_validation": calibration_report(neg, th, calibration_name)}
+    return th, {
+        "val_pr_auc": average_precision_score(va.label, p),
+        "val_roc_auc": roc_auc_score(va.label, p),
+        "thresholds": th,
+        "threshold_validation": calibration_report(neg, th, calibration_name),
+    }
 
 
 def train_audio():
     # Đọc đặc trưng âm thanh và cấu hình LightGBM nhỏ cho tầng phát hiện trong cuộc gọi.
     tr, va = load("train", "audio"), load("val", "audio")
-    params = dict(objective="binary", learning_rate=0.05, num_leaves=15, min_child_samples=20,
-                  feature_fraction=0.9, verbose=-1, seed=7)
+    params = dict(
+        objective="binary",
+        learning_rate=0.05,
+        num_leaves=15,
+        min_child_samples=20,
+        feature_fraction=0.9,
+        verbose=-1,
+        seed=7,
+    )
     # Huấn luyện trên tập train, theo dõi validation và dừng sớm khi không cải thiện.
-    model = lgb.train(params, lgb.Dataset(tr[AUDIO_FEATURES], tr.label), num_boost_round=800,
-                      valid_sets=[lgb.Dataset(va[AUDIO_FEATURES], va.label)],
-                      callbacks=[lgb.early_stopping(40, verbose=False)])
+    model = lgb.train(
+        params,
+        lgb.Dataset(tr[AUDIO_FEATURES], tr.label),
+        num_boost_round=800,
+        valid_sets=[lgb.Dataset(va[AUDIO_FEATURES], va.label)],
+        callbacks=[lgb.early_stopping(40, verbose=False)],
+    )
     # Chấm điểm validation và lấy điểm của mẫu hợp lệ để đặt ngưỡng.
     p = model.predict(va[AUDIO_FEATURES])
     ca, calibration_name = calibration_frame("audio")
@@ -243,13 +314,20 @@ def train_audio():
     # Audio negatives are fewer (in-call scoring is sampled), so the block threshold is the max
     # legitimate score on validation (empirical FPR = 0) rather than an extreme quantile.
     # Dùng điểm hợp lệ lớn nhất làm ngưỡng block; ngưỡng flag theo ngân sách FPR.
-    th = floor({"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)}, "audio")
+    th = floor(
+        {"block": threshold_for_fpr_bound(neg, TARGET_BLOCK_FPR), "flag": threshold_for_fpr(neg, TARGET_FLAG_FPR)},
+        "audio",
+    )
     # Lưu mô hình âm thanh và trả về ngưỡng cùng chỉ số đánh giá.
     model.save_model(str(MODEL_DIR / "tier2_audio_lgbm.txt"))
-    return th, {"val_pr_auc": average_precision_score(va.label, p), "val_roc_auc": roc_auc_score(va.label, p),
-                "best_iteration": model.best_iteration, "thresholds": th,
-                "threshold_validation": calibration_report(neg, th, calibration_name),
-                "threshold_window_reused_for_early_stopping": calibration_name == "val"}
+    return th, {
+        "val_pr_auc": average_precision_score(va.label, p),
+        "val_roc_auc": roc_auc_score(va.label, p),
+        "best_iteration": model.best_iteration,
+        "thresholds": th,
+        "threshold_validation": calibration_report(neg, th, calibration_name),
+        "threshold_window_reused_for_early_stopping": calibration_name == "val",
+    }
 
 
 if __name__ == "__main__":

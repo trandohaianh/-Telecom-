@@ -7,6 +7,7 @@ and for live scoring, so there is no train/serve skew.
 State is partitioned by key (MSISDN, IMEI, cell); in a deployment each partition would live in a
 shard of a low-latency store (e.g. Redis / Aerospike) keyed exactly like a Kafka partition.
 """
+
 from __future__ import annotations
 
 import bisect
@@ -36,11 +37,33 @@ GW_TACS = set(GATEWAY_TACS)
 
 # Danh sách feature CALL gồm nhịp gọi, địa lý, IMEI, network và số nóng/CLI mismatch.
 CALL_FEATURES = [
-    "calls_1m", "calls_10m", "calls_1h", "callee_dispersion_1h", "in_out_ratio_24h", "incoming_24h",
-    "short_call_ratio", "mean_log_duration", "completed_calls_seen", "imei_per_msisdn_24h", "msisdn_per_imei_24h",
-    "imei_gateway_tac", "cell_registered", "cell_unknown_radio", "cell_trunk_or_intl", "velocity_kmh",
-    "new_sims_on_cell_1h", "caller_age_days", "caller_foreign", "origin_local", "origin_intl_gw", "origin_bank_trunk",
-    "cli_protected", "protected_cli_mismatch", "network_2g", "hour_of_day", "active_hours_on_network",
+    "calls_1m",
+    "calls_10m",
+    "calls_1h",
+    "callee_dispersion_1h",
+    "in_out_ratio_24h",
+    "incoming_24h",
+    "short_call_ratio",
+    "mean_log_duration",
+    "completed_calls_seen",
+    "imei_per_msisdn_24h",
+    "msisdn_per_imei_24h",
+    "imei_gateway_tac",
+    "cell_registered",
+    "cell_unknown_radio",
+    "cell_trunk_or_intl",
+    "velocity_kmh",
+    "new_sims_on_cell_1h",
+    "caller_age_days",
+    "caller_foreign",
+    "origin_local",
+    "origin_intl_gw",
+    "origin_bank_trunk",
+    "cli_protected",
+    "protected_cli_mismatch",
+    "network_2g",
+    "hour_of_day",
+    "active_hours_on_network",
     # B-number novelty: share of this caller's calls in the last 24 h that went to someone it had never
     # called before. People mostly call their contacts again; SIM-box farms dial random subscribers,
     # which a slow farm (3-6 calls/h) never reveals through the 1-hour dispersion feature.
@@ -51,15 +74,33 @@ CALL_FEATURES = [
     # gives 1; a farm of n co-located SIMs gives n. 0 when the caller does not match the profile.
     "farm_cell_sims_1h",
 ]
-KNOWN_CALLEE_TTL_S = 30 * 86400.0   # how long a callee stays "known" to a caller
+KNOWN_CALLEE_TTL_S = 30 * 86400.0  # how long a callee stays "known" to a caller
 # Danh sách feature SMS dựa trên route, sender, URL và lưu lượng 1 giờ gần nhất.
-SMS_META_FEATURES = ["route_brand_gw", "route_p2p", "route_unverified_bts", "sender_is_brand", "brand_not_via_gateway",
-                     "url_count", "url_unofficial", "cell_registered", "sender_sms_1h"]
+SMS_META_FEATURES = [
+    "route_brand_gw",
+    "route_p2p",
+    "route_unverified_bts",
+    "sender_is_brand",
+    "brand_not_via_gateway",
+    "url_count",
+    "url_unofficial",
+    "cell_registered",
+    "sender_sms_1h",
+]
 # Danh sách feature audio dùng để phân biệt voice scam, deepfake và call bình thường.
-AUDIO_FEATURES = ["vocoder_artifact", "pitch_jitter", "spectral_flatness", "speaker_drift", "codec_2g",
-                  "scam_lexicon_hits", "caller_age_days", "caller_known",
-                  # Ai nói bao nhiêu (VAD): người gọi im lặng trong khi giọng người nghe bị ghi lại = thu giọng.
-                  "caller_speech_ratio", "callee_speech_s"]
+AUDIO_FEATURES = [
+    "vocoder_artifact",
+    "pitch_jitter",
+    "spectral_flatness",
+    "speaker_drift",
+    "codec_2g",
+    "scam_lexicon_hits",
+    "caller_age_days",
+    "caller_known",
+    # Ai nói bao nhiêu (VAD): người gọi im lặng trong khi giọng người nghe bị ghi lại = thu giọng.
+    "caller_speech_ratio",
+    "callee_speech_s",
+]
 
 
 # Xóa các phần tử cũ khỏi deque để giữ cửa sổ trượt luôn là dữ liệu trong khoảng thời gian hợp lệ.
@@ -87,6 +128,7 @@ class FarmCellWindow:
     after a fresh deployment, when every SIM is "newly active") does not make each call O(window).
     The deque is the serialised state; these counts are derived and rebuilt from it when needed.
     """
+
     __slots__ = ("q", "calls", "dialled", "bursty")
 
     def __init__(self, q):
@@ -130,7 +172,7 @@ class FarmCellWindow:
     def count_for(self, caller, ts):
         """|bursty SIMs| if ``caller`` is one of them, counting only entries with t <= ts, else 0."""
         future = []
-        for item in reversed(self.q):        # other parties' slightly newer calls (<= allowed lateness)
+        for item in reversed(self.q):  # other parties' slightly newer calls (<= allowed lateness)
             if item[0] <= ts:
                 break
             future.append(item)
@@ -144,27 +186,27 @@ class FarmCellWindow:
 
 # FeatureStore lưu toàn bộ state lịch sử để tính feature causally trên luồng event.
 class FeatureStore:
-# Khởi tạo deque, dict và trạng thái theo thuê bao, IMEI, cell để tính feature nhanh O(1).
+    # Khởi tạo deque, dict và trạng thái theo thuê bao, IMEI, cell để tính feature nhanh O(1).
     def __init__(self):
-        self.oc1h = defaultdict(deque)             # msisdn -> deque[(ts, callee)] outgoing, last hour
-        self.callee_cnt = defaultdict(dict)        # msisdn -> {callee: n} within the last hour
-        self.oc10 = defaultdict(deque)             # msisdn -> deque[ts] outgoing, last 10 min
-        self.oc1 = defaultdict(deque)              # msisdn -> deque[ts] outgoing, last minute
-        self.in_calls = defaultdict(deque)         # msisdn -> deque[ts] incoming, last 24h
-        self.out24 = {}                            # msisdn -> deque[exact event timestamps]
-        self.pending_cdr = defaultdict(list)      # msisdn -> min-heap[(end_ts, duration)]
+        self.oc1h = defaultdict(deque)  # msisdn -> deque[(ts, callee)] outgoing, last hour
+        self.callee_cnt = defaultdict(dict)  # msisdn -> {callee: n} within the last hour
+        self.oc10 = defaultdict(deque)  # msisdn -> deque[ts] outgoing, last 10 min
+        self.oc1 = defaultdict(deque)  # msisdn -> deque[ts] outgoing, last minute
+        self.in_calls = defaultdict(deque)  # msisdn -> deque[ts] incoming, last 24h
+        self.out24 = {}  # msisdn -> deque[exact event timestamps]
+        self.pending_cdr = defaultdict(list)  # msisdn -> min-heap[(end_ts, duration)]
         self.done_durations = defaultdict(lambda: deque(maxlen=20))
-        self.imei_by_msisdn = defaultdict(dict)    # msisdn -> {imei: last_ts}
-        self.msisdn_by_imei = defaultdict(dict)    # imei -> {msisdn: last_ts}
-        self.last_radio = {}                       # msisdn -> (ts, cell)
-        self.new_sims_cell = defaultdict(dict)     # cell -> {msisdn: last_ts} for SIMs younger than 60 days
+        self.imei_by_msisdn = defaultdict(dict)  # msisdn -> {imei: last_ts}
+        self.msisdn_by_imei = defaultdict(dict)  # imei -> {msisdn: last_ts}
+        self.last_radio = {}  # msisdn -> (ts, cell)
+        self.new_sims_cell = defaultdict(dict)  # cell -> {msisdn: last_ts} for SIMs younger than 60 days
         self.sms_by_sender = defaultdict(deque)
-        self.known_callees = defaultdict(dict)     # msisdn -> {callee: last_ts} (30-day memory)
+        self.known_callees = defaultdict(dict)  # msisdn -> {callee: last_ts} (30-day memory)
         # D14: keys changed since the last checkpoint (base or delta). Not part of the state itself.
         self._dirty = defaultdict(set)
-        self.new24 = defaultdict(deque)            # msisdn -> deque[(ts, 1 if new callee else 0)], last 24 h
+        self.new24 = defaultdict(deque)  # msisdn -> deque[(ts, 1 if new callee else 0)], last 24 h
         self.fresh_cell_calls = defaultdict(deque)  # radio cell -> deque[(ts, msisdn, callee)] of fresh SIMs, 1 h
-        self._farm_agg = {}                        # derived FarmCellWindow per cell (not state; rebuilt lazily)
+        self._farm_agg = {}  # derived FarmCellWindow per cell (not state; rebuilt lazily)
         self.age_by_msisdn = {}
         # Lần đầu thấy số hoạt động trên mạng (gọi, được gọi, nhắn tin) - khác với tuổi đăng ký SIM.
         # SIM cũ đi thuê / ngủ đông có tuổi đăng ký lớn nhưng vừa mới xuất hiện hoạt động.
@@ -172,7 +214,7 @@ class FeatureStore:
         self.last_seen = {}
 
     # ------------------------------------------------------------------ CALL (Tier 1)
-# Tính toàn bộ feature của một event CALL dựa trên lịch sử phát sinh từ stream cho đến thời điểm đó.
+    # Tính toàn bộ feature của một event CALL dựa trên lịch sử phát sinh từ stream cho đến thời điểm đó.
     def _first(self, party, ts):
         previous = self.first_seen.get(party)
         if previous is None or ts < previous:
@@ -281,28 +323,36 @@ class FeatureStore:
             fresh = 0 <= age < 60 or (age >= 0 and active_h < FRESH_ACTIVE_H)
             if fresh:
                 nsc[caller] = max(ts, nsc.get(caller, ts))
-            farm_sims = self._farm_cell(cell, ts, caller, callee, fresh,
-                                        fresh and incoming == 0 and len(cc) == n1h and new_ratio == 1.0)
+            farm_sims = self._farm_cell(
+                cell, ts, caller, callee, fresh, fresh and incoming == 0 and len(cc) == n1h and new_ratio == 1.0
+            )
             if nsc:
                 stale = [k for k, v in nsc.items() if v < h]
                 for k in stale:
                     del nsc[k]
-                new_sims = (len(nsc) if not nsc or max(nsc.values()) <= ts
-                            else sum(1 for v in nsc.values() if v <= ts))
+                new_sims = len(nsc) if not nsc or max(nsc.values()) <= ts else sum(1 for v in nsc.values() if v <= ts)
 
         # Trả về vector feature cuối cùng sau khi tất cả điều kiện thời gian và trạng thái đã được cập nhật.
         return {
-            "calls_1m": len(q1), "calls_10m": len(q10), "calls_1h": n1h,
+            "calls_1m": len(q1),
+            "calls_10m": len(q10),
+            "calls_1h": n1h,
             "callee_dispersion_1h": len(cc) / n1h,
             "in_out_ratio_24h": (incoming + 1) / (out24 + 1),
             "incoming_24h": incoming,
-            "short_call_ratio": short, "mean_log_duration": mlog, "completed_calls_seen": len(hist),
-            "imei_per_msisdn_24h": imei_cnt, "msisdn_per_imei_24h": msisdn_cnt, "imei_gateway_tac": gw,
+            "short_call_ratio": short,
+            "mean_log_duration": mlog,
+            "completed_calls_seen": len(hist),
+            "imei_per_msisdn_24h": imei_cnt,
+            "msisdn_per_imei_24h": msisdn_cnt,
+            "imei_gateway_tac": gw,
             "cell_registered": 1.0 if registered else 0.0,
             "cell_unknown_radio": 1.0 if unknown_radio else 0.0,
             "cell_trunk_or_intl": 1.0 if cell in ("TRUNK", "INTL") else 0.0,
-            "velocity_kmh": vel, "new_sims_on_cell_1h": new_sims,
-            "caller_age_days": age, "caller_foreign": 1.0 if age < 0 else 0.0,
+            "velocity_kmh": vel,
+            "new_sims_on_cell_1h": new_sims,
+            "caller_age_days": age,
+            "caller_foreign": 1.0 if age < 0 else 0.0,
             "origin_local": 1.0 if origin == "LOCAL" else 0.0,
             "origin_intl_gw": 1.0 if origin == "INTL_GW" else 0.0,
             "origin_bank_trunk": 1.0 if origin == "BANK_TRUNK" else 0.0,
@@ -331,7 +381,7 @@ class FeatureStore:
     def _farm_window(self, cell):
         q = self.fresh_cell_calls[cell]
         w = self._farm_agg.get(cell)
-        if w is None or w.q is not q:     # restored / rolled back / delta-applied deque: rebuild counts
+        if w is None or w.q is not q:  # restored / rolled back / delta-applied deque: rebuild counts
             w = self._farm_agg[cell] = FarmCellWindow(q)
         return w
 
@@ -413,8 +463,10 @@ class FeatureStore:
         if version not in (1, self.CHECKPOINT_VERSION):
             raise ValueError(f"unsupported feature-store checkpoint version: {version!r}")
         if version == 1 and any(v and v[0] for v in st.get("out24", {}).values()):
-            raise ValueError("v1 checkpoint contains approximate minute buckets; replay 24 h of history "
-                             "to rebuild exact v2 windows before resuming")
+            raise ValueError(
+                "v1 checkpoint contains approximate minute buckets; replay 24 h of history "
+                "to rebuild exact v2 windows before resuming"
+            )
         if version == 2 and st.get("feature_contract") != self.FEATURE_CONTRACT:
             raise ValueError("feature-store checkpoint uses a different feature contract")
         restored = FeatureStore()
@@ -422,7 +474,8 @@ class FeatureStore:
             maxlen = 20 if name == "done_durations" else None
             for k, values in st.get(name, {}).items():
                 getattr(restored, name)[k] = deque(
-                    (tuple(x) if isinstance(x, list) else x for x in values), maxlen=maxlen)
+                    (tuple(x) if isinstance(x, list) else x for x in values), maxlen=maxlen
+                )
         for name in self.STATE_DICTS:
             for k, values in st.get(name, {}).items():
                 getattr(restored, name)[k] = dict(values)
@@ -431,8 +484,7 @@ class FeatureStore:
                 getattr(restored, name)[k] = tuple(value) if isinstance(value, list) else value
         for k, values in st.get("pending_cdr", {}).items():
             heap = [(float(end), float(duration)) for end, duration in values]
-            if any(not math.isfinite(end) or not math.isfinite(duration) or duration < 0
-                   for end, duration in heap):
+            if any(not math.isfinite(end) or not math.isfinite(duration) or duration < 0 for end, duration in heap):
                 raise ValueError("invalid pending CDR in checkpoint")
             heapq.heapify(heap)
             restored.pending_cdr[k] = heap
@@ -477,10 +529,15 @@ class FeatureStore:
             if not q:
                 self.oc1h.pop(caller, None)
                 self.callee_cnt.pop(caller, None)
-        for name, horizon, tuples in (("oc10", M10, False), ("oc1", M1, False),
-                                      ("in_calls", D1, False), ("sms_by_sender", H1, True), ("new24", D1, True),
-                                      ("fresh_cell_calls", H1, True),
-                                      ("out24", D1, False)):
+        for name, horizon, tuples in (
+            ("oc10", M10, False),
+            ("oc1", M1, False),
+            ("in_calls", D1, False),
+            ("sms_by_sender", H1, True),
+            ("new24", D1, True),
+            ("fresh_cell_calls", H1, True),
+            ("out24", D1, False),
+        ):
             mapping = getattr(self, name)
             for key, q in list(mapping.items()):
                 if q and (q[0][0] if tuples else q[0]) < ts - horizon:
@@ -490,9 +547,13 @@ class FeatureStore:
                 if not q:
                     dirty[name].add(key)
                     del mapping[key]
-        self._farm_agg.clear()   # fresh_cell_calls deques were trimmed in place: derived counts are stale
-        for name, horizon in (("imei_by_msisdn", D1), ("msisdn_by_imei", D1), ("new_sims_cell", H1),
-                              ("known_callees", KNOWN_CALLEE_TTL_S)):
+        self._farm_agg.clear()  # fresh_cell_calls deques were trimmed in place: derived counts are stale
+        for name, horizon in (
+            ("imei_by_msisdn", D1),
+            ("msisdn_by_imei", D1),
+            ("new_sims_cell", H1),
+            ("known_callees", KNOWN_CALLEE_TTL_S),
+        ):
             mapping = getattr(self, name)
             for key, links in list(mapping.items()):
                 for link in [k for k, last_ts in links.items() if last_ts < ts - horizon]:
@@ -559,8 +620,10 @@ class FeatureStore:
                 if value is None:
                     mapping.pop(key, None)
                 elif name in self.STATE_DEQUES:
-                    mapping[key] = deque((tuple(x) if isinstance(x, list) else x for x in value),
-                                         maxlen=20 if name == "done_durations" else None)
+                    mapping[key] = deque(
+                        (tuple(x) if isinstance(x, list) else x for x in value),
+                        maxlen=20 if name == "done_durations" else None,
+                    )
                 elif name == "out24":
                     mapping[key] = deque(float(t) for t in value)
                 elif name in self.STATE_DICTS:
@@ -580,9 +643,20 @@ class FeatureStore:
             et = ev.get("event_type")
             caller, callee = ev.get("caller"), ev.get("callee")
             if et == "CALL":
-                for name in ("oc1h", "callee_cnt", "oc10", "oc1", "out24", "pending_cdr",
-                             "done_durations", "imei_by_msisdn", "last_radio", "age_by_msisdn",
-                             "known_callees", "new24"):
+                for name in (
+                    "oc1h",
+                    "callee_cnt",
+                    "oc10",
+                    "oc1",
+                    "out24",
+                    "pending_cdr",
+                    "done_durations",
+                    "imei_by_msisdn",
+                    "last_radio",
+                    "age_by_msisdn",
+                    "known_callees",
+                    "new24",
+                ):
                     touched[name].add(caller)
                 touched["in_calls"].update((caller, callee))
                 touched["msisdn_by_imei"].add(ev.get("imei"))
@@ -597,8 +671,14 @@ class FeatureStore:
                     touched[name].update((sender, recipient))
             elif et == "AUDIO":
                 touched["last_seen"].add(caller)
-        return {name: {key: copy.copy(getattr(self, name)[key]) if key in getattr(self, name) else _MISSING
-                       for key in keys if key is not None} for name, keys in touched.items()}
+        return {
+            name: {
+                key: copy.copy(getattr(self, name)[key]) if key in getattr(self, name) else _MISSING
+                for key in keys
+                if key is not None
+            }
+            for name, keys in touched.items()
+        }
 
     def restore_touched(self, before):
         for name, values in before.items():
@@ -636,32 +716,39 @@ class FeatureStore:
         except BaseException:
             self.restore_touched(before)
             raise
-        for name, values in before.items():     # committed: these keys go into the next delta
+        for name, values in before.items():  # committed: these keys go into the next delta
             self._dirty[name].update(values)
 
     def state_stats(self) -> dict:
         """Operational counts without subscriber identifiers."""
-        return {"checkpoint_version": self.CHECKPOINT_VERSION, "subscribers": len(self.first_seen),
-                "window_events": sum(len(q) for name in ("oc1h", "oc10", "oc1", "in_calls", "sms_by_sender", "out24")
-                                     for q in getattr(self, name).values()),
-                "pending_cdr": sum(map(len, self.pending_cdr.values())),
-                "imei_associations": sum(map(len, self.imei_by_msisdn.values())),
-                "cell_associations": sum(map(len, self.new_sims_cell.values()))}
+        return {
+            "checkpoint_version": self.CHECKPOINT_VERSION,
+            "subscribers": len(self.first_seen),
+            "window_events": sum(
+                len(q)
+                for name in ("oc1h", "oc10", "oc1", "in_calls", "sms_by_sender", "out24")
+                for q in getattr(self, name).values()
+            ),
+            "pending_cdr": sum(map(len, self.pending_cdr.values())),
+            "imei_associations": sum(map(len, self.imei_by_msisdn.values())),
+            "cell_associations": sum(map(len, self.new_sims_cell.values())),
+        }
 
-
-# Ghi checkpoint ra file tạm rồi replace atomically để không để lại file nửa chừng nếu crash.
+    # Ghi checkpoint ra file tạm rồi replace atomically để không để lại file nửa chừng nếu crash.
     def save_checkpoint(self, path) -> None:
         import json as _json
         from pathlib import Path as _Path
+
         p = _Path(path)
         tmp = p.with_suffix(p.suffix + ".tmp")
         tmp.write_text(_json.dumps(self.state_dict()), encoding="utf-8")
-        tmp.replace(p)          # atomic: a crash mid-write never leaves a half checkpoint
+        tmp.replace(p)  # atomic: a crash mid-write never leaves a half checkpoint
 
-# Đọc file checkpoint JSON và gắn state vào FeatureStore hiện tại.
+    # Đọc file checkpoint JSON và gắn state vào FeatureStore hiện tại.
     def load_checkpoint(self, path) -> None:
         import json as _json
         from pathlib import Path as _Path
+
         self.load_state_dict(_json.loads(_Path(path).read_text(encoding="utf-8")))
 
     def _count_out_24h(self, msisdn, ts):
@@ -686,7 +773,7 @@ class FeatureStore:
         self._dirty["pending_cdr"].add(ev["caller"])
 
     # ------------------------------------------------------------------ SMS
-# Tính feature SMS dựa trên route, sender, URL và lưu lượng gần đây của sender đó.
+    # Tính feature SMS dựa trên route, sender, URL và lưu lượng gần đây của sender đó.
     def sms_features(self, ev: dict) -> dict:
         ts, sender = ev["ts"], ev["sender"]
         self._touch(sender, ts)
@@ -715,17 +802,20 @@ class FeatureStore:
         }
 
     # ------------------------------------------------------------------ AUDIO (Tier 2)
-# Tính feature audio từ transcript, codec và age của caller để cảnh báo voice scam.
+    # Tính feature audio từ transcript, codec và age của caller để cảnh báo voice scam.
     def audio_features(self, ev: dict) -> dict:
         self._touch(ev["caller"], ev["ts"])
         tr = ev.get("transcript", "")
         age = self.age_by_msisdn.get(ev["caller"], -2)
         return {
-            "vocoder_artifact": ev["vocoder_artifact"], "pitch_jitter": ev["pitch_jitter"],
-            "spectral_flatness": ev["spectral_flatness"], "speaker_drift": ev["speaker_drift"],
+            "vocoder_artifact": ev["vocoder_artifact"],
+            "pitch_jitter": ev["pitch_jitter"],
+            "spectral_flatness": ev["spectral_flatness"],
+            "speaker_drift": ev["speaker_drift"],
             "codec_2g": 1.0 if ev["codec"].startswith("AMR") else 0.0,
             "scam_lexicon_hits": float(sum(1 for k in SCAM_LEXICON if k in tr)),
-            "caller_age_days": float(age), "caller_known": 0.0 if age == -2 else 1.0,
+            "caller_age_days": float(age),
+            "caller_known": 0.0 if age == -2 else 1.0,
             "caller_speech_ratio": float(ev.get("caller_speech_ratio", 0.5)),
             "callee_speech_s": float(ev.get("callee_speech_s", 0.0)),
         }

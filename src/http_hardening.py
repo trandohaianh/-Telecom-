@@ -8,20 +8,22 @@
 2. Security headers on every response, including the JSON 500 produced by the catch-all handler
    (Starlette's ServerErrorMiddleware runs outside @app.middleware, so errors used to go out bare).
 """
+
 from __future__ import annotations
 
 import json
 import os
 
-DEFAULT_MAX_BODY = 1 << 20          # 1 MiB: largest legitimate JSON body (CDR/verdict/report) is a few KB
+DEFAULT_MAX_BODY = 1 << 20  # 1 MiB: largest legitimate JSON body (CDR/verdict/report) is a few KB
 LARGE_BODY_PATHS = ("/api/v1/audio",)
 
 SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     # 20/11/2026: every page script now lives in a .js file (static/app/*.js, static/admin/assets/*.js), so
     # inline scripts and inline handlers are refused. Google Identity Services is the only external script.
-    "Content-Security-Policy": ("frame-ancestors 'none'; object-src 'none'; base-uri 'self'; "
-                                "script-src 'self' https://accounts.google.com"),
+    "Content-Security-Policy": (
+        "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; script-src 'self' https://accounts.google.com"
+    ),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), geolocation=(), payment=()",
@@ -111,7 +113,7 @@ class BodyLimitMiddleware:
         async def guarded_send(message):
             nonlocal started
             if rejected:
-                return                      # the 413 already went out; drop the app's late response
+                return  # the 413 already went out; drop the app's late response
             if message["type"] == "http.response.start":
                 started = True
             await send(message)

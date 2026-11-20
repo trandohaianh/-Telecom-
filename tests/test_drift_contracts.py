@@ -1,4 +1,5 @@
 """Monitoring must notice missing/stale inputs and movement inside peer groups."""
+
 import sys
 from pathlib import Path
 
@@ -47,8 +48,7 @@ def test_peer_group_drift_is_visible_when_aggregate_distribution_is_unchanged():
 
 
 def test_nonfinite_scores_are_quality_alerts_not_apparent_allow_traffic():
-    baseline = drift.build_baseline({"f": np.arange(1000)}, scores=[0.1] * 1000,
-                                    thresholds={"block": 0.9, "flag": 0.5})
+    baseline = drift.build_baseline({"f": np.arange(1000)}, scores=[0.1] * 1000, thresholds={"block": 0.9, "flag": 0.5})
     report = drift.evaluate_drift(baseline, {"f": np.arange(1000)}, scores=[float("nan")] * 1000)
     assert "risk_score" in report["quality_alert"]
     assert report["band_shares"]["ALLOW"] == 0
@@ -59,25 +59,42 @@ def test_shadow_cli_passes_only_scored_call_features_segments_and_event_times(tm
     import json
 
     import shadow_run
-    events = [dict(event_id="one", event_type="CALL", ts=100.0, caller="A", callee="B", label=0),
-              dict(event_id="late", event_type="CALL", ts=90.0, caller="A", callee="B", label=0)]
+
+    events = [
+        dict(event_id="one", event_type="CALL", ts=100.0, caller="A", callee="B", label=0),
+        dict(event_id="late", event_type="CALL", ts=90.0, caller="A", callee="B", label=0),
+    ]
+
     class FakeDetector:
         def __init__(self, **kwargs):
             self.guard = type("Guard", (), {"state": lambda self: {"late": 1}})()
+
         def prime(self, _):
             pass
+
         def process(self, rows):
             out = []
             for ev in rows:
                 scored = ev["event_id"] == "one"
-                out.append(dict(event_type="CALL", decision="ALLOW", risk=0.1 if scored else None,
-                                scored=scored, ingest="ADMITTED" if scored else "LATE", enforced=False,
-                                evidence_features={name: 0.0 for name in shadow_run.WATCHED}))
+                out.append(
+                    dict(
+                        event_type="CALL",
+                        decision="ALLOW",
+                        risk=0.1 if scored else None,
+                        scored=scored,
+                        ingest="ADMITTED" if scored else "LATE",
+                        enforced=False,
+                        evidence_features={name: 0.0 for name in shadow_run.WATCHED},
+                    )
+                )
             return out
+
     captured = {}
+
     def monitor(base, features, **kwargs):
         captured.update(features=features, **kwargs)
         return dict(recommendation=drift.WATCH, max_feature_psi=0.0, null_psi_max=0.0, band_shares={})
+
     monkeypatch.setattr(shadow_run, "Detector", FakeDetector)
     monkeypatch.setattr(shadow_run, "DATA_DIR", tmp_path)
     monkeypatch.setattr(shadow_run, "MODEL_DIR", tmp_path)

@@ -9,6 +9,7 @@ import asyncio
 import collections
 import copy
 import math
+import os
 import hashlib
 import json
 import queue
@@ -106,6 +107,14 @@ async def await_precise_deadline(future, deadline):
             await asyncio.sleep(0)
 
 
+def event_retention_days() -> int:
+    """FRAUD_EVENT_RETENTION_DAYS (default 30; 0 keeps the journal forever)."""
+    raw = os.environ.get("FRAUD_EVENT_RETENTION_DAYS", "30").strip()
+    if not raw.isdigit() or int(raw) > 3650:
+        raise ValueError("FRAUD_EVENT_RETENTION_DAYS must be an integer in [0, 3650]")
+    return int(raw)
+
+
 @dataclass
 class Work:
     seq: int
@@ -160,6 +169,11 @@ class InferenceRuntime:
         self.checkpoint_every = checkpoint_every
         self.checkpoint_interval_s = checkpoint_interval_s
         self.last_seq = 0
+        # Retention of the SQLite journal (events): rows covered by a checkpoint, with exported evidence and
+        # older than this many days are deleted hourly while the owner is idle. 0 disables.
+        self.event_retention_s = event_retention_days() * 86400
+        self._checkpointed_seq = 0
+        self._last_retention = 0.0
         self._since_checkpoint = 0
         self._checkpoint_at = time.perf_counter()
         self._closing = False
@@ -240,6 +254,7 @@ class InferenceRuntime:
     def checkpoint(self):
         with self.execution_lock:
             self._write_base(self._snapshot())
+            self._checkpointed_seq = self.last_seq
             self._since_checkpoint = 0
             self._checkpoint_at = time.perf_counter()
 
@@ -310,6 +325,7 @@ class InferenceRuntime:
             restored_refs = {r.get("journal_ref") for r in self.g.retro if r.get("journal_ref")}
             for raw in delta.get("unconfirmed_delivery", []):
                 restore_notifications(raw)
+        self._checkpointed_seq = self.last_seq          # everything up to here is covered by a checkpoint
         # Rebuild changes since the checkpoint in journal order. Historical decisions are not
         # enforced again. The durable result ledger is the authority for previously returned RPCs.
         for seq, kind, ev, result in self.state.journal_after(self.last_seq):
@@ -622,6 +638,7 @@ class InferenceRuntime:
             self.last_seq = next_seq
             self._since_checkpoint += new_count
             if checkpointed:
+                self._checkpointed_seq = next_seq
                 self._since_checkpoint = 0
                 self._checkpoint_at = time.perf_counter()
             self.stats["owner_commits"] += 1
@@ -728,6 +745,7 @@ class InferenceRuntime:
             except queue.Empty:
                 if self._closing:
                     break
+                self._retention()
                 if not self._maintenance(32):
                     break
                 continue
@@ -770,6 +788,18 @@ class InferenceRuntime:
                     break
         if self._fatal_error is None:
             self.checkpoint()
+
+    def _retention(self):
+        """Hourly, idle-only, bounded journal retention (see BackendState.prune_events)."""
+        now = time.monotonic()
+        if not self.event_retention_s or now - self._last_retention < 3600 or not hasattr(self.state, "prune_events"):
+            return
+        self._last_retention = now
+        try:
+            deleted = self.state.prune_events(time.time() - self.event_retention_s, self._checkpointed_seq)
+            self.stats["events_pruned"] = self.stats.get("events_pruned", 0) + deleted
+        except Exception:      # noqa: BLE001 - retention must never take the owner down
+            self.stats["retention_errors"] = self.stats.get("retention_errors", 0) + 1
 
     def _maintenance(self, max_rescore):
         """Publish retrospective intents and drain a bounded rescore batch. False = owner stopped."""

@@ -555,7 +555,7 @@ async def _http_metrics(request: Request, call_next):
         response = await call_next(request)
         status = response.status_code
         # Clickjacking, MIME sniffing, referrer leaks; HSTS when served over https (http_hardening.py).
-        http_hardening.apply_security_headers(response.headers, request.url.scheme)
+        http_hardening.apply_security_headers(response.headers, request.url.scheme, request.url.path)
         return response
     finally:
         if request.url.path != "/metrics":
@@ -1199,5 +1199,7 @@ def app_family_respond(guardian: str, accept: bool, msisdn=Depends(app_user)):
 
 # Tệp tĩnh của app (index.html, manifest, service worker, icon) phục vụ tại /app/.
 app.mount("/app", StaticFiles(directory=STATIC_DIR / "app", html=True), name="app")
+# Scripts of /admin/ and /admin/manage (moved out of the HTML so the CSP can refuse inline scripts).
+app.mount("/admin/assets", StaticFiles(directory=STATIC_DIR / "admin" / "assets"), name="admin-assets")
 
 

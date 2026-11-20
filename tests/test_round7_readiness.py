@@ -21,7 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def read(rel):
-    return (ROOT / rel).read_text(encoding="utf-8")
+    from _pages import page_source        # HTML + the page's local .js files (scripts moved out for the CSP)
+    return page_source(rel)
 
 
 # =========================================================================== backend
@@ -267,7 +268,7 @@ def test_subscriber_app_never_ends_on_a_blank_screen_and_escapes_family_numbers(
 def test_service_worker_offline_deep_link_and_notification_navigation():
     sw = read("static/app/sw.js")
     assert "e.request.mode === 'navigate' ? caches.match('index.html')" in sw
-    assert "c.navigate(target)" in sw and "la-chan-v5" in sw
+    assert "c.navigate(target)" in sw and int(re.search(r"la-chan-v(\d+)", sw).group(1)) >= 5
 
 
 def test_manage_page_escapes_and_encodes_and_never_fails_silently():

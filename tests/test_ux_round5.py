@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def read(rel: str) -> str:
-    return (ROOT / rel).read_text(encoding="utf-8")
+    from _pages import page_source        # HTML + the page's local .js files (scripts moved out for the CSP)
+    return page_source(rel)
 
 
 APP = "static/app/index.html"

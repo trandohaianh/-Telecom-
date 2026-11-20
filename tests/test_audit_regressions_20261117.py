@@ -187,7 +187,8 @@ def test_stereo_audio_without_caller_channel_abstains():
 
 # --------------------------------------------------------------- giao diện vận hành: XSS
 def test_operator_alert_card_escapes_network_supplied_fields():
-    html = (ROOT / "static" / "admin" / "index.html").read_text(encoding="utf-8")
+    from _pages import page_source
+    html = page_source("static/admin/index.html")
     card = html[html.index("function card(a)"):html.index("function render(s)")]
     for raw in ("${a.party", "${a.counterparty", 'data-id="${a.event_id}"', "${a.time}", "${r.code}"):
         assert raw not in card, raw

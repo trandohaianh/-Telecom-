@@ -1,6 +1,6 @@
 # Kafka demo image: same code, bundle and pinned dependencies as the production image, plus the Kafka
 # client. Built from the repository root (see docker-compose.yml). Not used by the production stack.
-FROM python:3.12.12-slim-bookworm
+FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMBA_NUM_THREADS=1 \
     NUMBA_CACHE_DIR=/tmp/numba-cache FRAUD_ARTIFACT_DIR=/srv/app/runtime/artifacts_v22 \

@@ -1,7 +1,7 @@
 // Service worker tối giản: lưu khung app để mở nhanh / cài lên màn hình chính.
 // Dữ liệu API luôn lấy mới từ mạng, không bao giờ trả bản cũ trong cache.
-const CACHE = 'la-chan-v5';
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'la-chan-v6';
+const SHELL = ['./', 'index.html', 'theme-init.js', 'app.js', 'theme-toggle.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

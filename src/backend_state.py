@@ -217,6 +217,21 @@ class BackendState:
                 raise EventConflict("event_id already belongs to different content for this operation")
         return row[0], json.loads(row[2]) if row[2] else None
 
+    def prune_events(self, before_ts, max_seq, limit=5000):
+        """Retention: delete journal rows that nothing needs any more; returns the number deleted.
+
+        A row may go only if ALL hold: it is covered by a durable checkpoint (seq <= max_seq, so restart
+        replay never needs it), it has a result (not a pending reservation), its evidence was exported
+        and acknowledged (evidence_exported=1, so the JSONL chain holds it), and it is older than before_ts.
+        Bounded per call so the owner thread never stalls on a long DELETE.
+        """
+        with self.transaction():
+            cur = self.db.execute(
+                "DELETE FROM events WHERE seq IN (SELECT seq FROM events WHERE seq<=? AND received<? "
+                "AND result IS NOT NULL AND evidence_exported=1 ORDER BY seq LIMIT ?)",
+                (int(max_seq), float(before_ts), int(limit)))
+        return cur.rowcount
+
     # ---- batched journal for streaming consumers (Kafka demo, A2: one write per event instead of two)
     def lookup_many(self, kind, events, db=None):
         """{event_id: stored result} for identities already journalled; EventConflict on different content.

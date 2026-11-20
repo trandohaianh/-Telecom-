@@ -18,8 +18,10 @@ LARGE_BODY_PATHS = ("/api/v1/audio",)
 
 SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
-    # No script-src yet: the pages use inline scripts (moving them out is listed in reports/06).
-    "Content-Security-Policy": "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+    # 20/11/2026: every page script now lives in a .js file (static/app/*.js, static/admin/assets/*.js), so
+    # inline scripts and inline handlers are refused. Google Identity Services is the only external script.
+    "Content-Security-Policy": ("frame-ancestors 'none'; object-src 'none'; base-uri 'self'; "
+                                "script-src 'self' https://accounts.google.com"),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), geolocation=(), payment=()",
@@ -40,9 +42,17 @@ def max_body_bytes() -> int:
     return value
 
 
-def apply_security_headers(headers, scheme: str) -> None:
+# FastAPI's interactive API docs load their own inline bootstrap and CDN scripts: they keep the previous,
+# script-unrestricted policy rather than being broken by the page CSP.
+DOCS_PATHS = ("/docs", "/redoc")
+DOCS_CSP = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+
+
+def apply_security_headers(headers, scheme: str, path: str = "") -> None:
     """headers: a mutable mapping with setdefault (Starlette MutableHeaders)."""
     for name, value in SECURITY_HEADERS.items():
+        if name == "Content-Security-Policy" and path.startswith(DOCS_PATHS):
+            value = DOCS_CSP
         headers.setdefault(name, value)
     if scheme == "https":
         headers.setdefault("Strict-Transport-Security", HSTS)

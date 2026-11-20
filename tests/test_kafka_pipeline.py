@@ -191,7 +191,7 @@ def test_demo_stack_is_separate_pinned_and_loopback_only():
     compose = yaml.safe_load((ROOT / "deploy" / "kafka-demo" / "docker-compose.yml").read_text(encoding="utf-8"))
     assert compose["name"] == "telecom-kafka-demo"
     k = compose["services"]["kafka"]
-    assert k["image"] == "apache/kafka:3.8.0" and all(p.startswith("127.0.0.1:") for p in k["ports"])
+    assert k["image"].startswith("apache/kafka:3.8.0@sha256:") and all(p.startswith("127.0.0.1:") for p in k["ports"])
     assert compose["services"]["demo"]["environment"]["FRAUD_SQLITE_SYNCHRONOUS"] == "FULL"
     assert "confluent-kafka==" in (ROOT / "deploy" / "kafka-demo" / "requirements-kafka.txt").read_text(encoding="utf-8")
 

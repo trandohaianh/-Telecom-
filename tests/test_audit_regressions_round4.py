@@ -24,6 +24,9 @@ CALL = {"event_type": "CALL", "caller": "84961234567", "callee": "84351234567", 
 
 
 def _src(*parts):
+    if parts[0] == "static" and parts[-1].endswith(".html"):
+        from _pages import page_source    # HTML + the page's local .js files (scripts moved out for the CSP)
+        return page_source("/".join(parts))
     return (ROOT.joinpath(*parts)).read_text(encoding="utf-8")
 
 

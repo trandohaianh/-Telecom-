@@ -143,6 +143,7 @@ def test_eval_quality_targets_are_advisory_but_safety_gates_block():
 
 
 def test_subscriber_app_registers_and_drops_web_push():
-    page = (ROOT / "static" / "app" / "index.html").read_text(encoding="utf-8")
+    from _pages import page_source
+    page = page_source("static/app/index.html")
     assert "pushManager.subscribe" in page and "/api/app/push/subscribe" in page and "applicationServerKey" in page
     assert "/api/app/push/unsubscribe" in page and "pushUnsubscribe(TOKEN)" in page

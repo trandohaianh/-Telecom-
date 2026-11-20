@@ -7,7 +7,7 @@ name: telecom-kafka-demo
 
 services:
   kafka:
-    image: apache/kafka:3.8.0
+    image: apache/kafka:3.8.0@sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller

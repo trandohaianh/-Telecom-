@@ -149,7 +149,7 @@ def test_demo_injections_are_serialised():
     import server
 
     assert hasattr(server.LiveEngine, "_inject_unlocked")
-    src = (ROOT / "src" / "server.py").read_text(encoding="utf-8")
+    src = "".join((ROOT / "src" / f).read_text(encoding="utf-8") for f in ("server.py", "live_engine.py"))
     assert "% 10_000_000" not in src  # event_id cũ có thể trùng giữa hai lần bấm cùng mili-giây
 
 

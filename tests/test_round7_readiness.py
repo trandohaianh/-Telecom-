@@ -368,7 +368,7 @@ def test_demo_evidence_rotates_and_both_chains_stay_valid(tmp_path):
 def test_only_demo_mode_rotates_evidence(monkeypatch):
     import server
 
-    src = read("src/server.py")
+    src = read("src/live_engine.py")  # LiveEngine moved out of server.py
     assert "rotate_bytes=_demo_evidence_cap() if self.demo_mode else None" in src
     assert server._demo_evidence_cap() == 256 << 20
     for bad in ("1", "abc", "999999"):

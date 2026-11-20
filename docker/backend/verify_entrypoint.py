@@ -72,6 +72,7 @@ def main():
             name: hashlib.sha256((Path("/workspace/src") / name).read_bytes()).hexdigest()
             for name in (
                 "server.py",
+                "live_engine.py",
                 "backend_runtime.py",
                 "backend_state.py",
                 "http_loadtest.py",

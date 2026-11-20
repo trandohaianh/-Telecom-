@@ -80,7 +80,7 @@ def test_evidence_chain_is_verified_in_a_child_process(tmp_path):
 
 
 def test_server_verifies_evidence_outside_its_own_interpreter():
-    src = (ROOT / "src" / "server.py").read_text(encoding="utf-8")
+    src = (ROOT / "src" / "live_engine.py").read_text(encoding="utf-8")  # LiveEngine moved out of server.py
     body = src.split("def verify_evidence(self):", 1)[1].split("\n    def ", 1)[0]
     assert "verify_in_subprocess" in body and "verify(self.evidence_path)" not in body
 

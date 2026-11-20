@@ -33,7 +33,7 @@ ignore = [
 known-first-party = [
     "accounts", "agent", "appdb", "backend_evidence", "backend_runtime", "backend_state", "build_dataset",
     "carrier_bridge", "commercial_registry", "compare_models", "config", "costs", "data_generator", "detector",
-    "drift", "evaluate", "events_io", "evidence", "fast_iforest", "feature_store", "gc_tuning", "http_hardening",
+    "drift", "evaluate", "events_io", "evidence", "fast_iforest", "feature_store", "gc_tuning", "http_hardening", "live_engine",
     "ingest_guard", "kafka_pipeline", "observability", "ops_pipeline", "portal", "push", "reason_codes",
     "resilience", "scaleout", "security", "server", "statistical_reporting", "textnorm", "train", "voice_api",
     "voice_model", "voice_pipeline",

@@ -258,12 +258,13 @@ def test_durable_evidence_drains_outbox_once_and_preserves_existing_chain(tmp_pa
 
 
 def test_live_boot_skips_demo_files_and_appends_live_decision(tmp_path, monkeypatch):
+    import live_engine
     import server
 
     def no_demo_data(*args, **kwargs):
         raise AssertionError("live mode must not load demo data")
 
-    monkeypatch.setattr(server, "load_events", no_demo_data)
+    monkeypatch.setattr(live_engine, "load_events", no_demo_data)
     path = tmp_path / "live.jsonl"
     engine = server.LiveEngine(
         demo_mode=False,

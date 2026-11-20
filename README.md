@@ -196,11 +196,18 @@ recorded but not enforced — the call had already ended.
 - `src/ingest_guard.py` deduplication, event-time watermark, idempotent action ledger
 - `FeatureStore.save_checkpoint/load_checkpoint` crash recovery without re-running the 24 h warm-up
 - `src/drift.py` PSI drift monitor with a measured noise floor; `src/shadow_run.py` score-but-never-enforce mode
-- `src/server.py` + `static/index.html` live dashboard (attack injection, fault drills, chain verification)
+- `src/server.py` HTTP routes · `src/live_engine.py` live engine (replay/live, journal, evidence, agent) · `static/admin/`, `static/app/` operator console and subscriber PWA (scripts in `.js` files, no inline scripts: CSP)
+- `src/backend_state.py` SQLite WAL journal (events, checkpoints, retention) · `src/appdb.py` subscriber/admin data
 - `data/test_events_50k.csv` independent test set · `data/benchmark_results.json`, `data/loadtest_results.json` measurements
 - `docs/` bilingual report (DOCX/PDF), slides (PPTX/PDF, with speaker notes), portfolio, figures, demo video; `docs/build/` generates them
 - `src/agent.py` AI agent (proposes, humans decide) · `src/security.py` roles, sessions, signed audit, operator-link HMAC
 - `HUONG_DAN.md` step-by-step guide (Vietnamese): setup, demo, Android, tests, rebuilding data / models / documents
+
+## Phát triển / Development
+- Quy ước thư mục, đặt tên, lint, bí mật, commit: [docs/CONVENTIONS.md](docs/CONVENTIONS.md)
+- Công cụ: `pip install -r requirements-dev.txt && npm ci --ignore-scripts && pre-commit install`
+- Kiểm tra: `ruff check . && ruff format --check . && npm run lint && python -B -m pytest -q tests && python -B -m pytest -q spark telecom_grpc`
+- Phụ thuộc phục vụ có khoá hash: `requirements-serve.lock` (Docker/CI cài bằng `--require-hashes`)
 
 ## Giới hạn / Limitations
 Simulated data; audio tier uses pre-computed acoustic features (including who-speaks-how-much from a VAD, which the
